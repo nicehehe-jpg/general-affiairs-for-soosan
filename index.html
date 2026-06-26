@@ -90,6 +90,35 @@
   .mail-fab:hover{transform:scale(1.12); box-shadow:0 10px 28px rgba(49,130,246,.55);}
   .mail-fab:active{transform:scale(.97);}
 
+  /* ===== 히어로 검색바 ===== */
+  .hero-search-wrap{
+    display:flex; align-items:center; gap:6px;
+    background:#fff; border:2px solid #3182F6;
+    border-radius:999px; padding:8px 14px;
+    width:320px; box-shadow:0 2px 12px rgba(49,130,246,.15);
+    transition:box-shadow .2s;
+  }
+  .hero-search-wrap:focus-within{box-shadow:0 4px 20px rgba(49,130,246,.3);}
+  .hero-search-icon{font-size:17px;line-height:1;flex-shrink:0;}
+  .hero-search-input{
+    flex:1; border:none; outline:none; font-size:13.5px;
+    font-family:inherit; color:#191F28; background:transparent;
+  }
+  .hero-search-input::placeholder{color:#B0B8C1;}
+  .hero-search-kbd{
+    background:none; border:none; cursor:pointer; font-size:16px;
+    color:#B0B8C1; padding:0; line-height:1; flex-shrink:0;
+  }
+  .hero-search-kbd:hover{color:#3182F6;}
+  .hero-search-ai{
+    background:linear-gradient(135deg,#3182F6,#6C5CE7);
+    color:#fff; border:none; border-radius:999px;
+    padding:5px 13px; font-size:12.5px; font-weight:700;
+    cursor:pointer; font-family:inherit; flex-shrink:0;
+    white-space:nowrap;
+  }
+  .hero-search-ai:hover{opacity:.9;}
+
   .mail-hero-btn{
     display:flex; align-items:center; gap:10px;
     background:linear-gradient(135deg,#3182F6,#6C5CE7);
@@ -122,6 +151,7 @@
     white-space:nowrap; position:relative;
   }
   .ql-item:hover{background:#EEF4FF; border-color:var(--blue); color:var(--blue); transform:translateY(-1px); box-shadow:0 3px 10px rgba(49,130,246,.15);}
+  .ql-item.ql-drag-over{border-color:var(--blue); background:#EEF4FF; transform:scale(1.05);}
   .ql-item:hover .ql-del{display:flex;}
   .ql-ic{font-size:14px; line-height:1;}
   .ql-name{font-size:12px;}
@@ -646,6 +676,13 @@
       <p class="greet-sub">오늘 처리할 업무를 확인하세요. <span id="syncBadge" class="sync-badge loading">☁ 연결 중…</span></p>
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
+      <!-- 검색바 -->
+      <div class="hero-search-wrap">
+        <span class="hero-search-icon">🔍</span>
+        <input class="hero-search-input" id="heroSearchInput" placeholder="검색어를 입력해 주세요." onkeydown="if(event.key==='Enter') heroSearch()" autocomplete="off">
+        <button class="hero-search-kbd" onclick="document.getElementById('heroSearchInput').focus()" title="검색창 포커스">⌨</button>
+        <button class="hero-search-ai" onclick="heroSearchAI()" title="AI 검색">✦ AI</button>
+      </div>
       <button class="mail-hero-btn" onclick="openDashMailModal()">
         <span class="ic">✉️</span>
         <span class="txt">
@@ -805,6 +842,185 @@
 
 <!-- 플로팅 메일 버튼 -->
 <button class="mail-fab" onclick="openDashMailModal()" title="메일 보내기">✉️</button>
+
+<!-- AI 채팅 버튼 -->
+<button class="ai-fab" onclick="toggleAiChat()" title="AI 어시스턴트">🤖</button>
+
+<!-- AI 채팅 모달 -->
+<div class="ai-chat-box" id="aiChatBox">
+  <div class="ai-chat-header">
+    <span>🤖 AI 어시스턴트</span>
+    <button onclick="toggleAiChat()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">✕</button>
+  </div>
+  <div class="ai-chat-messages" id="aiMessages">
+    <div class="ai-msg ai">안녕하세요! 업무 관련해서 무엇이든 물어보세요 😊</div>
+  </div>
+  <div class="ai-chat-input-row">
+    <input id="aiInput" class="ai-input" placeholder="질문을 입력하세요..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiMsg();}">
+    <button class="ai-send-btn" onclick="sendAiMsg()">전송</button>
+  </div>
+</div>
+
+<style>
+.ai-fab{
+  position:fixed; bottom:100px; right:32px; z-index:150;
+  width:58px; height:58px; border-radius:50%;
+  background:linear-gradient(135deg,#6C5CE7,#a29bfe);
+  border:none; cursor:pointer; font-size:26px;
+  box-shadow:0 4px 18px rgba(108,92,231,.45);
+  transition:transform .18s, box-shadow .18s;
+}
+.ai-fab:hover{transform:scale(1.12); box-shadow:0 10px 28px rgba(108,92,231,.55);}
+.ai-chat-box{
+  position:fixed; bottom:170px; right:32px; z-index:200;
+  width:360px; height:480px; background:#fff;
+  border-radius:18px; box-shadow:0 8px 40px rgba(0,0,0,.18);
+  display:none; flex-direction:column; overflow:hidden;
+}
+.ai-chat-box.open{display:flex;}
+.ai-chat-header{
+  background:linear-gradient(135deg,#6C5CE7,#a29bfe);
+  padding:14px 18px; display:flex; justify-content:space-between; align-items:center;
+  color:#fff; font-size:14px; font-weight:700;
+}
+.ai-chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ai-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;word-break:break-word;}
+.ai-msg.ai{background:#f2f4f6;color:#191F28;align-self:flex-start;border-bottom-left-radius:4px;}
+.ai-msg.user{background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+.ai-msg.loading{color:#8b95a1;font-style:italic;}
+.ai-chat-input-row{display:flex;gap:8px;padding:12px 14px;border-top:1px solid #e5e8eb;}
+.ai-input{flex:1;border:1.5px solid #e5e8eb;border-radius:10px;padding:9px 12px;font-size:13.5px;font-family:inherit;outline:none;color:#191F28;}
+.ai-input:focus{border-color:#6C5CE7;}
+.ai-send-btn{background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff;border:none;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+</style>
+
+<script>
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+function getGroqKey(){ return localStorage.getItem('groq_api_key') || ''; }
+let aiHistory = [];
+
+function toggleAiChat(){
+  if(!getGroqKey()){
+    const key = prompt('Groq API 키를 입력하세요:\n(console.groq.com에서 발급)');
+    if(!key) return;
+    localStorage.setItem('groq_api_key', key.trim());
+  }
+  const box = document.getElementById('aiChatBox');
+  box.classList.toggle('open');
+  if(box.classList.contains('open')) document.getElementById('aiInput').focus();
+}
+
+function getSystemContext(){
+  const today = new Date().toISOString().split('T')[0];
+  let ctx = `당신은 수산이앤에스 경영지원팀 허창영님의 전담 업무 어시스턴트입니다. 아래에 허창영님의 실제 업무 데이터가 있습니다. 이 데이터를 기반으로 정확하고 실용적으로 답변해주세요. 오늘 날짜는 ${today}입니다.\n\n`;
+
+  try {
+    // 1. 업무 목록 (미완료만)
+    const tasks = JSON.parse(localStorage.getItem('gongmu_tasks_v1')||'[]');
+    const active = tasks.filter(t=>t.status!=='done').slice(0,20);
+    if(active.length){
+      ctx += `[진행/대기 업무 ${active.length}건]\n`;
+      active.forEach(t=>{ ctx += `- [${t.status}] ${t.title} 마감:${t.due||'미정'}\n`; });
+      ctx += '\n';
+    }
+  } catch(e){}
+
+  try {
+    // 2. 구매계약 (미완료만, 핵심 필드)
+    const purchase = JSON.parse(localStorage.getItem('purchase_cases_v1')||'[]');
+    const activePc = purchase.filter(c=>{
+      const v = Object.values(c.stages||{});
+      return !v.length || !v.every(s=>s==='done'||s==='na');
+    }).slice(0,15);
+    if(activePc.length){
+      ctx += `[진행중 구매계약 ${activePc.length}건]\n`;
+      activePc.forEach(c=>{ ctx += `- ${c.name} / ${c.vendor||'업체미정'} / 납품:${c.dueDate||'미정'}\n`; });
+      ctx += '\n';
+    }
+  } catch(e){}
+
+  try {
+    // 3. 메모 (미완료만)
+    const todos = JSON.parse(localStorage.getItem('todos_v2')||'[]');
+    const activeTodos = todos.filter(t=>!t.done).slice(0,10);
+    if(activeTodos.length){
+      ctx += `[메모/할일 ${activeTodos.length}건]\n`;
+      activeTodos.forEach(t=>{ ctx += `- ${t.text}\n`; });
+      ctx += '\n';
+    }
+  } catch(e){}
+
+  try {
+    // 4. 주소록 (이름+회사+연락처만)
+    const contacts = JSON.parse(localStorage.getItem('ab_contacts')||'[]').slice(0,20);
+    if(contacts.length){
+      ctx += `[주소록 ${contacts.length}명]\n`;
+      contacts.forEach(c=>{ ctx += `- ${c.name}(${c.company||''}) ${c.phone||''}\n`; });
+      ctx += '\n';
+    }
+  } catch(e){}
+
+  try {
+    // 5. 날씨
+    if(window._weatherCtx) ctx += `[오늘 날씨] ${window._weatherCtx}\n\n`;
+  } catch(e){}
+
+  try {
+    // 6. 오늘 식단
+    const info = getTodayKey();
+    const meal = MEAL_DATA[info.key];
+    if(meal){
+      ctx += `[오늘 매곡테크노파크 식단]\n`;
+      ctx += `점심: ${(meal.lunch||[]).join(', ')}\n`;
+      ctx += `저녁: ${(meal.dinner||[]).join(', ')}\n\n`;
+    }
+  } catch(e){}
+
+  return ctx;
+}
+
+async function sendAiMsg(){
+  const input = document.getElementById('aiInput');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+
+  const msgs = document.getElementById('aiMessages');
+  msgs.innerHTML += `<div class="ai-msg user">${msg}</div>`;
+  const loading = document.createElement('div');
+  loading.className = 'ai-msg ai loading';
+  loading.textContent = '생각 중...';
+  msgs.appendChild(loading);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  aiHistory.push({ role:'user', content: msg });
+
+  try {
+    const res = await fetch(GROQ_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json', 'Authorization':'Bearer ' + getGroqKey()},
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role:'system', content: getSystemContext() },
+          ...aiHistory
+        ],
+        temperature: 0.7,
+        max_tokens: 1024
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || (data.error ? '오류: ' + data.error.message : '응답을 받지 못했습니다.');
+    aiHistory.push({ role:'assistant', content: reply });
+    loading.remove();
+    msgs.innerHTML += `<div class="ai-msg ai">${reply.replace(/\n/g,'<br>')}</div>`;
+  } catch(e) {
+    loading.remove();
+    msgs.innerHTML += `<div class="ai-msg ai">오류가 발생했습니다: ${e.message}</div>`;
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+</script>
 
 <!-- 메일 모달 -->
 <div class="modal-overlay" id="dashMailModal" onclick="if(event.target===this)closeDashMailModal()">
@@ -1389,7 +1605,37 @@ function renderProgressAndFilters(catItems){
 function renderTaskList(){
   const wrap = document.getElementById('taskList');
   const title = document.getElementById('taskListTitle');
-  const catItems = activeCat==='all' ? TASKS.slice() : TASKS.filter(t=>t.cat===activeCat);
+
+  // 구매업무 카테고리면 purchase_cases_v1 데이터도 포함
+  let purchaseCaseItems = [];
+  if(activeCat==='purchase' || activeCat==='all'){
+    try{
+      const cases = JSON.parse(localStorage.getItem('purchase_cases_v1') || '[]');
+      purchaseCaseItems = cases.map(c => {
+        const stageValues = Object.values(c.stages || {});
+        const allDone = stageValues.length && stageValues.every(s => s==='done' || s==='na');
+        const anyDone = stageValues.some(s => s==='done');
+        const status = allDone ? 'done' : anyDone ? 'doing' : 'wait';
+        return {
+          id: 'pc_' + c.id,
+          title: `[구매] ${c.name}` + (c.vendor ? ` · ${c.vendor}` : ''),
+          cat: 'purchase',
+          priority: 'mid',
+          status,
+          due: c.dueDate || '',
+          _isPurchaseCase: true,
+          _caseId: c.id,
+        };
+      });
+    }catch(e){}
+  }
+
+  const baseTasks = activeCat==='all' ? TASKS.slice() : TASKS.filter(t=>t.cat===activeCat);
+  const catItems = activeCat==='purchase'
+    ? [...baseTasks, ...purchaseCaseItems]
+    : activeCat==='all'
+      ? [...baseTasks, ...purchaseCaseItems]
+      : baseTasks;
 
   document.getElementById('openGuiBtn').style.display = (activeCat==='monthly') ? '' : 'none';
   document.getElementById('openPurchaseBtn').style.display = (activeCat==='purchase') ? '' : 'none';
@@ -1663,6 +1909,7 @@ async function loadWeather(){
     const wind = c.wind_speed_10m.toFixed(1);
     const tmax = Math.round(daily.temperature_2m_max[0]);
     const tmin = Math.round(daily.temperature_2m_min[0]);
+    window._weatherCtx = `울산 매곡동 현재 ${temp}°C(체감 ${feel}°C), ${desc}, 최고${tmax}°/최저${tmin}°, 습도${humid}%, 풍속${wind}m/s`;
     document.getElementById('weatherContent').className = '';
     document.getElementById('weatherContent').innerHTML =
       '<div class="weather-main">'
@@ -2042,6 +2289,22 @@ E-mail  nicehehe@soosan.co.kr
 Address  울산광역시 북구 매곡산업로 21 (자동차조선기술관 3층)
 Homepage  www.soosanens.co.kr`;
 
+function heroSearch() {
+  const q = document.getElementById('heroSearchInput').value.trim();
+  if (!q) return;
+  window.open(`https://search.naver.com/search.naver?query=${encodeURIComponent(q)}`, '_blank');
+  document.getElementById('heroSearchInput').value = '';
+}
+
+function heroSearchAI() {
+  const q = document.getElementById('heroSearchInput').value.trim();
+  document.getElementById('heroSearchInput').value = '';
+  const box = document.getElementById('aiChatBox');
+  box.classList.add('open');
+  const input = document.getElementById('aiInput');
+  if(q){ input.value = q; sendAiMsg(); } else { input.focus(); }
+}
+
 function openDashMailModal() {
   dmRecipients = [];
   renderRecipientTags();
@@ -2190,8 +2453,37 @@ function dmSend() {
 
   const subject = document.getElementById('dmSubject').value.trim() || '(제목 없음)';
   const body = document.getElementById('dmBody').value;
-  window.location.href = `mailto:${encodeURIComponent(toList.join(';'))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  closeDashMailModal();
+
+  // 로컬 서버 또는 사내 PC IP로 전송 시도, 아니면 아웃룩으로 열기
+  const MAIL_SERVERS = ['http://localhost:3000', 'http://172.30.100.19:3000'];
+  const tryServer = (servers) => {
+    if (!servers.length) return Promise.reject('no server');
+    return fetch(servers[0] + '/health', { signal: AbortSignal.timeout(1500) })
+      .then(() => servers[0])
+      .catch(() => tryServer(servers.slice(1)));
+  };
+  tryServer(MAIL_SERVERS)
+    .then(base => {
+      return fetch(base + '/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: toList.join(','), subject, body })
+      });
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        alert('✅ 메일이 전송되었습니다!');
+        closeDashMailModal();
+      } else {
+        alert('전송 실패: ' + data.error);
+      }
+    })
+    .catch(() => {
+      // 서버 없으면 아웃룩으로 fallback
+      window.location.href = `mailto:${encodeURIComponent(toList.join(';'))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      closeDashMailModal();
+    });
 }
 document.addEventListener('click', (e)=>{
   if(openMenuId !== null && !e.target.closest('.row-actions') && !e.target.closest('.status-menu-inline')){
@@ -2252,11 +2544,42 @@ function renderQlSites() {
   const sites = loadQlSites();
   const list = document.getElementById('qlList');
   list.innerHTML = sites.map((s, i) => `
-    <a class="ql-item" href="${s.url}" target="_blank">
+    <a class="ql-item" href="${s.url}" target="_blank" draggable="true" data-idx="${i}"
+       ondragstart="qlDragStart(event)" ondragover="qlDragOver(event)" ondrop="qlDrop(event)" ondragend="qlDragEnd(event)">
       <span class="ql-ic">${s.ic}</span>
       <span class="ql-name">${s.name}</span>
       <button class="ql-del" onclick="deleteQlSite(event,${i})">✕</button>
     </a>`).join('');
+}
+
+let qlDragSrcIdx = null;
+function qlDragStart(e) {
+  qlDragSrcIdx = +e.currentTarget.dataset.idx;
+  e.currentTarget.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function qlDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.ql-item').forEach(el => el.classList.remove('ql-drag-over'));
+  e.currentTarget.classList.add('ql-drag-over');
+}
+function qlDrop(e) {
+  e.preventDefault(); e.stopPropagation();
+  const toIdx = +e.currentTarget.dataset.idx;
+  if (qlDragSrcIdx === null || qlDragSrcIdx === toIdx) return;
+  const sites = loadQlSites();
+  const moved = sites.splice(qlDragSrcIdx, 1)[0];
+  sites.splice(toIdx, 0, moved);
+  saveQlSites(sites);
+  renderQlSites();
+}
+function qlDragEnd(e) {
+  qlDragSrcIdx = null;
+  document.querySelectorAll('.ql-item').forEach(el => {
+    el.style.opacity = '';
+    el.classList.remove('ql-drag-over');
+  });
 }
 
 function deleteQlSite(e, idx) {
