@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>수산이앤에스 전표생성기</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+  if (window['pdfjsLib']) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+<style>
+  :root{
+    --bg:#F2F4F6;
+    --card:#ffffff;
+    --t1:#191F28;
+    --t2:#4E5968;
+    --t3:#8B95A1;
+    --blue:#3182F6;
+    --blue-bg:#EBF2FF;
+    --green:#1DB67F;
+    --green-bg:#E6F9F0;
+    --orange:#FF9800;
+    --orange-bg:#FFF4E5;
+    --red:#F04452;
+    --red-bg:#FDEAEC;
+    --purple:#6C5CE7;
+    --purple-bg:#F0EEFF;
+    --line:#E5E8EB;
+  }
+  *{box-sizing:border-box; font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+  body{margin:0 auto;background:var(--bg);color:var(--t1);padding:28px;max-width:1080px;}
+  h1{color:var(--t1);font-size:22px;font-weight:800;margin:0 0 20px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 24px;margin-bottom:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .card h2{font-size:15px;color:var(--t1);background:none;margin:0 0 16px;padding:0 0 14px;border-radius:0;border-bottom:1px solid var(--line);font-weight:800;}
+  .row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;align-items:center;}
+  .row label{font-size:13px;color:var(--t2);min-width:90px;font-weight:600;}
+  .row input, .row select{padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--t1);}
+  .row input:focus, .row select:focus{outline:none;border-color:var(--blue);background:#fff;}
+  table{border-collapse:collapse;width:100%;font-size:13px;margin-top:8px;}
+  th,td{border:1px solid var(--line);padding:8px 10px;}
+  th{background:var(--blue-bg);color:var(--blue);font-weight:700;}
+  td input{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13px;font-family:inherit;}
+  td input[type=number]{text-align:right;}
+  .btn{background:var(--blue);color:#fff;border:none;padding:8px 16px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;}
+  .btn:hover{background:#1B6FE0;}
+  .btn.small{padding:5px 12px;font-size:12px;border-radius:8px;background:var(--blue-bg);color:var(--blue);font-weight:700;}
+  .btn.small:hover{background:#dce8ff;}
+  .btn.danger{background:var(--red-bg);color:var(--red);}
+  .btn.danger:hover{background:#fbd8db;}
+  .btn.gen{background:var(--purple);font-size:15px;padding:14px 30px;font-weight:800;border-radius:14px;box-shadow:0 4px 12px rgba(108,92,231,.25);}
+  .btn.gen:hover{background:#5b4bd6;}
+  .actions{text-align:right;margin-top:10px;}
+  .total-line{text-align:right;font-size:13px;color:var(--t2);margin-top:8px;font-weight:600;}
+  .footer{text-align:center;margin-top:24px;}
+  .hint{font-size:12px;color:var(--t3);margin-top:6px;line-height:1.5;}
+  .upload-box{background:var(--blue-bg);border:1px dashed var(--blue);border-radius:14px;padding:12px 16px;margin-bottom:14px;}
+  .upload-box label.upl{font-size:12.5px;color:var(--blue);font-weight:700;margin-right:8px;}
+  .status-msg{font-size:12px;color:var(--blue);margin-top:6px;white-space:pre-line;}
+  .status-msg.err{color:var(--red);}
+  .hidden{display:none !important;}
+  .task-select{display:flex;flex-wrap:wrap;gap:10px;}
+  .task-select label{display:flex;align-items:center;gap:7px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-weight:700;color:var(--t2);transition:border-color .12s, background .12s, color .12s;}
+  .task-select label:hover{border-color:var(--blue);background:var(--blue-bg);color:var(--blue);}
+  .task-select input[type=checkbox]{width:17px;height:17px;cursor:pointer;accent-color:var(--blue);}
+</style>
+</head>
+<body>
+<!-- ===== 비밀번호 잠금 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;" onkeydown="if(event.key==='Enter')gateCheck()" onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1B6FE0'" onmouseout="this.style.background='#3182F6'">들어가기</button>
+  </div>
+</div>
+<script>
+  const GATE_PW_HASH = 'fbdb32e45b2566ac0a1ead4d585162645698e431dfec179c69ccffb31d996a03';
+  (function(){
+    if(sessionStorage.getItem('gm_auth')==='ok'){
+      document.getElementById('gate').style.display='none';
+    } else {
+      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
+    }
+  })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  }
+</script>
+
+<h1>🧾 수산이앤에스 전표생성기</h1>
+
+<div class="card">
+  <h2>📝 처리할 업무 선택</h2>
+  <div class="task-select">
+    <label><input type="checkbox" id="task-mgmt" onchange="updateTaskVisibility()"> 🏢 ① 관리비</label>
+    <label><input type="checkbox" id="task-rent" onchange="updateTaskVisibility()"> 🏠 ② 임차료</label>
+    <label><input type="checkbox" id="task-etc" onchange="updateTaskVisibility()"> 🧰 ③ 기타 본사관리비</label>
+    <label><input type="checkbox" id="task-driver" onchange="updateTaskVisibility()"> 🚗 ④ 법인운전대행(대리운전)</label>
+    <label><input type="checkbox" id="task-comm" onchange="updateTaskVisibility()"> 📱 ⑤ 직책보임자 통신비</label>
+  </div>
+  <div class="hint">처리할 업무를 선택하면 아래에 공통 설정과 해당 업무의 입력 항목이 나타납니다. 여러 업무를 동시에 선택할 수 있습니다.</div>
+</div>
+
+<div class="card hidden" id="commonCard">
+  <h2>⚙️ 공통 설정</h2>
+  <div class="row">
+    <label>건물/사옥명</label><input id="location" value="매곡 본사 사옥" style="width:160px">
+    <label>기표일</label><input id="docDate" type="date">
+    <label>출납예정일</label><input id="payDate" type="date">
+  </div>
+  <div class="upload-box">
+    <label class="upl">📎 ① 급상여전표처리사원별적용률 업로드 (선택)</label>
+    <input type="file" id="rateMasterFile" accept=".xlsx,.xls">
+    <div class="hint">업로드하면 ④ 법인운전대행, ⑤ 직책보임자 통신비에서 사번(또는 성명)이 일치하는 직원의 금액이 적용률에 따라 여러 코스트센터로 자동 분할됩니다. 업로드하지 않으면 기존처럼 표에서 직접 부서를 선택합니다.</div>
+    <div class="status-msg" id="rateMasterStatus">적용률 파일 미업로드</div>
+  </div>
+</div>
+
+<div class="card hidden" id="mgmtCard">
+  <h2>🏢 ① 관리비 (납부고지서 항목별 부서 안분)</h2>
+  <div class="upload-box">
+    <label class="upl">📎 납부고지서 PDF 업로드 (관리비+임차료 자동인식)</label>
+    <input type="file" id="mgmtPdfFile" accept=".pdf">
+    <div class="hint">관리비 청구내역과 임대료가 함께 있는 고지서 PDF를 올리면 아래 항목 금액, 임차료, 사용월, 납부기한일이 자동으로 채워집니다. 업로드 후 내용을 확인하고 필요하면 직접 수정하세요.</div>
+    <div class="status-msg" id="mgmtPdfStatus"></div>
+  </div>
+  <div class="row">
+    <label>거래처</label><input id="mgmtVendor" value="(재)울산테크노파크" style="width:220px">
+    <label>사용월</label><input id="mgmtYM" type="month">
+  </div>
+  <table id="mgmtTable">
+    <thead><tr><th style="width:28%">항목명</th><th style="width:32%">계정과목 suffix</th><th style="width:20%">공급가액</th><th style="width:10%"></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="actions">
+    <button class="btn small" onclick="addMgmtRow()">➕ 항목 추가</button>
+  </div>
+  <div class="total-line" id="mgmtTotalLine"></div>
+</div>
+
+<div class="card hidden" id="rentCard">
+  <h2>🏠 ② 임차료 (부서 안분)</h2>
+  <div class="hint" style="margin-bottom:8px;">위 ①의 납부고지서 PDF를 업로드하면 이 항목도 함께 자동 입력됩니다.</div>
+  <div class="row">
+    <label>거래처</label><input id="rentVendor" value="(재)울산테크노파크" style="width:220px">
+    <label>대상월</label><input id="rentYM" type="month">
+    <label>공급가액</label><input id="rentAmount" type="number" value="0" style="width:140px">
+    <label>계정 suffix</label><input id="rentSuffix" value="지급임차료_기타지급임차료" style="width:220px">
+  </div>
+</div>
+
+<div class="card hidden" id="etcCard">
+  <h2>🧰 ③ 기타 본사관리비 (정수기/비데/복합기/공기청정기/커피머신 렌탈, 전자도서관 등 - 부서 안분)</h2>
+  <div class="upload-box">
+    <label class="upl">📎 전자세금계산서 PDF 업로드 (여러 개 선택 가능, 자동 행 추가)</label>
+    <input type="file" id="etcPdfFile" accept=".pdf" multiple>
+    <div class="hint">전자세금계산서를 올리면 공급자(거래처), 공급가액, 세액을 읽어 아래 표에 행을 추가합니다. 업무유형은 품목명을 보고 추정하므로 추가된 행에서 꼭 확인/수정하세요.</div>
+    <div class="status-msg" id="etcPdfStatus"></div>
+  </div>
+  <div class="row">
+    <label>사용월</label><input id="etcYM" type="month">
+    <div class="hint">각 행은 별도 청구서(거래처)로 취급되어 각각 부서안분 + 자체 부가세/미지급금 행을 생성합니다.</div>
+  </div>
+  <table id="etcTable">
+    <thead><tr>
+      <th style="width:14%">업무유형</th><th style="width:14%">거래처</th><th style="width:11%">공급가액</th>
+      <th style="width:9%">부가세</th><th style="width:9%">증빙유형</th><th style="width:25%">적요(공란시 자동생성)</th><th style="width:8%"></th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="actions"><button class="btn small" onclick="addEtcRow()">➕ 항목 추가</button></div>
+  <div class="total-line" id="etcTotalLine"></div>
+</div>
+
+<div class="card hidden" id="driverCard">
+  <h2>🚗 ④ 법인운전대행(대리운전) - 사원별</h2>
+  <div class="upload-box">
+    <label class="upl">📎 이용내역서 엑셀 업로드 (둘둘대리운전 형식: 성명/요금 등)</label>
+    <input type="file" id="driverXlsxFile" accept=".xlsx,.xls">
+    <div class="hint">"성명", "요금" 컬럼이 있는 이용내역서를 올리면 동일 인물의 요금을 합산해 아래 표를 채웁니다. 공통설정에서 적용률 파일을 올렸다면 사번/성명이 일치하는 직원은 자동으로 여러 코스트센터로 분할 처리됩니다.</div>
+    <div class="status-msg" id="driverXlsxStatus"></div>
+  </div>
+  <div class="row">
+    <label>거래처</label><input id="driverVendor" value="유디서비스" style="width:200px">
+    <label>대상월</label><input id="driverYM" type="month">
+    <div class="hint">부가세 불공제 처리: 입력한 이용금액(공급가액)에 10%를 가산한 금액이 비용/미지급금으로 처리됩니다. 부가세 행은 증빙(전자세금계산서 매입세액_불공제)만 표기되고 금액은 0원입니다.</div>
+  </div>
+  <table id="driverTable">
+    <thead><tr><th style="width:14%">사번</th><th style="width:18%">성명</th><th style="width:22%">귀속부서(적용률 미매칭시 사용)</th><th style="width:22%">이용금액(공급가액)</th><th style="width:8%"></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="actions"><button class="btn small" onclick="addDriverRow()">➕ 사원 추가</button></div>
+  <div class="total-line" id="driverTotalLine"></div>
+</div>
+
+<div class="card hidden" id="commCard">
+  <h2>📱 ⑤ 직책보임자 통신비 (개인별)</h2>
+  <div class="upload-box">
+    <label class="upl">📎 통신비 지급내역 엑셀 업로드 (사번/성명/직책/지급총액)</label>
+    <input type="file" id="commXlsxFile" accept=".xlsx,.xls">
+    <div class="hint">"사번", "지급총액" 컬럼이 있는 지급내역 엑셀을 올리면 아래 표를 채웁니다. 공통설정에서 적용률 파일을 올렸다면 사번이 일치하는 직원은 자동으로 여러 코스트센터로 분할 처리됩니다.</div>
+    <div class="status-msg" id="commXlsxStatus"></div>
+  </div>
+  <div class="row">
+    <label>거래처</label><input id="commVendor" value="" style="width:220px">
+    <label>대상월</label><input id="commYM" type="month">
+  </div>
+  <table id="commTable">
+    <thead><tr><th style="width:14%">사번</th><th style="width:16%">성명</th><th style="width:14%">직책</th><th style="width:22%">귀속부서(적용률 미매칭시 사용)</th><th style="width:20%">금액</th><th style="width:8%"></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="actions">
+    <button class="btn small" onclick="addCommRow()">➕ 직원 추가</button>
+  </div>
+  <div class="total-line" id="commTotalLine"></div>
+</div>
+
+<div class="footer hidden" id="footerBar">
+  <button class="btn gen" onclick="generate()">📥 엑셀 생성 및 다운로드</button>
+</div>
+
+<script>
+const DEPTS = [ // [부서명, 코스트센터, 인원수, 유형]
+  ['경영지원팀','경영지원팀',10,'판관비'],
+  ['재무기획팀','재무기획팀',6,'판관비'],
+  ['IT팀','IT팀',3,'판관비'],
+  ['품질안전본부','품질안전본부',10,'제조비용'],
+  ['사업본부','사업본부',32,'제조비용'],
+  ['엔지니어링본부','엔지니어링본부',28,'제조비용'],
+  ['마케팅본부','마케팅본부',5,'제조비용'],
+];
+const TOTAL_HEAD = DEPTS.reduce((s,d)=>s+d[2],0);
+const HQ_DEPTS = ['경영지원팀','재무기획팀','IT팀']; // 적용률 분할시 판관비로 분류할 부서명
+
+function acct(suffix, dtype){
+  return dtype==='판관비' ? `판관비_${suffix}` : `제조비용_${suffix}`;
+}
+function fmtYM(ym){ // "2026-04" -> "26년 04월"
+  if(!ym) return '';
+  const [y,m]=ym.split('-');
+  return `${y.slice(2)}년 ${m}월`;
+}
+function fmtDate(d){ return d || ''; }
+function fmtYMFull(ym){ // "2026-04" -> "2026년 04월"
+  if(!ym) return '';
+  const [y,m]=ym.split('-');
+  return `${y}년 ${m}월`;
+}
+function toNum(s){
+  if(s===null || s===undefined) return null;
+  const n = Number(String(s).replace(/[,\s]/g,''));
+  return isNaN(n) ? null : n;
+}
+
+let mgmtItems = [
+  {name:'개별 전기요금', suffix:'수도광열비', amount:0},
+  {name:'공용 전기요금', suffix:'수도광열비', amount:0},
+  {name:'개별 냉난방비', suffix:'수도광열비', amount:0},
+  {name:'온수가열비', suffix:'수도광열비', amount:0},
+  {name:'상하수도요금', suffix:'수도광열비', amount:0},
+  {name:'경비용역비', suffix:'지급수수료_건물관리용역비', amount:0},
+  {name:'시설용역비', suffix:'지급수수료_건물관리용역비', amount:0},
+  {name:'청소용역비', suffix:'지급수수료_환경및위생처리용역', amount:0},
+  {name:'공동소모품비', suffix:'소모품비_기타', amount:0},
+  {name:'승강기유지비', suffix:'지급수수료_건물관리용역비', amount:0},
+  {name:'방역소독비', suffix:'지급수수료_기타', amount:0},
+  {name:'저수조청소비', suffix:'지급수수료_기타', amount:0},
+  {name:'법정검사/공사비', suffix:'수선비', amount:0},
+  {name:'정기검사/공사비', suffix:'지급수수료_건물관리용역비', amount:0},
+  {name:'기타검사/공사비', suffix:'지급수수료_건물관리용역비', amount:0},
+  {name:'조경관리비', suffix:'지급수수료_건물관리용역비', amount:0},
+];
+let commEmployees = [
+  {empno:'', name:'', title:'', dept:'경영지원팀', amount:0},
+];
+
+// 업무유형 → 계정과목 suffix 매핑 (기타 본사관리비)
+const ETC_TYPE_MAP = {
+  '정수기/비데':'지급임차료_기타지급임차료',
+  '복합기임차료':'지급임차료_사무용기기임차료',
+  '공기청정기':'지급임차료_기타지급임차료',
+  '커피머신렌탈':'지급임차료_기타지급임차료',
+  '전자도서관':'도서인쇄비_단행본구입',
+  '휴양시설':'복리후생비_콘도및휴양시설',
+  '기타':'지급수수료_기타',
+};
+let etcItems = [
+  {type:'정수기/비데', vendor:'', supply:0, vat:0, evidType:'세금계산서', memo:''},
+];
+let driverEmployees = [
+  {empno:'', name:'', dept:'경영지원팀', amount:0},
+];
+
+// ===================== 적용률 마스터 =====================
+// rateMaster: { 사번: [{name, dept, cc, ym, rate}, ...], ... }
+let rateMaster = {};
+let rateMasterByName = {}; // 성명 -> 사번(첫 매칭) 보조 인덱스
+
+function lookupRates(empno, name, ym){
+  let entries = null;
+  if(empno && rateMaster[empno]) entries = rateMaster[empno];
+  if(!entries && name && rateMasterByName[name]) entries = rateMaster[rateMasterByName[name]];
+  if(!entries || entries.length===0) return null;
+  let filtered = ym ? entries.filter(e=>e.ym===ym) : entries;
+  if(filtered.length===0) filtered = entries; // 해당월 데이터 없으면 보유한 전체 데이터로 대체
+  return filtered;
+}
+
+// 일부 사내 시스템에서 내보낸 xlsx는 styles.xml에 속성 없는 <xf> 태그가 들어있어
+// SheetJS가 파싱 중 예외를 던지는 경우가 있다. 직접 파싱이 실패하면 JSZip으로
+// styles.xml만 보정(빈 <xf> 태그에 더미 속성 추가)한 뒤 재시도한다.
+async function readWorkbookSafe(file){
+  const buf = await file.arrayBuffer();
+  try{
+    return XLSX.read(buf, {type:'array'});
+  } catch(e){
+    if(typeof JSZip === 'undefined') throw e;
+    const zip = await JSZip.loadAsync(buf);
+    const stylesFile = zip.file('xl/styles.xml');
+    if(stylesFile){
+      let xml = await stylesFile.async('string');
+      xml = xml.replace(/<((?:[a-zA-Z0-9]+:)?xf)>/g, '<$1 applyAlignment="0">');
+      zip.file('xl/styles.xml', xml);
+    }
+    const fixedBuf = await zip.generateAsync({type:'arraybuffer'});
+    return XLSX.read(fixedBuf, {type:'array'});
+  }
+}
+
+async function handleRateMasterUpload(ev){
+  const file = ev.target.files[0];
+  const statusEl = document.getElementById('rateMasterStatus');
+  if(!file) return;
+  try{
+    const wb = await readWorkbookSafe(file);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:null});
+    let headerIdx=-1, col={};
+    for(let i=0;i<aoa.length;i++){
+      const row = aoa[i].map(v=>v===null?'':String(v).trim());
+      if(row.includes('사번') && row.includes('적용률')){
+        headerIdx=i;
+        row.forEach((v,ci)=>{ col[v]=ci; });
+        break;
+      }
+    }
+    if(headerIdx<0){ statusEl.textContent='헤더(사번/적용률)를 찾지 못했습니다.'; statusEl.classList.add('err'); return; }
+    rateMaster = {}; rateMasterByName = {};
+    let cnt=0;
+    for(let i=headerIdx+1;i<aoa.length;i++){
+      const r = aoa[i];
+      if(!r) continue;
+      const empno = r[col['사번']]!==null && r[col['사번']]!==undefined ? String(r[col['사번']]).trim() : '';
+      const name = col['사원']!==undefined ? (r[col['사원']]||'') : '';
+      const dept = col['부서']!==undefined ? (r[col['부서']]||'') : '';
+      const cc = col['적용코스트센터']!==undefined ? (r[col['적용코스트센터']]||'') : '';
+      let ym = col['적용월']!==undefined ? r[col['적용월']] : null;
+      if(ym instanceof Date){ ym = `${ym.getFullYear()}-${String(ym.getMonth()+1).padStart(2,'0')}`; }
+      else if(ym!==null && ym!==undefined){ ym = String(ym).trim(); }
+      const rate = toNum(col['적용률']!==undefined ? r[col['적용률']] : null);
+      if(!empno || !dept || rate===null) continue;
+      if(!rateMaster[empno]) rateMaster[empno]=[];
+      rateMaster[empno].push({name, dept, cc, ym, rate});
+      if(name && !rateMasterByName[name]) rateMasterByName[name]=empno;
+      cnt++;
+    }
+    statusEl.classList.remove('err');
+    statusEl.textContent = `적용률 자료 로드 완료: 사원 ${Object.keys(rateMaster).length}명, ${cnt}행`;
+  } catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
+  }
+}
+
+// ===================== PDF 텍스트 추출 =====================
+async function extractPdfText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  let fullText='';
+  for(let p=1;p<=pdf.numPages;p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const items = content.items.map(it=>({str:it.str, x:it.transform[4], y:it.transform[5]}));
+    items.sort((a,b)=> (b.y-a.y) || (a.x-b.x));
+    let lines=[], curY=null, curLine=[];
+    const TOL=2.5;
+    items.forEach(it=>{
+      if(curY===null || Math.abs(it.y-curY)>TOL){
+        if(curLine.length) lines.push(curLine);
+        curLine=[it]; curY=it.y;
+      } else {
+        curLine.push(it);
+      }
+    });
+    if(curLine.length) lines.push(curLine);
+    lines.forEach(line=>{
+      line.sort((a,b)=>a.x-b.x);
+      fullText += line.map(it=>it.str).join(' ') + '\n';
+    });
+  }
+  return fullText;
+}
+function numAfter(text, labelPattern){
+  const re = new RegExp(labelPattern+'\\s+([\\d,]+)');
+  const m = text.match(re);
+  return m ? Number(m[1].replace(/,/g,'')) : null;
+}
+function esc(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function parseMgmtInvoiceText(text){
+  const items = {
+    '개별 전기요금': numAfter(text, esc('개별전기요금')),
+    '공용 전기요금': numAfter(text, esc('공용전기요금')),
+    '개별 냉난방비': numAfter(text, '냉난방요금') ?? numAfter(text, '냉난방비'),
+    '온수가열비': numAfter(text, esc('온수가열비')),
+    '상하수도요금': numAfter(text, esc('상하수도요금')),
+    '경비용역비': numAfter(text, esc('경비용역비')),
+    '시설용역비': numAfter(text, esc('시설용역비')),
+    '청소용역비': numAfter(text, esc('청소용역비')),
+    '공동소모품비': numAfter(text, esc('공동소모품비')),
+    '승강기유지비': numAfter(text, esc('승강기유지비')),
+    '방역소독비': numAfter(text, esc('방역소독비')),
+    '저수조청소비': numAfter(text, esc('저수조청소비')),
+    '법정검사/공사비': numAfter(text, esc('법정검사/공사비')) ?? numAfter(text,'법정검사공사비'),
+    '정기검사/공사비': numAfter(text, esc('정기검사/공사비')) ?? numAfter(text,'정기검사공사비'),
+    '기타검사/공사비': numAfter(text, esc('기타검사/공사비')) ?? numAfter(text,'기타검사공사비'),
+    '조경관리비': numAfter(text, esc('조경관리비')),
+  };
+  const rentAmount = numAfter(text, '임\\s*대\\s*료');
+  const buildingMatch = text.match(/건\s*물\s*명\s*([^\n]+?)(?:\s{2,}|$)/m);
+  const periodMatch = text.match(/사용기간\s*[:：]?\s*(\d{4})[.\-](\d{2})[.\-]\d{2}/);
+  const dueMatch = text.match(/납부기한일\s*(\d{4})년\s*(\d{2})월\s*(\d{2})일/);
+  return {
+    items, rentAmount,
+    building: buildingMatch ? buildingMatch[1].trim() : null,
+    ym: periodMatch ? `${periodMatch[1]}-${periodMatch[2]}` : null,
+    payDate: dueMatch ? `${dueMatch[1]}-${dueMatch[2]}-${dueMatch[3]}` : null,
+  };
+}
+
+async function handleMgmtPdfUpload(ev){
+  const file = ev.target.files[0];
+  const statusEl = document.getElementById('mgmtPdfStatus');
+  if(!file) return;
+  try{
+    const text = await extractPdfText(file);
+    const parsed = parseMgmtInvoiceText(text);
+    let filled=[];
+    mgmtItems.forEach(it=>{
+      if(parsed.items[it.name]!==null && parsed.items[it.name]!==undefined){
+        it.amount = parsed.items[it.name];
+        filled.push(it.name);
+      }
+    });
+    renderMgmtTable();
+    if(parsed.rentAmount!==null){
+      document.getElementById('rentAmount').value = parsed.rentAmount;
+    }
+    if(parsed.ym){
+      document.getElementById('mgmtYM').value = parsed.ym;
+      document.getElementById('rentYM').value = parsed.ym;
+      document.getElementById('etcYM').value = parsed.ym;
+    }
+    if(parsed.payDate){
+      document.getElementById('payDate').value = parsed.payDate;
+    }
+    statusEl.classList.remove('err');
+    statusEl.textContent = `인식 완료: ${filled.length}개 항목` + (parsed.rentAmount!==null?`, 임대료 ${parsed.rentAmount.toLocaleString()}원`:'') + (parsed.ym?`, 사용월 ${parsed.ym}`:'') + '\n내용을 확인 후 필요시 직접 수정하세요.';
+  } catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = 'PDF 인식 중 오류: '+e.message;
+  }
+}
+
+function parseTaxInvoiceText(text){
+  let date=null, supply=null, vat=null;
+  const m = text.match(/작성일자\s+공급가액\s+세액[^\n]*\n\s*([\d./\-]+)\s+([\d,]+)\s+([\d,]+)/);
+  if(m){ date=m[1]; supply=Number(m[2].replace(/,/g,'')); vat=Number(m[3].replace(/,/g,'')); }
+  let vendor=null;
+  const idx = text.indexOf('상호 상호');
+  if(idx>=0){
+    const after = text.slice(idx+5, idx+250);
+    const mm = after.match(/([^\n]+?)\s*대표자명/);
+    if(mm) vendor = mm[1].trim();
+  }
+  let type='기타';
+  if(/복사기|복합기/.test(text)) type='복합기임차료';
+  else if(/정수기|비데/.test(text)) type='정수기/비데';
+  else if(/공기청정기/.test(text)) type='공기청정기';
+  else if(/커피머신/.test(text)) type='커피머신렌탈';
+  else if(/전자도서관/.test(text)) type='전자도서관';
+  return {vendor, date, supply, vat, type};
+}
+
+async function handleEtcPdfUpload(ev){
+  const files = Array.from(ev.target.files||[]);
+  const statusEl = document.getElementById('etcPdfStatus');
+  if(files.length===0) return;
+  let msgs=[];
+  for(const file of files){
+    try{
+      const text = await extractPdfText(file);
+      const parsed = parseTaxInvoiceText(text);
+      etcItems.push({
+        type: parsed.type,
+        vendor: parsed.vendor || '',
+        supply: parsed.supply || 0,
+        vat: parsed.vat || 0,
+        evidType: '세금계산서',
+        memo: '',
+      });
+      msgs.push(`${file.name}: ${parsed.type}, 공급가액 ${parsed.supply? parsed.supply.toLocaleString():'?'}원`);
+    } catch(e){
+      msgs.push(`${file.name}: 오류 - ${e.message}`);
+    }
+  }
+  renderEtcTable();
+  statusEl.classList.remove('err');
+  statusEl.textContent = msgs.join('\n') + '\n업무유형/거래처를 확인 후 필요시 수정하세요.';
+}
+
+// ===================== 엑셀 업로드 (통신비/대리운전) =====================
+async function readWorkbookSheets(file){
+  return readWorkbookSafe(file);
+}
+function findHeaderRow(aoa, requiredCols){
+  for(let i=0;i<aoa.length;i++){
+    const row = (aoa[i]||[]).map(v=>v===null||v===undefined?'':String(v).trim());
+    if(requiredCols.every(c=>row.includes(c))){
+      const col={};
+      row.forEach((v,ci)=>{ if(v) col[v]=ci; });
+      return {idx:i, col};
+    }
+  }
+  return null;
+}
+
+async function handleCommUpload(ev){
+  const file = ev.target.files[0];
+  const statusEl = document.getElementById('commXlsxStatus');
+  if(!file) return;
+  try{
+    const wb = await readWorkbookSheets(file);
+    let sheetName = wb.SheetNames.find(n=>n.includes('통신비') && !n.includes('적용률')) || wb.SheetNames[0];
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
+    const head = findHeaderRow(aoa, ['사번','지급총액']);
+    if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(사번/지급총액)를 찾지 못했습니다.'; return; }
+    const rows=[];
+    for(let i=head.idx+1;i<aoa.length;i++){
+      const r=aoa[i];
+      if(!r) continue;
+      const empno = r[head.col['사번']];
+      const amount = toNum(r[head.col['지급총액']]);
+      if(!empno && !amount) continue;
+      if(!empno || !amount) continue;
+      rows.push({
+        empno: String(empno).trim(),
+        name: head.col['성명']!==undefined ? String(r[head.col['성명']]||'').trim() : '',
+        title: head.col['직책']!==undefined ? String(r[head.col['직책']]||'').trim() : '',
+        dept: '경영지원팀',
+        amount: amount,
+      });
+    }
+    if(rows.length===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행을 찾지 못했습니다.'; return; }
+    commEmployees = rows;
+    renderCommTable();
+    statusEl.classList.remove('err');
+    statusEl.textContent = `${rows.length}명 불러왔습니다. (시트: ${sheetName})`;
+  } catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
+  }
+}
+
+async function handleDriverUpload(ev){
+  const file = ev.target.files[0];
+  const statusEl = document.getElementById('driverXlsxStatus');
+  if(!file) return;
+  try{
+    const wb = await readWorkbookSheets(file);
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:null});
+    const head = findHeaderRow(aoa, ['성명','요금']);
+    if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(성명/요금)를 찾지 못했습니다.'; return; }
+    const sums={};
+    for(let i=head.idx+1;i<aoa.length;i++){
+      const r=aoa[i];
+      if(!r) continue;
+      const name = r[head.col['성명']];
+      const fare = toNum(r[head.col['요금']]);
+      if(!name || !fare) continue;
+      const nm = String(name).trim();
+      sums[nm] = (sums[nm]||0) + fare;
+    }
+    const rows = Object.entries(sums).map(([name,amount])=>{
+      const empno = rateMasterByName[name] || '';
+      return {empno, name, dept:'경영지원팀', amount};
+    });
+    if(rows.length===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행을 찾지 못했습니다.'; return; }
+    driverEmployees = rows;
+    renderDriverTable();
+    statusEl.classList.remove('err');
+    statusEl.textContent = `${rows.length}명 불러왔습니다. (동일 인물 요금 합산)`;
+  } catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
+  }
+}
+
+// ===================== 표 렌더링 =====================
+function renderEtcTable(){
+  const tbody=document.querySelector('#etcTable tbody');
+  tbody.innerHTML='';
+  const typeOptions = Object.keys(ETC_TYPE_MAP).map(t=>`<option value="${t}">${t}</option>`).join('');
+  etcItems.forEach((it,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><select onchange="etcItems[${i}].type=this.value">${typeOptions}</select></td>
+      <td><input value="${it.vendor}" oninput="etcItems[${i}].vendor=this.value"></td>
+      <td><input type="number" value="${it.supply}" oninput="etcItems[${i}].supply=Number(this.value)||0; renderEtcTable()"></td>
+      <td><input type="number" value="${it.vat}" oninput="etcItems[${i}].vat=Number(this.value)||0; renderEtcTable()"></td>
+      <td><select onchange="etcItems[${i}].evidType=this.value"><option value="세금계산서">세금계산서</option><option value="카드">카드</option></select></td>
+      <td><input value="${it.memo}" oninput="etcItems[${i}].memo=this.value"></td>
+      <td><button class="btn small danger" onclick="etcItems.splice(${i},1);renderEtcTable()">삭제</button></td>`;
+    tr.querySelector('select').value = it.type;
+    tr.querySelectorAll('select')[1].value = it.evidType;
+    tbody.appendChild(tr);
+  });
+  const supplyTotal=etcItems.reduce((s,x)=>s+x.supply,0);
+  const vatTotal=etcItems.reduce((s,x)=>s+x.vat,0);
+  document.getElementById('etcTotalLine').textContent =
+    `공급가액 합계: ${supplyTotal.toLocaleString()}원   부가세 합계: ${vatTotal.toLocaleString()}원   합계: ${(supplyTotal+vatTotal).toLocaleString()}원`;
+}
+function addEtcRow(){ etcItems.push({type:'정수기/비데',vendor:'',supply:0,vat:0,evidType:'세금계산서',memo:''}); renderEtcTable(); }
+
+function renderDriverTable(){
+  const tbody=document.querySelector('#driverTable tbody');
+  tbody.innerHTML='';
+  const deptOptions = DEPTS.map(d=>`<option value="${d[0]}">${d[0]}</option>`).join('');
+  driverEmployees.forEach((e,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input value="${e.empno}" oninput="driverEmployees[${i}].empno=this.value"></td>
+      <td><input value="${e.name}" oninput="driverEmployees[${i}].name=this.value"></td>
+      <td><select onchange="driverEmployees[${i}].dept=this.value">${deptOptions}</select></td>
+      <td><input type="number" value="${e.amount}" oninput="driverEmployees[${i}].amount=Number(this.value)||0; renderDriverTable()"></td>
+      <td><button class="btn small danger" onclick="driverEmployees.splice(${i},1);renderDriverTable()">삭제</button></td>`;
+    tr.querySelector('select').value = e.dept;
+    tbody.appendChild(tr);
+  });
+  const total=driverEmployees.reduce((s,x)=>s+x.amount,0);
+  document.getElementById('driverTotalLine').textContent = `대리운전 합계: ${total.toLocaleString()}원`;
+}
+function addDriverRow(){ driverEmployees.push({empno:'',name:'',dept:'경영지원팀',amount:0}); renderDriverTable(); }
+
+function renderMgmtTable(){
+  const tbody=document.querySelector('#mgmtTable tbody');
+  tbody.innerHTML='';
+  mgmtItems.forEach((it,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input value="${it.name}" oninput="mgmtItems[${i}].name=this.value"></td>
+      <td><input value="${it.suffix}" oninput="mgmtItems[${i}].suffix=this.value"></td>
+      <td><input type="number" value="${it.amount}" oninput="mgmtItems[${i}].amount=Number(this.value)||0; renderMgmtTable()"></td>
+      <td><button class="btn small danger" onclick="mgmtItems.splice(${i},1);renderMgmtTable()">삭제</button></td>`;
+    tbody.appendChild(tr);
+  });
+  const total=mgmtItems.reduce((s,x)=>s+x.amount,0);
+  const vat=Math.round(total*0.1);
+  document.getElementById('mgmtTotalLine').textContent =
+    `공급가액 합계: ${total.toLocaleString()}원   부가세(10%): ${vat.toLocaleString()}원   합계: ${(total+vat).toLocaleString()}원`;
+}
+function addMgmtRow(){ mgmtItems.push({name:'',suffix:'',amount:0}); renderMgmtTable(); }
+
+function renderCommTable(){
+  const tbody=document.querySelector('#commTable tbody');
+  tbody.innerHTML='';
+  const deptOptions = DEPTS.map(d=>`<option value="${d[0]}">${d[0]}</option>`).join('');
+  commEmployees.forEach((e,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input value="${e.empno}" oninput="commEmployees[${i}].empno=this.value"></td>
+      <td><input value="${e.name}" oninput="commEmployees[${i}].name=this.value"></td>
+      <td><input value="${e.title}" oninput="commEmployees[${i}].title=this.value"></td>
+      <td><select onchange="commEmployees[${i}].dept=this.value">${deptOptions}</select></td>
+      <td><input type="number" value="${e.amount}" oninput="commEmployees[${i}].amount=Number(this.value)||0; renderCommTable()"></td>
+      <td><button class="btn small danger" onclick="commEmployees.splice(${i},1);renderCommTable()">삭제</button></td>`;
+    tr.querySelector('select').value = e.dept;
+    tbody.appendChild(tr);
+  });
+  const total=commEmployees.reduce((s,x)=>s+x.amount,0);
+  document.getElementById('commTotalLine').textContent = `통신비 합계: ${total.toLocaleString()}원`;
+}
+function addCommRow(){ commEmployees.push({empno:'',name:'',title:'',dept:'경영지원팀',amount:0}); renderCommTable(); }
+
+function allocate(amount, suffix, memo, vendor, docDate){
+  const rows=[]; let alloc=0;
+  DEPTS.forEach((d,i)=>{
+    const [dept,cc,head,dtype]=d;
+    const amt = (i===DEPTS.length-1) ? amount-alloc : Math.trunc(amount*head/TOTAL_HEAD);
+    if(amt===0) return;
+    rows.push({계정과목:acct(suffix,dtype),적요:memo,귀속부서:dept,코스트센터:cc,차변금액:amt,대변금액:0,거래처:vendor,증빙:'',기표일:docDate,출납예정일:''});
+    alloc+=amt;
+  });
+  return rows;
+}
+
+// 적용률 분할 또는 (매칭 안되면) 단일 부서 사용
+function allocateByRateOrDept(amount, empno, name, fallbackDept, ym, suffix, memo, vendor, docDate){
+  const rows=[];
+  const rates = lookupRates(empno, name, ym);
+  if(rates && rates.length){
+    let alloc=0;
+    rates.forEach((r,i)=>{
+      const portion = (i===rates.length-1) ? amount-alloc : Math.round(amount*r.rate/100);
+      if(portion===0) return;
+      const dtype = HQ_DEPTS.includes(r.dept) ? '판관비' : '제조비용';
+      rows.push({계정과목:acct(suffix,dtype),적요:memo,귀속부서:r.dept,코스트센터:r.cc||r.dept,차변금액:portion,대변금액:0,거래처:vendor,증빙:'',기표일:docDate,출납예정일:''});
+      alloc+=portion;
+    });
+  } else {
+    const dept = DEPTS.find(d=>d[0]===fallbackDept) || DEPTS[0];
+    rows.push({계정과목:acct(suffix,dept[3]),적요:memo,귀속부서:dept[0],코스트센터:dept[1],차변금액:amount,대변금액:0,거래처:vendor,증빙:'',기표일:docDate,출납예정일:''});
+  }
+  return rows;
+}
+
+function generate(){
+  const docDate=fmtDate(document.getElementById('docDate').value);
+  const payDate=fmtDate(document.getElementById('payDate').value);
+  const location=document.getElementById('location').value;
+  const groups=[]; // {label, rows:[...]}
+
+  const incMgmt=document.getElementById('task-mgmt').checked;
+  const incRent=document.getElementById('task-rent').checked;
+  const incEtc=document.getElementById('task-etc').checked;
+  const incDriver=document.getElementById('task-driver').checked;
+  const incComm=document.getElementById('task-comm').checked;
+
+  if(!incMgmt && !incRent && !incEtc && !incDriver && !incComm){
+    alert('처리할 업무를 먼저 선택해주세요.');
+    return;
+  }
+
+  let mgmtYM='', rentYM='', commYM='';
+
+  // ① 관리비
+  if(incMgmt){
+    const mgmtVendor=document.getElementById('mgmtVendor').value;
+    mgmtYM=document.getElementById('mgmtYM').value;
+    let mgmtTotal=0;
+    const mgmtRows=[];
+    mgmtItems.filter(it=>it.amount>0).forEach(it=>{
+      const memo=`${location} ${fmtYM(mgmtYM)} ${it.name}`;
+      mgmtRows.push(...allocate(it.amount, it.suffix, memo, mgmtVendor, docDate));
+      mgmtTotal+=it.amount;
+    });
+    if(mgmtTotal>0){
+      const vat=Math.round(mgmtTotal*0.1);
+      const sumMemo=`${location} ${fmtYM(mgmtYM)} 관리비(납부기한: ${payDate})`;
+      mgmtRows.push({계정과목:'일반매입부가세',적요:sumMemo,귀속부서:'',코스트센터:'',차변금액:vat,대변금액:0,거래처:mgmtVendor,증빙:'전자세금계산서(일반)',기표일:docDate,출납예정일:''});
+      mgmtRows.push({계정과목:'미지급금_일반',적요:sumMemo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:mgmtTotal+vat,거래처:mgmtVendor,증빙:'',기표일:docDate,출납예정일:payDate});
+      groups.push({label:`  ▶  본사 관리비  |  ${mgmtVendor}  |  ${fmtYMFull(mgmtYM)}분 (세금계산서 ${docDate})`, rows:mgmtRows});
+    }
+  }
+
+  // ② 임차료
+  if(incRent){
+    const rentVendor=document.getElementById('rentVendor').value;
+    rentYM=document.getElementById('rentYM').value;
+    const rentAmount=Number(document.getElementById('rentAmount').value)||0;
+    const rentSuffix=document.getElementById('rentSuffix').value;
+    if(rentAmount>0){
+      const memo=`${location} ${fmtYM(rentYM)} 임대료(납부기한: ${payDate})`;
+      const rentRows=allocate(rentAmount, rentSuffix, memo, rentVendor, docDate);
+      const vat=Math.round(rentAmount*0.1);
+      rentRows.push({계정과목:'일반매입부가세',적요:memo,귀속부서:'',코스트센터:'',차변금액:vat,대변금액:0,거래처:rentVendor,증빙:'전자세금계산서(일반)',기표일:docDate,출납예정일:''});
+      rentRows.push({계정과목:'미지급금_일반',적요:memo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:rentAmount+vat,거래처:rentVendor,증빙:'',기표일:docDate,출납예정일:payDate});
+      groups.push({label:`  ▶  본사 임차료  |  ${rentVendor}  |  ${fmtYMFull(rentYM)}분 (세금계산서 ${docDate})`, rows:rentRows});
+    }
+  }
+
+  // ③ 기타 본사관리비 (렌탈비품/전자도서관 등 - 개별 청구서, 청구서 1건당 1그룹)
+  if(incEtc){
+    const etcYM=document.getElementById('etcYM').value;
+    etcItems.filter(it=>it.supply>0).forEach(it=>{
+      const suffix=ETC_TYPE_MAP[it.type]||'지급수수료_기타';
+      const isCard = it.evidType==='카드';
+      const vatAcct = isCard ? '카드매입부가세' : '일반매입부가세';
+      const payAcct = isCard ? '법인카드미지급금' : '미지급금_일반';
+      const evid = isCard ? '카드매입' : '전자세금계산서(일반)';
+      const memo = it.memo || `${location} ${fmtYM(etcYM)} ${it.type}`;
+      const etcRows=allocate(it.supply, suffix, memo, it.vendor, docDate);
+      etcRows.push({계정과목:vatAcct,적요:memo,귀속부서:'',코스트센터:'',차변금액:it.vat,대변금액:0,거래처:it.vendor,증빙:evid,기표일:docDate,출납예정일:''});
+      etcRows.push({계정과목:payAcct,적요:memo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:it.supply+it.vat,거래처:it.vendor,증빙:'',기표일:docDate,출납예정일:payDate});
+      groups.push({label:`  ▶  기타본사관리비(${it.type})  |  ${it.vendor||'-'}  |  ${fmtYMFull(etcYM)}분 (세금계산서 ${docDate})`, rows:etcRows});
+    });
+  }
+
+  // ④ 법인운전대행(대리운전) - 적용률 매칭시 코스트센터 분할, 미매칭시 표의 부서 사용
+  if(incDriver){
+    const driverVendor=document.getElementById('driverVendor').value;
+    const driverYM=document.getElementById('driverYM').value;
+    let driverTotal=0;
+    const driverRows=[];
+    driverEmployees.filter(e=>e.amount>0).forEach(e=>{
+      const memo=`${fmtYM(driverYM)}분 운전대행(대리운전) 이용 - ${e.name}`;
+      const costAmt=Math.round(e.amount*1.1); // 부가세 불공제 → 이용금액의 10%를 비용에 가산
+      const rows = allocateByRateOrDept(costAmt, e.empno, e.name, e.dept, driverYM, '지급수수료_기타', memo, driverVendor, docDate);
+      driverRows.push(...rows);
+      driverTotal+=costAmt;
+    });
+    if(driverTotal>0){
+      const sumMemo=`${fmtYM(driverYM)}분 운전대행(대리운전) 이용`;
+      driverRows.push({계정과목:'일반매입부가세',적요:sumMemo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:0,거래처:driverVendor,증빙:'전자세금계산서(매입세액_불공제)',기표일:docDate,출납예정일:''});
+      driverRows.push({계정과목:'미지급금_일반',적요:sumMemo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:driverTotal,거래처:driverVendor,증빙:'',기표일:docDate,출납예정일:payDate});
+      groups.push({label:`  ▶  법인운전대행(대리운전)  |  ${driverVendor}  |  ${fmtYMFull(driverYM)}분 (세금계산서 ${docDate})`, rows:driverRows});
+    }
+  }
+
+  // ⑤ 직책보임자 통신비 - 적용률 매칭시 코스트센터 분할, 미매칭시 표의 부서 사용
+  if(incComm){
+    const commVendor=document.getElementById('commVendor').value;
+    commYM=document.getElementById('commYM').value;
+    let commTotal=0;
+    const commRows=[];
+    if(commYM){
+      const [y,m]=commYM.split('-').map(Number);
+      const lastDay=new Date(y,m,0).getDate();
+      const dateFrom=`${y}.${String(m).padStart(2,'0')}.01`;
+      const dateTo=`${y}.${String(m).padStart(2,'0')}.${String(lastDay).padStart(2,'0')}`;
+      commEmployees.filter(e=>e.amount>0).forEach(e=>{
+        const nameTag=`${e.name} ${e.title}`.trim();
+        const memo=`${dateFrom} ~ ${dateTo} 휴대폰사용지원비(${nameTag})`;
+        const rows = allocateByRateOrDept(e.amount, e.empno, e.name, e.dept, commYM, '복리후생비_휴대폰사용지원비', memo, commVendor, docDate);
+        commRows.push(...rows);
+        commTotal+=e.amount;
+      });
+      if(commTotal>0){
+        const sumMemo=`${fmtYM(commYM)} 직책보임자 통신비 지급`;
+        commRows.push({계정과목:'일반매입부가세',적요:sumMemo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:0,거래처:commVendor,증빙:'',기표일:docDate,출납예정일:''});
+        commRows.push({계정과목:'미지급금_일반',적요:sumMemo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:commTotal,거래처:commVendor,증빙:'',기표일:docDate,출납예정일:payDate});
+        groups.push({label:`  ▶  직책보임자 통신비  |  ${commVendor||'-'}  |  ${fmtYMFull(commYM)}분 (세금계산서 ${docDate})`, rows:commRows});
+      }
+    }
+  }
+
+  if(groups.length===0){ alert('입력된 금액이 없습니다. 항목을 입력해주세요.'); return; }
+
+  const header=['계정과목','적요','귀속부서','코스트센터','차변금액','대변금액','거래처','증빙','기표일','출납예정일'];
+  const now=new Date();
+  const nowStr=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const aoa=[[`수산이앤에스 전표입력 참조   (생성: ${nowStr})`]];
+  const merges=[{s:{r:0,c:0},e:{r:0,c:header.length-1}}];
+
+  groups.forEach((g,gi)=>{
+    if(gi>0) aoa.push([]); // 그룹 사이 빈 줄
+    const headerRowIdx=aoa.length;
+    aoa.push([g.label]);
+    merges.push({s:{r:headerRowIdx,c:0},e:{r:headerRowIdx,c:header.length-1}});
+    aoa.push(header.slice());
+    let dSum=0, cSum=0;
+    g.rows.forEach(r=>{
+      aoa.push(header.map(h=>r[h]));
+      dSum+=r['차변금액']||0;
+      cSum+=r['대변금액']||0;
+    });
+    aoa.push(['합 계','','','',dSum,cSum,'','','','']);
+  });
+
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=merges;
+  ws['!cols']=[{wch:38},{wch:46},{wch:18},{wch:18},{wch:14},{wch:14},{wch:22},{wch:26},{wch:13},{wch:13}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'전표입력참조');
+
+  const ymTag=(mgmtYM||rentYM||commYM||'').replace('-','');
+  XLSX.writeFile(wb, `전표_${ymTag||'결과'}.xlsx`);
+}
+
+document.getElementById('rateMasterFile').addEventListener('change', handleRateMasterUpload);
+document.getElementById('mgmtPdfFile').addEventListener('change', handleMgmtPdfUpload);
+document.getElementById('etcPdfFile').addEventListener('change', handleEtcPdfUpload);
+document.getElementById('driverXlsxFile').addEventListener('change', handleDriverUpload);
+document.getElementById('commXlsxFile').addEventListener('change', handleCommUpload);
+
+// ===================== 업무 선택에 따른 카드 표시/숨김 =====================
+function updateTaskVisibility(){
+  const checks = {
+    mgmt: document.getElementById('task-mgmt').checked,
+    rent: document.getElementById('task-rent').checked,
+    etc: document.getElementById('task-etc').checked,
+    driver: document.getElementById('task-driver').checked,
+    comm: document.getElementById('task-comm').checked,
+  };
+  const any = Object.values(checks).some(v=>v);
+  document.getElementById('commonCard').classList.toggle('hidden', !any);
+  document.getElementById('mgmtCard').classList.toggle('hidden', !checks.mgmt);
+  document.getElementById('rentCard').classList.toggle('hidden', !checks.rent);
+  document.getElementById('etcCard').classList.toggle('hidden', !checks.etc);
+  document.getElementById('driverCard').classList.toggle('hidden', !checks.driver);
+  document.getElementById('commCard').classList.toggle('hidden', !checks.comm);
+  document.getElementById('footerBar').classList.toggle('hidden', !any);
+}
+// ===================== 총무 대시보드 연동: URL 파라미터로 사전 설정 =====================
+function applyUrlParams(){
+  const params = new URLSearchParams(window.location.search);
+  const task = params.get('task');
+  if(!task) return;
+  const idMap = {mgmt:'task-mgmt', rent:'task-rent', etc:'task-etc', driver:'task-driver', comm:'task-comm'};
+  const tasks = task.split(',').map(s=>s.trim()).filter(Boolean);
+  tasks.forEach(t=>{
+    const id = idMap[t];
+    if(id){ const el=document.getElementById(id); if(el) el.checked = true; }
+  });
+
+  const etcType = params.get('etcType');
+  const vendor = params.get('vendor');
+  const ym = params.get('ym');
+
+  if(tasks.includes('etc') && etcType){
+    etcItems = [{type:etcType, vendor:vendor||'', supply:0, vat:0, evidType:'세금계산서', memo:''}];
+  }
+  if(tasks.includes('rent') && vendor){
+    const el=document.getElementById('rentVendor'); if(el) el.value = vendor;
+  }
+  if(tasks.includes('mgmt') && vendor){
+    const el=document.getElementById('mgmtVendor'); if(el) el.value = vendor;
+  }
+  if(tasks.includes('comm') && vendor){
+    const el=document.getElementById('commVendor'); if(el) el.value = vendor;
+  }
+  if(ym){
+    ['mgmtYM','rentYM','etcYM','driverYM','commYM'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.value = ym;
+    });
+  }
+}
+
+applyUrlParams();
+updateTaskVisibility();
+
+renderMgmtTable();
+renderEtcTable();
+renderDriverTable();
+renderCommTable();
+</script>
+</body>
+</html>

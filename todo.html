@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>할 일 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+:root {
+  --bg:#F2F4F6;
+  --card:#ffffff;
+  --t1:#191F28;
+  --t2:#4E5968;
+  --t3:#8B95A1;
+  --blue:#3182F6;
+  --blue-bg:#EBF2FF;
+  --green:#1DB67F;
+  --green-bg:#E6F9F0;
+  --orange:#FF9800;
+  --orange-bg:#FFF4E5;
+  --red:#F04452;
+  --red-bg:#FDEAEC;
+  --purple:#6C5CE7;
+  --purple-bg:#F0EEFF;
+  --line:#E5E8EB;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  min-height:100vh;
+}
+
+/* ===== 헤더 ===== */
+.header{
+  background:var(--card); border-bottom:1px solid var(--line);
+  padding:0 32px; display:flex; align-items:center; justify-content:space-between;
+  height:60px; position:sticky; top:0; z-index:100;
+}
+.header-left{display:flex;align-items:center;gap:10px;}
+.header-back{
+  display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;
+  color:var(--t2);text-decoration:none;padding:6px 10px;border-radius:8px;
+  transition:background .12s,color .12s;
+}
+.header-back:hover{background:var(--bg);color:var(--t1);}
+.header-title{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px;}
+.header-title .dot{width:8px;height:8px;background:var(--blue);border-radius:50%;}
+.header-right{display:flex;align-items:center;gap:10px;}
+
+/* ===== 컨테이너 ===== */
+.container{max-width:900px;margin:0 auto;padding:32px 24px 80px;}
+
+/* ===== 상단 통계 ===== */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{
+  background:var(--card);border-radius:16px;padding:18px 18px 16px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+}
+.stat-card .ic{font-size:20px;margin-bottom:10px;}
+.stat-card .num{font-size:24px;font-weight:800;line-height:1;}
+.stat-card .lbl{font-size:12px;color:var(--t3);margin-top:4px;font-weight:500;}
+
+/* ===== 빠른 추가 ===== */
+.quick-add-card{
+  background:var(--card);border-radius:16px;padding:16px 18px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:20px;
+}
+.quick-add-row{display:flex;gap:10px;align-items:center;}
+.quick-input{
+  flex:1;border:1.5px solid var(--line);border-radius:10px;
+  padding:11px 14px;font-size:14px;font-family:inherit;
+  color:var(--t1);background:var(--bg);outline:none;
+  transition:border-color .15s,background .15s;
+}
+.quick-input:focus{border-color:var(--blue);background:#fff;}
+.quick-input::placeholder{color:var(--t3);}
+.opts-row{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;}
+.opts-row select,.opts-row input[type=date]{
+  padding:7px 10px;border:1px solid var(--line);border-radius:8px;
+  font-size:12.5px;font-family:inherit;color:var(--t2);
+  background:var(--bg);outline:none;cursor:pointer;
+}
+.opts-row select:focus,.opts-row input[type=date]:focus{border-color:var(--blue);}
+.opts-row .cat-select{min-width:110px;}
+.tag-input-wrap{display:flex;align-items:center;gap:6px;}
+.tag-input{
+  padding:7px 10px;border:1px solid var(--line);border-radius:8px;
+  font-size:12.5px;font-family:inherit;color:var(--t2);
+  background:var(--bg);outline:none;width:130px;
+}
+.tag-input:focus{border-color:var(--blue);}
+.add-btn{
+  background:var(--blue);color:#fff;border:none;border-radius:10px;
+  padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;
+  font-family:inherit;white-space:nowrap;flex-shrink:0;
+  transition:background .12s;
+}
+.add-btn:hover{background:#1B6FE0;}
+
+/* ===== 필터 & 검색 바 ===== */
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap;}
+.filter-tabs{display:flex;gap:6px;}
+.filter-tab{
+  background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--t2);
+  cursor:pointer;font-family:inherit;transition:all .12s;display:flex;align-items:center;gap:5px;
+}
+.filter-tab:hover{background:#F7F9FB;}
+.filter-tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.filter-tab .cnt{
+  font-size:11px;font-weight:700;padding:1px 6px;border-radius:10px;
+  background:rgba(255,255,255,.25);
+}
+.filter-tab:not(.active) .cnt{background:var(--bg);color:var(--t3);}
+
+.toolbar-right{display:flex;align-items:center;gap:8px;}
+.search-wrap{position:relative;}
+.search-wrap input{
+  padding:8px 12px 8px 34px;border:1px solid var(--line);border-radius:10px;
+  font-size:13px;font-family:inherit;color:var(--t1);background:var(--card);
+  outline:none;width:200px;transition:border-color .15s;
+}
+.search-wrap input:focus{border-color:var(--blue);}
+.search-wrap .search-ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:14px;}
+.sort-select{
+  padding:8px 10px;border:1px solid var(--line);border-radius:10px;
+  font-size:12.5px;font-family:inherit;color:var(--t2);background:var(--card);outline:none;cursor:pointer;
+}
+.sort-select:focus{border-color:var(--blue);}
+
+/* ===== 진행률 바 ===== */
+.progress-card{
+  background:var(--card);border-radius:14px;padding:14px 18px;
+  margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);
+  display:flex;align-items:center;gap:16px;
+}
+.progress-card .prog-label{font-size:13px;font-weight:700;color:var(--t1);white-space:nowrap;}
+.progress-card .prog-bar-bg{flex:1;height:8px;background:var(--bg);border-radius:20px;overflow:hidden;}
+.progress-card .prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),#5B9BFF);border-radius:20px;transition:width .4s;}
+.progress-card .prog-pct{font-size:14px;font-weight:800;color:var(--blue);white-space:nowrap;min-width:40px;text-align:right;}
+
+/* ===== 카테고리 색상 뱃지 ===== */
+.cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;}
+
+/* ===== 할 일 목록 카드 ===== */
+.list-card{background:var(--card);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);overflow:hidden;}
+.todo-item{
+  display:flex;align-items:flex-start;gap:12px;padding:15px 18px;
+  border-bottom:1px solid var(--line);transition:background .1s;position:relative;
+}
+.todo-item:last-child{border-bottom:none;}
+.todo-item:hover{background:#F7F9FB;}
+.todo-item.done{opacity:.7;}
+.todo-item.done .todo-title{text-decoration:line-through;color:var(--t3);}
+
+.chk-btn{
+  width:22px;height:22px;border-radius:50%;border:2px solid var(--line);
+  flex-shrink:0;cursor:pointer;background:none;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;margin-top:1px;
+}
+.chk-btn:hover{border-color:var(--green);}
+.chk-btn.done{background:var(--green);border-color:var(--green);}
+.chk-btn .chk-ic{color:#fff;font-size:12px;font-weight:800;display:none;}
+.chk-btn.done .chk-ic{display:block;}
+
+.todo-body{flex:1;min-width:0;}
+.todo-title{font-size:14px;font-weight:600;color:var(--t1);margin-bottom:5px;line-height:1.4;}
+.todo-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.priority-tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.priority-tag.high{background:var(--red-bg);color:var(--red);}
+.priority-tag.medium{background:var(--orange-bg);color:var(--orange);}
+.priority-tag.low{background:var(--green-bg);color:var(--green);}
+.cat-tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--bg);color:var(--t2);}
+.tag-chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--purple-bg);color:var(--purple);}
+.due-tag{font-size:11px;font-weight:600;color:var(--t3);display:flex;align-items:center;gap:3px;}
+.due-tag.overdue{color:var(--red);font-weight:700;}
+.due-tag.today{color:var(--orange);font-weight:700;}
+.due-tag.soon{color:var(--blue);}
+
+.todo-memo{font-size:12.5px;color:var(--t3);margin-top:4px;line-height:1.5;}
+
+/* 하위 작업 */
+.subtask-list{margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+.subtask-item{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--t2);}
+.sub-chk{
+  width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line);
+  flex-shrink:0;cursor:pointer;background:none;
+  display:flex;align-items:center;justify-content:center;transition:all .12s;
+}
+.sub-chk:hover{border-color:var(--green);}
+.sub-chk.done{background:var(--green);border-color:var(--green);}
+.sub-chk .chk-ic{color:#fff;font-size:9px;font-weight:800;display:none;}
+.sub-chk.done .chk-ic{display:block;}
+.subtask-item.done .sub-title{text-decoration:line-through;color:var(--t3);}
+
+.todo-actions{display:flex;align-items:center;gap:2px;flex-shrink:0;margin-top:1px;}
+.icon-btn{
+  background:none;border:none;cursor:pointer;color:var(--t3);
+  font-size:14px;padding:5px 7px;border-radius:8px;font-family:inherit;
+  transition:background .12s,color .12s;
+}
+.icon-btn:hover{background:var(--bg);color:var(--t1);}
+.icon-btn.danger:hover{background:var(--red-bg);color:var(--red);}
+
+/* ===== 빈 상태 ===== */
+.empty-state{
+  padding:60px 20px;text-align:center;color:var(--t3);
+}
+.empty-state .icon{font-size:48px;margin-bottom:14px;}
+.empty-state .msg{font-size:15px;font-weight:700;color:var(--t2);margin-bottom:6px;}
+.empty-state .sub{font-size:13px;}
+
+/* ===== 편집 모달 ===== */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(25,31,40,.45);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.show{display:flex;}
+.modal{
+  background:var(--card);border-radius:20px;padding:26px;
+  width:100%;max-width:520px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 60px rgba(0,0,0,.18);
+}
+.modal h3{font-size:18px;font-weight:800;margin-bottom:20px;}
+.form-field{margin-bottom:14px;}
+.form-field label{display:block;font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px;}
+.form-field input,.form-field select,.form-field textarea{
+  width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;
+  font-size:14px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;
+  transition:border-color .15s,background .15s;
+}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{
+  border-color:var(--blue);background:#fff;
+}
+.form-field textarea{resize:vertical;min-height:80px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+.modal-actions button{
+  flex:1;padding:13px;border-radius:12px;font-size:14px;font-weight:700;
+  cursor:pointer;font-family:inherit;border:none;transition:background .12s;
+}
+.btn-save{background:var(--blue);color:#fff;}
+.btn-save:hover{background:#1B6FE0;}
+.btn-cancel{background:var(--bg);color:var(--t2);}
+.btn-cancel:hover{background:var(--line);}
+
+/* 하위 작업 편집 */
+.subtask-editor{margin-top:8px;}
+.subtask-editor-item{
+  display:flex;align-items:center;gap:6px;margin-bottom:6px;
+}
+.subtask-editor-item input{
+  flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px;
+  font-size:13px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;
+}
+.subtask-editor-item input:focus{border-color:var(--blue);}
+.add-sub-btn{
+  background:none;border:1px dashed var(--line);border-radius:8px;
+  padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--t3);
+  cursor:pointer;font-family:inherit;width:100%;text-align:left;
+  transition:border-color .12s,color .12s;
+}
+.add-sub-btn:hover{border-color:var(--blue);color:var(--blue);}
+
+/* ===== Undo 스낵바 ===== */
+.snackbar{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--t1);color:#fff;padding:12px 20px;border-radius:12px;
+  font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:300;
+  opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;
+}
+.snackbar.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto;}
+.snackbar button{
+  background:none;border:none;color:var(--blue);font-size:13.5px;font-weight:800;
+  cursor:pointer;font-family:inherit;padding:0;
+}
+.snackbar button:hover{color:#5B9BFF;}
+
+/* ===== 카테고리 관리 ===== */
+.cat-manage-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.cat-badge{
+  display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;
+  background:var(--bg);border:1px solid var(--line);font-size:12px;font-weight:600;color:var(--t2);
+  cursor:pointer;transition:all .12s;
+}
+.cat-badge:hover{border-color:var(--blue);color:var(--blue);}
+.cat-badge.active{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);}
+.cat-badge .rm{font-size:14px;color:var(--t3);line-height:1;margin-left:2px;}
+.cat-badge .rm:hover{color:var(--red);}
+
+/* ===== 메일 모달 ===== */
+.mail-preview{
+  background:var(--bg);border:1px solid var(--line);border-radius:10px;
+  padding:14px;font-size:13px;color:var(--t2);line-height:1.7;
+  max-height:260px;overflow-y:auto;white-space:pre-wrap;font-family:inherit;
+  margin-top:6px;
+}
+.mail-todo-check{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+.mail-todo-check:last-child{border-bottom:none;}
+.mail-todo-check input[type=checkbox]{width:16px;height:16px;margin-top:2px;cursor:pointer;accent-color:var(--blue);}
+.mail-todo-info{flex:1;}
+.mail-todo-title{font-size:13.5px;font-weight:600;color:var(--t1);}
+.mail-todo-meta{font-size:12px;color:var(--t3);margin-top:2px;}
+.mail-select-all{font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;}
+.mail-select-all:hover{text-decoration:underline;}
+
+@media(max-width:640px){
+  .stat-row{grid-template-columns:repeat(2,1fr);}
+  .form-grid{grid-template-columns:1fr;}
+  .header{padding:0 16px;}
+  .container{padding:20px 12px 60px;}
+  .search-wrap input{width:140px;}
+}
+</style>
+</head>
+<body>
+<!-- ===== 비밀번호 잠금 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;" onkeydown="if(event.key==='Enter')gateCheck()" onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1B6FE0'" onmouseout="this.style.background='#3182F6'">들어가기</button>
+  </div>
+</div>
+<script>
+  const GATE_PW_HASH = 'fbdb32e45b2566ac0a1ead4d585162645698e431dfec179c69ccffb31d996a03';
+  (function(){
+    if(sessionStorage.getItem('gm_auth')==='ok'){
+      document.getElementById('gate').style.display='none';
+    } else {
+      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
+    }
+  })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  }
+</script>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-left">
+    <a class="header-back" href="index.html">← 메인</a>
+    <div class="header-title">
+      <div class="dot"></div>
+      할 일 관리
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="icon-btn" onclick="openMailModal()" title="메일 보내기" style="font-size:16px;">✉️</button>
+    <button class="icon-btn" onclick="openCatModal()" title="카테고리 관리" style="font-size:16px;">🏷️</button>
+  </div>
+</div>
+
+<!-- 컨테이너 -->
+<div class="container">
+
+  <!-- 통계 -->
+  <div class="stat-row" id="statRow">
+    <div class="stat-card">
+      <div class="ic">📋</div>
+      <div class="num" id="statTotal">0</div>
+      <div class="lbl">전체</div>
+    </div>
+    <div class="stat-card">
+      <div class="ic">⏳</div>
+      <div class="num" id="statPending">0</div>
+      <div class="lbl">진행중</div>
+    </div>
+    <div class="stat-card">
+      <div class="ic">✅</div>
+      <div class="num" id="statDone">0</div>
+      <div class="lbl">완료</div>
+    </div>
+    <div class="stat-card">
+      <div class="ic">🚨</div>
+      <div class="num" id="statOverdue" style="color:var(--red)">0</div>
+      <div class="lbl">기한 초과</div>
+    </div>
+  </div>
+
+  <!-- 빠른 추가 -->
+  <div class="quick-add-card">
+    <div class="quick-add-row">
+      <input class="quick-input" id="quickInput" placeholder="새 할 일을 입력하고 Enter 또는 추가 버튼을 누르세요..." autocomplete="off">
+      <button class="add-btn" onclick="quickAdd()">+ 추가</button>
+    </div>
+    <div class="opts-row">
+      <select id="quickPriority" class="cat-select">
+        <option value="medium">🟡 보통</option>
+        <option value="high">🔴 높음</option>
+        <option value="low">🟢 낮음</option>
+      </select>
+      <select id="quickCat" class="cat-select">
+        <option value="">카테고리 없음</option>
+      </select>
+      <input type="date" id="quickDue">
+      <div class="tag-input-wrap">
+        <input class="tag-input" id="quickTag" placeholder="태그 (쉼표 구분)">
+      </div>
+    </div>
+  </div>
+
+  <!-- 필터 & 정렬 -->
+  <div class="toolbar">
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">전체 <span class="cnt" id="cntAll">0</span></button>
+      <button class="filter-tab" data-filter="pending" onclick="setFilter('pending',this)">진행중 <span class="cnt" id="cntPending">0</span></button>
+      <button class="filter-tab" data-filter="done" onclick="setFilter('done',this)">완료 <span class="cnt" id="cntDone">0</span></button>
+      <button class="filter-tab" data-filter="overdue" onclick="setFilter('overdue',this)">기한 초과 <span class="cnt" id="cntOverdue">0</span></button>
+      <button class="filter-tab" data-filter="tasks" onclick="setFilter('tasks',this)">📋 업무 <span class="cnt" id="cntTasks">0</span></button>
+    </div>
+    <div class="toolbar-right">
+      <div class="search-wrap">
+        <span class="search-ic">🔍</span>
+        <input id="searchInput" placeholder="검색..." oninput="render()">
+      </div>
+      <select class="sort-select" id="sortSelect" onchange="render()">
+        <option value="created">생성일순</option>
+        <option value="due">마감일순</option>
+        <option value="priority">우선순위순</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 진행률 -->
+  <div class="progress-card">
+    <span class="prog-label">진행률</span>
+    <div class="prog-bar-bg"><div class="prog-bar-fill" id="progBar" style="width:0%"></div></div>
+    <span class="prog-pct" id="progPct">0%</span>
+  </div>
+
+  <!-- 목록 -->
+  <div class="list-card" id="listCard">
+    <div class="empty-state">
+      <div class="icon">📝</div>
+      <div class="msg">할 일이 없어요</div>
+      <div class="sub">위 입력창에서 새 할 일을 추가해보세요.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== 편집 모달 ===== -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3 id="modalTitle">할 일 편집</h3>
+    <div class="form-field">
+      <label>제목 *</label>
+      <input id="editTitle" placeholder="할 일 제목">
+    </div>
+    <div class="form-field">
+      <label>메모</label>
+      <textarea id="editMemo" placeholder="상세 메모 (선택)"></textarea>
+    </div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>우선순위</label>
+        <select id="editPriority">
+          <option value="high">🔴 높음</option>
+          <option value="medium">🟡 보통</option>
+          <option value="low">🟢 낮음</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>카테고리</label>
+        <select id="editCat"></select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>마감일</label>
+        <input type="date" id="editDue">
+      </div>
+      <div class="form-field">
+        <label>태그 (쉼표 구분)</label>
+        <input id="editTags" placeholder="예: 업무, 긴급">
+      </div>
+    </div>
+    <div class="form-field">
+      <label>하위 작업</label>
+      <div class="subtask-editor" id="subtaskEditor"></div>
+      <button class="add-sub-btn" onclick="addSubtaskField()">+ 하위 작업 추가</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 카테고리 모달 ===== -->
+<div class="modal-overlay" id="catModal">
+  <div class="modal" style="max-width:400px;">
+    <h3>카테고리 관리</h3>
+    <div class="form-field">
+      <label>새 카테고리</label>
+      <div style="display:flex;gap:8px;">
+        <input id="newCatName" placeholder="카테고리 이름" style="flex:1;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;">
+        <input type="color" id="newCatColor" value="#3182F6" style="width:44px;height:44px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer;padding:2px;">
+        <button class="add-btn" onclick="addCategory()" style="padding:10px 16px;">추가</button>
+      </div>
+    </div>
+    <div id="catList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;"></div>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn-save" onclick="closeCatModal()">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 메일 모달 ===== -->
+<div class="modal-overlay" id="mailModal">
+  <div class="modal" style="max-width:560px;">
+    <h3>✉️ 아웃룩 메일 보내기</h3>
+    <div class="form-field">
+      <label>받는 사람</label>
+      <input id="mailTo" placeholder="example@company.com" type="email">
+    </div>
+    <div class="form-field">
+      <label>제목</label>
+      <input id="mailSubject" placeholder="메일 제목">
+    </div>
+    <div class="form-field" id="mailChecklistWrap" style="display:none;">
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        전송할 항목 선택
+        <button class="mail-select-all" onclick="mailSelectAll()">전체 선택/해제</button>
+      </label>
+      <div id="mailChecklist" style="border:1px solid var(--line);border-radius:10px;padding:4px 14px;max-height:200px;overflow-y:auto;margin-top:6px;"></div>
+    </div>
+    <div class="form-field">
+      <label>본문 미리보기</label>
+      <div class="mail-preview" id="mailPreview"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeMailModal()">취소</button>
+      <button class="btn-save" onclick="sendMail()" style="background:var(--blue);">📨 아웃룩으로 열기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Undo 스낵바 ===== -->
+<div class="snackbar" id="snackbar">
+  <span id="snackMsg">삭제되었습니다.</span>
+  <button onclick="undoDelete()">되돌리기</button>
+</div>
+
+<script>
+// ========================= 데이터 =========================
+let todos = JSON.parse(localStorage.getItem('todos_v2') || '[]');
+let categories = JSON.parse(localStorage.getItem('todo_cats') || '[]');
+let currentFilter = 'all';
+let editingId = null;
+let deletedItem = null;
+let snackTimer = null;
+
+// ========================= 업무 데이터 (gongmu_tasks_v1) =========================
+const TASK_CAT_LABELS = {
+  purchase: '구매업무', routine: '상시업무', monthly: '월간업무',
+  yearly: '연간업무', etc: '기타업무'
+};
+
+function loadGongmuTasks() {
+  return JSON.parse(localStorage.getItem('gongmu_tasks_v1') || '[]');
+}
+
+function saveGongmuTasks(tasks) {
+  localStorage.setItem('gongmu_tasks_v1', JSON.stringify(tasks));
+}
+
+function isTaskOverdue(t) {
+  if (!t.due || t.status === 'done') return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(t.due); due.setHours(0,0,0,0);
+  return due < today;
+}
+
+function toggleTaskStatus(id, newStatus) {
+  const tasks = loadGongmuTasks();
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.status = newStatus;
+  saveGongmuTasks(tasks);
+  render();
+}
+
+function renderTasksView() {
+  const tasks = loadGongmuTasks();
+  const q = document.getElementById('searchInput').value.toLowerCase();
+
+  // 통계
+  const total = tasks.length;
+  const done = tasks.filter(t => t.status === 'done').length;
+  const doing = tasks.filter(t => t.status === 'doing').length;
+  const overdue = tasks.filter(isTaskOverdue).length;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPending').textContent = doing;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statOverdue').textContent = overdue;
+  document.getElementById('cntTasks').textContent = total;
+
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('progBar').style.width = pct + '%';
+  document.getElementById('progPct').textContent = pct + '%';
+
+  // 필터링
+  let list = tasks.filter(t => !q || t.title.toLowerCase().includes(q));
+
+  const el = document.getElementById('listCard');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div><div class="msg">업무 항목이 없어요</div><div class="sub">index.html에서 업무를 추가하세요.</div></div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(t => {
+    const dueInfo = getDueLabel(t.due);
+    const catLabel = TASK_CAT_LABELS[t.cat] || t.cat || '';
+    const priorityMap = { high: '높음', mid: '보통', low: '낮음' };
+    const priorityCls = t.priority === 'high' ? 'high' : t.priority === 'mid' ? 'medium' : 'low';
+    const priorityLabel = priorityMap[t.priority] || t.priority;
+    const isDone = t.status === 'done';
+
+    const statusBtns = [
+      { val: 'wait', label: '대기', color: 'var(--t3)' },
+      { val: 'doing', label: '진행중', color: 'var(--blue)' },
+      { val: 'done', label: '완료', color: 'var(--green)' }
+    ].map(s => {
+      const active = t.status === s.val;
+      return `<button onclick="toggleTaskStatus('${t.id}','${s.val}')" style="
+        font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;border:1.5px solid ${s.color};
+        background:${active ? s.color : 'transparent'};color:${active ? '#fff' : s.color};
+        cursor:pointer;font-family:inherit;transition:all .12s;">${s.label}</button>`;
+    }).join('');
+
+    return `<div class="todo-item${isDone ? ' done' : ''}" id="task-${t.id}">
+      <button class="chk-btn${isDone ? ' done' : ''}" onclick="toggleTaskStatus('${t.id}','${isDone ? 'wait' : 'done'}')" title="완료 토글"><span class="chk-ic">✓</span></button>
+      <div class="todo-body">
+        <div class="todo-title">${esc(t.title)}</div>
+        <div class="todo-meta">
+          <span class="priority-tag ${priorityCls}">${priorityLabel}</span>
+          ${catLabel ? `<span class="cat-tag">${catLabel}</span>` : ''}
+          ${dueInfo ? `<span class="due-tag ${dueInfo.cls}">📅 ${dueInfo.label}</span>` : ''}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;">${statusBtns}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function save() {
+  localStorage.setItem('todos_v2', JSON.stringify(todos));
+  localStorage.setItem('todo_cats', JSON.stringify(categories));
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+// ========================= 카테고리 =========================
+function renderCatSelects() {
+  const opts = '<option value="">카테고리 없음</option>' +
+    categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('quickCat').innerHTML = opts;
+  document.getElementById('editCat').innerHTML = opts;
+}
+
+function renderCatList() {
+  const el = document.getElementById('catList');
+  if (!categories.length) { el.innerHTML = '<span style="color:var(--t3);font-size:13px;">카테고리가 없습니다.</span>'; return; }
+  el.innerHTML = categories.map(c => `
+    <div class="cat-badge">
+      <span style="width:10px;height:10px;border-radius:50%;background:${c.color};display:inline-block;"></span>
+      ${c.name}
+      <span class="rm" onclick="removeCategory('${c.id}')" title="삭제">×</span>
+    </div>`).join('');
+}
+
+function addCategory() {
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) return;
+  const color = document.getElementById('newCatColor').value;
+  categories.push({ id: uid(), name, color });
+  save();
+  document.getElementById('newCatName').value = '';
+  renderCatSelects();
+  renderCatList();
+}
+
+function removeCategory(id) {
+  categories = categories.filter(c => c.id !== id);
+  todos = todos.map(t => t.categoryId === id ? { ...t, categoryId: '' } : t);
+  save();
+  renderCatSelects();
+  renderCatList();
+  render();
+}
+
+function openCatModal() { renderCatList(); document.getElementById('catModal').classList.add('show'); }
+function closeCatModal() { document.getElementById('catModal').classList.remove('show'); render(); }
+
+// ========================= 할 일 추가 =========================
+function quickAdd() {
+  const title = document.getElementById('quickInput').value.trim();
+  if (!title) return;
+  const todo = {
+    id: uid(),
+    title,
+    memo: '',
+    priority: document.getElementById('quickPriority').value,
+    categoryId: document.getElementById('quickCat').value,
+    dueDate: document.getElementById('quickDue').value,
+    tags: document.getElementById('quickTag').value.split(',').map(t => t.trim()).filter(Boolean),
+    isCompleted: false,
+    completedAt: null,
+    subTasks: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  todos.unshift(todo);
+  save();
+  document.getElementById('quickInput').value = '';
+  document.getElementById('quickTag').value = '';
+  document.getElementById('quickDue').value = '';
+  render();
+}
+
+// ========================= 필터 & 렌더 =========================
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  // 업무 탭이면 빠른 추가창 숨기기
+  document.querySelector('.quick-add-card').style.display = f === 'tasks' ? 'none' : '';
+  render();
+}
+
+function getDueLabel(dueDate) {
+  if (!dueDate) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(dueDate); due.setHours(0,0,0,0);
+  const diff = Math.round((due - today) / 86400000);
+  if (diff < 0) return { label: `D+${Math.abs(diff)} 초과`, cls: 'overdue' };
+  if (diff === 0) return { label: '오늘 마감', cls: 'today' };
+  if (diff <= 3) return { label: `D-${diff}`, cls: 'soon' };
+  return { label: `D-${diff}`, cls: '' };
+}
+
+function isOverdue(t) {
+  if (!t.dueDate || t.isCompleted) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(t.dueDate); due.setHours(0,0,0,0);
+  return due < today;
+}
+
+function priorityOrder(p) { return p === 'high' ? 0 : p === 'medium' ? 1 : 2; }
+
+// gongmu_tasks_v1 업무를 할 일 형태로 변환 (마감일 있는 것만)
+function getGongmuAsTodos() {
+  return loadGongmuTasks()
+    .filter(t => t.due)
+    .map(t => ({
+      id: 'g_' + t.id,
+      _gongmuId: t.id,
+      _isGongmu: true,
+      title: t.title,
+      memo: '',
+      priority: t.priority === 'high' ? 'high' : t.priority === 'mid' ? 'medium' : 'low',
+      dueDate: t.due,
+      isCompleted: t.status === 'done',
+      tags: [],
+      subTasks: [],
+      createdAt: t.due + 'T00:00:00',
+      _catLabel: TASK_CAT_LABELS[t.cat] || t.cat || '',
+    }));
+}
+
+function getFiltered() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const allItems = [...todos, ...getGongmuAsTodos()];
+  let list = allItems.filter(t => {
+    const matchQ = !q || t.title.toLowerCase().includes(q) || (t.memo||'').toLowerCase().includes(q) || (t.tags||[]).some(tg => tg.toLowerCase().includes(q));
+    if (!matchQ) return false;
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'pending') return !t.isCompleted;
+    if (currentFilter === 'done') return t.isCompleted;
+    if (currentFilter === 'overdue') return isOverdue(t);
+    return true;
+  });
+  const sort = document.getElementById('sortSelect').value;
+  list.sort((a,b) => {
+    if (sort === 'priority') return priorityOrder(a.priority) - priorityOrder(b.priority);
+    if (sort === 'due') {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate) - new Date(b.dueDate);
+    }
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+  return list;
+}
+
+function getCat(id) { return categories.find(c => c.id === id); }
+
+function render() {
+  // 업무 탭 카운트 (항상 갱신)
+  const gTasks = loadGongmuTasks();
+  document.getElementById('cntTasks').textContent = gTasks.length;
+
+  if (currentFilter === 'tasks') {
+    renderTasksView();
+    return;
+  }
+
+  const allItems = [...todos, ...getGongmuAsTodos()];
+  const total = allItems.length;
+  const done = allItems.filter(t => t.isCompleted).length;
+  const pending = total - done;
+  const overdue = allItems.filter(isOverdue).length;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statOverdue').textContent = overdue;
+
+  document.getElementById('cntAll').textContent = total;
+  document.getElementById('cntPending').textContent = pending;
+  document.getElementById('cntDone').textContent = done;
+  document.getElementById('cntOverdue').textContent = overdue;
+
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById('progBar').style.width = pct + '%';
+  document.getElementById('progPct').textContent = pct + '%';
+
+  const list = getFiltered();
+  const el = document.getElementById('listCard');
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">${currentFilter==='done'?'🎉':currentFilter==='overdue'?'😌':'📝'}</div><div class="msg">${currentFilter==='done'?'완료한 항목이 없어요':currentFilter==='overdue'?'기한 초과 항목이 없어요':'할 일이 없어요'}</div><div class="sub">${currentFilter==='all'?'위 입력창에서 새 할 일을 추가해보세요.':'필터 조건에 맞는 항목이 없습니다.'}</div></div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(t => {
+    const dueInfo = getDueLabel(t.dueDate);
+    const isDone = t.isCompleted;
+
+    if (t._isGongmu) {
+      // ── 업무 항목 (gongmu_tasks_v1에서 온 것) ──
+      const priorityCls = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'medium' : 'low';
+      const priorityLbl = t.priority === 'high' ? '높음' : t.priority === 'medium' ? '보통' : '낮음';
+      const metaHtml = [
+        `<span class="priority-tag ${priorityCls}">${priorityLbl}</span>`,
+        `<span class="cat-tag" style="background:var(--blue-bg);color:var(--blue);font-weight:700;">📋 ${t._catLabel}</span>`,
+        dueInfo ? `<span class="due-tag ${dueInfo.cls}">📅 ${dueInfo.label}</span>` : ''
+      ].filter(Boolean).join('');
+      return `<div class="todo-item${isDone?' done':''}" id="item-${t.id}">
+        <button class="chk-btn${isDone?' done':''}" onclick="toggleGongmuDone('${t._gongmuId}')"><span class="chk-ic">✓</span></button>
+        <div class="todo-body">
+          <div class="todo-title">${esc(t.title)}</div>
+          <div class="todo-meta">${metaHtml}</div>
+        </div>
+        <div class="todo-actions">
+          <button class="icon-btn" onclick="openMailSingle('${t.id}')" title="메일 보내기">✉️</button>
+        </div>
+      </div>`;
+    }
+
+    // ── 일반 할 일 항목 ──
+    const cat = getCat(t.categoryId);
+    const subDone = (t.subTasks||[]).filter(s=>s.isCompleted).length;
+    const subTotal = (t.subTasks||[]).length;
+    const metaHtml = [
+      `<span class="priority-tag ${t.priority}">${t.priority==='high'?'높음':t.priority==='medium'?'보통':'낮음'}</span>`,
+      cat ? `<span class="cat-tag"><span style="width:7px;height:7px;border-radius:50%;background:${cat.color};display:inline-block;margin-right:4px;"></span>${cat.name}</span>` : '',
+      ...(t.tags||[]).map(tg => `<span class="tag-chip">#${tg}</span>`),
+      dueInfo ? `<span class="due-tag ${dueInfo.cls}">📅 ${dueInfo.label}</span>` : '',
+      subTotal ? `<span class="due-tag">📌 ${subDone}/${subTotal}</span>` : ''
+    ].filter(Boolean).join('');
+    const subtasksHtml = subTotal ? `<div class="subtask-list">${(t.subTasks||[]).map((s,i) => `
+      <div class="subtask-item${s.isCompleted?' done':''}">
+        <button class="sub-chk${s.isCompleted?' done':''}" onclick="toggleSub('${t.id}',${i})"><span class="chk-ic">✓</span></button>
+        <span class="sub-title">${esc(s.title)}</span>
+      </div>`).join('')}</div>` : '';
+    return `<div class="todo-item${isDone?' done':''}" id="item-${t.id}">
+      <button class="chk-btn${isDone?' done':''}" onclick="toggleDone('${t.id}')"><span class="chk-ic">✓</span></button>
+      <div class="todo-body">
+        <div class="todo-title">${esc(t.title)}</div>
+        <div class="todo-meta">${metaHtml}</div>
+        ${t.memo ? `<div class="todo-memo">${esc(t.memo)}</div>` : ''}
+        ${subtasksHtml}
+      </div>
+      <div class="todo-actions">
+        <button class="icon-btn" onclick="openMailSingle('${t.id}')" title="메일 보내기">✉️</button>
+        <button class="icon-btn" onclick="openEdit('${t.id}')" title="편집">✏️</button>
+        <button class="icon-btn danger" onclick="deleteTodo('${t.id}')" title="삭제">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ========================= 완료 토글 =========================
+function toggleGongmuDone(gongmuId) {
+  const tasks = loadGongmuTasks();
+  const t = tasks.find(t => t.id === gongmuId);
+  if (!t) return;
+  t.status = t.status === 'done' ? 'wait' : 'done';
+  saveGongmuTasks(tasks);
+  render();
+}
+
+function toggleDone(id) {
+  const t = todos.find(t => t.id === id);
+  if (!t) return;
+  t.isCompleted = !t.isCompleted;
+  t.completedAt = t.isCompleted ? new Date().toISOString() : null;
+  t.updatedAt = new Date().toISOString();
+  save();
+  render();
+}
+
+function toggleSub(todoId, idx) {
+  const t = todos.find(t => t.id === todoId);
+  if (!t) return;
+  t.subTasks[idx].isCompleted = !t.subTasks[idx].isCompleted;
+  t.updatedAt = new Date().toISOString();
+  save();
+  render();
+}
+
+// ========================= 삭제 + Undo =========================
+function deleteTodo(id) {
+  const idx = todos.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  deletedItem = { item: todos[idx], idx };
+  todos.splice(idx, 1);
+  save();
+  render();
+  showSnack('삭제되었습니다.');
+}
+
+function undoDelete() {
+  if (!deletedItem) return;
+  todos.splice(deletedItem.idx, 0, deletedItem.item);
+  deletedItem = null;
+  save();
+  render();
+  hideSnack();
+}
+
+function showSnack(msg) {
+  document.getElementById('snackMsg').textContent = msg;
+  document.getElementById('snackbar').classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(hideSnack, 4000);
+}
+
+function hideSnack() {
+  document.getElementById('snackbar').classList.remove('show');
+}
+
+// ========================= 편집 모달 =========================
+function openEdit(id) {
+  editingId = id;
+  const t = todos.find(t => t.id === id);
+  if (!t) return;
+  document.getElementById('modalTitle').textContent = '할 일 편집';
+  document.getElementById('editTitle').value = t.title;
+  document.getElementById('editMemo').value = t.memo || '';
+  document.getElementById('editPriority').value = t.priority;
+  renderCatSelects();
+  document.getElementById('editCat').value = t.categoryId || '';
+  document.getElementById('editDue').value = t.dueDate || '';
+  document.getElementById('editTags').value = (t.tags||[]).join(', ');
+  renderSubtaskEditor(t.subTasks || []);
+  document.getElementById('editModal').classList.add('show');
+}
+
+function renderSubtaskEditor(subs) {
+  const el = document.getElementById('subtaskEditor');
+  el.innerHTML = subs.map((s, i) => `
+    <div class="subtask-editor-item">
+      <input value="${esc(s.title)}" placeholder="하위 작업" id="sub_${i}">
+      <button class="icon-btn danger" onclick="removeSubField(${i})" style="font-size:16px;">×</button>
+    </div>`).join('');
+}
+
+function addSubtaskField() {
+  const el = document.getElementById('subtaskEditor');
+  const i = el.children.length;
+  const div = document.createElement('div');
+  div.className = 'subtask-editor-item';
+  div.innerHTML = `<input placeholder="하위 작업" id="sub_${i}"><button class="icon-btn danger" onclick="this.parentElement.remove()" style="font-size:16px;">×</button>`;
+  el.appendChild(div);
+}
+
+function removeSubField(i) {
+  const el = document.getElementById('subtaskEditor');
+  if (el.children[i]) el.children[i].remove();
+}
+
+function saveEdit() {
+  const title = document.getElementById('editTitle').value.trim();
+  if (!title) { document.getElementById('editTitle').focus(); return; }
+  const t = todos.find(t => t.id === editingId);
+  if (!t) return;
+  t.title = title;
+  t.memo = document.getElementById('editMemo').value.trim();
+  t.priority = document.getElementById('editPriority').value;
+  t.categoryId = document.getElementById('editCat').value;
+  t.dueDate = document.getElementById('editDue').value;
+  t.tags = document.getElementById('editTags').value.split(',').map(s => s.trim()).filter(Boolean);
+  const subEls = document.getElementById('subtaskEditor').querySelectorAll('input');
+  t.subTasks = Array.from(subEls).map((el, i) => ({
+    id: (t.subTasks[i] || {}).id || uid(),
+    title: el.value.trim(),
+    isCompleted: (t.subTasks[i] || {}).isCompleted || false
+  })).filter(s => s.title);
+  t.updatedAt = new Date().toISOString();
+  save();
+  render();
+  closeModal();
+}
+
+function closeModal() { document.getElementById('editModal').classList.remove('show'); editingId = null; }
+
+// ========================= 메일 =========================
+let mailMode = 'single'; // 'single' | 'bulk'
+let mailSingleId = null;
+
+function priorityLabel(p) { return p==='high'?'높음':p==='medium'?'보통':'낮음'; }
+
+function buildMailBody(items) {
+  const today = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric'});
+  let body = `안녕하세요,\n\n아래 할 일 목록을 공유드립니다. (${today})\n\n`;
+  body += '─'.repeat(40) + '\n';
+  items.forEach((t, i) => {
+    const cat = getCat(t.categoryId);
+    body += `\n${i+1}. ${t.title}\n`;
+    body += `   • 우선순위: ${priorityLabel(t.priority)}\n`;
+    if (cat) body += `   • 카테고리: ${cat.name}\n`;
+    if (t.dueDate) body += `   • 마감일: ${t.dueDate}\n`;
+    if (t.memo) body += `   • 메모: ${t.memo}\n`;
+    body += `   • 상태: ${t.isCompleted ? '✅ 완료' : '⏳ 진행중'}\n`;
+    if ((t.subTasks||[]).length) {
+      body += `   • 하위 작업:\n`;
+      t.subTasks.forEach(s => { body += `     - [${s.isCompleted?'완료':'미완'}] ${s.title}\n`; });
+    }
+  });
+  body += '\n' + '─'.repeat(40) + '\n\n감사합니다.';
+  return body;
+}
+
+function updateMailPreview() {
+  const items = getMailSelectedItems();
+  document.getElementById('mailPreview').textContent = items.length ? buildMailBody(items) : '선택된 항목이 없습니다.';
+}
+
+function getMailSelectedItems() {
+  if (mailMode === 'single') {
+    const t = todos.find(t => t.id === mailSingleId);
+    return t ? [t] : [];
+  }
+  return Array.from(document.querySelectorAll('.mail-chk:checked'))
+    .map(el => todos.find(t => t.id === el.dataset.id))
+    .filter(Boolean);
+}
+
+function renderMailChecklist() {
+  const list = getFiltered();
+  document.getElementById('mailChecklist').innerHTML = list.map(t => `
+    <div class="mail-todo-check">
+      <input type="checkbox" class="mail-chk" data-id="${t.id}" onchange="updateMailPreview()" checked>
+      <div class="mail-todo-info">
+        <div class="mail-todo-title">${esc(t.title)}</div>
+        <div class="mail-todo-meta">${priorityLabel(t.priority)}${t.dueDate?' · '+t.dueDate:''}</div>
+      </div>
+    </div>`).join('');
+}
+
+function mailSelectAll() {
+  const boxes = document.querySelectorAll('.mail-chk');
+  const allChecked = Array.from(boxes).every(b => b.checked);
+  boxes.forEach(b => { b.checked = !allChecked; });
+  updateMailPreview();
+}
+
+function openMailSingle(id) {
+  mailMode = 'single';
+  mailSingleId = id;
+  const t = todos.find(t => t.id === id);
+  document.getElementById('mailSubject').value = `[할 일 공유] ${t.title}`;
+  document.getElementById('mailTo').value = '';
+  document.getElementById('mailChecklistWrap').style.display = 'none';
+  updateMailPreview();
+  document.getElementById('mailModal').classList.add('show');
+}
+
+function openMailModal() {
+  mailMode = 'bulk';
+  mailSingleId = null;
+  document.getElementById('mailSubject').value = `[할 일 목록 공유] ${new Date().toLocaleDateString('ko-KR')}`;
+  document.getElementById('mailTo').value = '';
+  document.getElementById('mailChecklistWrap').style.display = 'block';
+  renderMailChecklist();
+  updateMailPreview();
+  document.getElementById('mailModal').classList.add('show');
+}
+
+function closeMailModal() {
+  document.getElementById('mailModal').classList.remove('show');
+}
+
+function sendMail() {
+  const to = document.getElementById('mailTo').value.trim();
+  const subject = document.getElementById('mailSubject').value.trim() || '할 일 공유';
+  const items = getMailSelectedItems();
+  if (!items.length) { alert('전송할 항목을 선택해주세요.'); return; }
+  const body = buildMailBody(items);
+  const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = mailto;
+  closeMailModal();
+}
+
+document.getElementById('mailModal').addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeMailModal();
+});
+
+// ========================= 키보드 =========================
+document.getElementById('quickInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') quickAdd();
+  if (e.key === 'Escape') document.getElementById('quickInput').value = '';
+});
+
+document.getElementById('editModal').addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') saveEdit();
+});
+
+document.getElementById('catModal').addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeCatModal();
+  if (e.key === 'Enter' && document.activeElement.id === 'newCatName') addCategory();
+});
+
+// ========================= 초기화 =========================
+renderCatSelects();
+render();
+
+// index.html에서 업무 변경 시 자동 갱신 (다른 탭에서 localStorage 변경 감지)
+window.addEventListener('storage', e => {
+  if (e.key === 'gongmu_tasks_v1' && currentFilter === 'tasks') {
+    renderTasksView();
+  }
+});
+
+// 이 탭으로 다시 돌아왔을 때 갱신 (같은 브라우저 내 탭 전환)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && currentFilter === 'tasks') {
+    renderTasksView();
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>피복 관리 시스템 | 수산이앤에스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  :root{
+    --bg:#F2F4F6;
+    --card:#ffffff;
+    --t1:#191F28;
+    --t2:#4E5968;
+    --t3:#8B95A1;
+    --blue:#3182F6;
+    --blue-bg:#EBF2FF;
+    --green:#1DB67F;
+    --green-bg:#E6F9F0;
+    --orange:#FF9800;
+    --orange-bg:#FFF4E5;
+    --red:#F04452;
+    --red-bg:#FDEAEC;
+    --purple:#6C5CE7;
+    --purple-bg:#F0EEFF;
+    --line:#E5E8EB;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--t1);
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    padding:28px 32px 80px; max-width:1180px; margin:0 auto;
+  }
+
+  /* ===== 상단 ===== */
+  .back-link{
+    display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--t3);
+    text-decoration:none; font-weight:600; margin-bottom:14px;
+  }
+  .back-link:hover{color:var(--blue);}
+  .page-head{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:24px;}
+  h1{font-size:24px; font-weight:800; margin:0 0 4px;}
+  .page-sub{font-size:13.5px; color:var(--t2); margin:0;}
+  .head-btns{display:flex; gap:8px; flex-wrap:wrap;}
+
+  /* ===== 버튼 ===== */
+  .btn{
+    background:var(--blue); color:#fff; border:none; border-radius:10px; padding:9px 16px;
+    font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .btn:hover{background:#1B6FE0;}
+  .btn.line{background:var(--card); color:var(--t2); border:1px solid var(--line);}
+  .btn.line:hover{background:#F7F9FB; color:var(--t1);}
+  .btn.green{background:var(--green);} .btn.green:hover{background:#17a070;}
+  .btn.purple{background:var(--purple);} .btn.purple:hover{background:#5b4bd6;}
+  .btn.red-line{background:var(--red-bg); color:var(--red);} .btn.red-line:hover{background:#fbd8db;}
+  .btn.sm{padding:6px 12px; font-size:12px; border-radius:8px;}
+  .sync-badge{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; margin-left:6px; vertical-align:middle;}
+  .sync-badge.online{background:var(--green-bg); color:var(--green);}
+  .sync-badge.saving{background:var(--blue-bg); color:var(--blue);}
+  .sync-badge.loading{background:var(--bg); color:var(--t3);}
+  .sync-badge.offline{background:var(--orange-bg); color:var(--orange);}
+
+  /* ===== 통계 카드 ===== */
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px;}
+  .stat-card{
+    background:var(--card); border-radius:20px; padding:20px; box-shadow:0 1px 2px rgba(0,0,0,0.03);
+    transition:box-shadow .15s, transform .15s;
+  }
+  .stat-card:hover{box-shadow:0 8px 20px rgba(25,31,40,0.08); transform:translateY(-2px);}
+  .stat-card .icon-circle{
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:16px; margin-bottom:14px;
+  }
+  .stat-card .num{font-size:25px; font-weight:800; line-height:1;}
+  .stat-card .num small{font-size:14px; font-weight:700; color:var(--t3); margin-left:2px;}
+  .stat-card .lbl{font-size:12.5px; color:var(--t3); margin-top:5px; font-weight:500;}
+
+  /* ===== 섹션 ===== */
+  h2.section-title{font-size:16px; font-weight:800; margin:0 0 14px; display:flex; align-items:center; gap:8px;}
+  .section-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;}
+
+  /* ===== 탭 ===== */
+  .tabs{display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;}
+  .tab{
+    background:var(--card); border:1px solid var(--line); border-radius:20px; padding:8px 16px;
+    font-size:13px; font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit;
+  }
+  .tab:hover{background:#F7F9FB;}
+  .tab.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+
+  /* ===== 품목 재고 카드 ===== */
+  .item-grid{display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:30px;}
+  .item-card{background:var(--card); border-radius:20px; padding:20px 22px; box-shadow:0 1px 2px rgba(0,0,0,0.03);}
+  .item-head{display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;}
+  .item-icon{
+    width:40px; height:40px; border-radius:13px; display:flex; align-items:center;
+    justify-content:center; font-size:18px; flex-shrink:0;
+  }
+  .item-title{font-size:15.5px; font-weight:800;}
+  .item-meta{font-size:12px; color:var(--t3); margin-top:3px; font-weight:500;}
+  .item-meta b{color:var(--t2); font-weight:700;}
+  .item-head .grow{flex:1;}
+
+  .size-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(82px,1fr)); gap:8px;}
+  .size-cell{
+    border:1px solid var(--line); border-radius:12px; padding:10px 8px; text-align:center;
+    background:#FAFBFC;
+  }
+  .size-lbl{font-size:11.5px; color:var(--t3); font-weight:700; margin-bottom:4px;}
+  .size-qty{font-size:19px; font-weight:800; color:var(--t1); line-height:1;}
+  .size-unit{font-size:10.5px; color:var(--t3); font-weight:600; margin-left:1px;}
+  .size-cell.low{background:var(--orange-bg); border-color:#FFD9A0;}
+  .size-cell.low .size-qty{color:var(--orange);}
+  .size-cell.zero{background:var(--red-bg); border-color:#F8C4C9;}
+  .size-cell.zero .size-qty{color:var(--red);}
+
+  .item-foot{
+    display:flex; gap:18px; flex-wrap:wrap; margin-top:16px; padding-top:14px;
+    border-top:1px solid var(--line); font-size:12.5px; color:var(--t2);
+  }
+  .item-foot .k{color:var(--t3); margin-right:5px;}
+  .item-foot b{font-weight:800; color:var(--t1);}
+
+  /* ===== 입출고 등록 카드 ===== */
+  .form-card{background:var(--card); border-radius:20px; padding:22px 24px; box-shadow:0 1px 2px rgba(0,0,0,0.03); margin-bottom:24px;}
+  .seg{display:inline-flex; background:var(--bg); border-radius:12px; padding:4px; margin-bottom:18px;}
+  .seg button{
+    border:none; background:none; padding:8px 22px; border-radius:9px; font-size:13px;
+    font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit;
+  }
+  .seg button.on-in{background:var(--blue); color:#fff;}
+  .seg button.on-out{background:var(--green); color:#fff;}
+  .form-row{display:flex; flex-wrap:wrap; gap:14px 18px; align-items:flex-end;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:12px; color:var(--t2); font-weight:700;}
+  .field input, .field select{
+    padding:9px 11px; border:1px solid var(--line); border-radius:10px; font-size:13px;
+    font-family:inherit; background:var(--bg); color:var(--t1); min-width:120px;
+  }
+  .field input:focus, .field select:focus{outline:none; border-color:var(--blue); background:#fff;}
+  .field.qty input{width:90px; min-width:90px; text-align:right;}
+  .field.price input{width:120px; min-width:120px; text-align:right;}
+  .field.grow{flex:1; min-width:160px;}
+  .field.grow input{min-width:100%;}
+
+  /* ===== 내역 테이블 ===== */
+  .filter-bar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px;}
+  .filter-bar select, .filter-bar input{
+    padding:8px 11px; border:1px solid var(--line); border-radius:10px; font-size:12.5px;
+    font-family:inherit; background:var(--card); color:var(--t1);
+  }
+  .table-wrap{background:var(--card); border-radius:20px; padding:6px; box-shadow:0 1px 2px rgba(0,0,0,0.03); overflow-x:auto;}
+  table{border-collapse:collapse; width:100%; font-size:13px; min-width:760px;}
+  th,td{padding:11px 12px; text-align:center; border-bottom:1px solid var(--line); white-space:nowrap;}
+  th{font-size:11.5px; color:var(--t3); font-weight:700; background:#FAFBFC;}
+  tbody tr:hover{background:#F7F9FB;}
+  td.left{text-align:left;}
+  td.num{text-align:right; font-variant-numeric:tabular-nums;}
+  .pill{font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;}
+  .pill.in{color:var(--blue); background:var(--blue-bg);}
+  .pill.out{color:var(--green); background:var(--green-bg);}
+  .del-btn{background:none; border:none; cursor:pointer; color:var(--t3); font-size:14px; padding:4px 7px; border-radius:8px;}
+  .del-btn:hover{background:var(--red-bg); color:var(--red);}
+  .empty{padding:40px; text-align:center; color:var(--t3); font-size:13px;}
+
+  /* ===== 정보수정 모달 ===== */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(25,31,40,.45); z-index:100;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{
+    background:var(--card); border-radius:24px; padding:26px 26px 22px; width:100%;
+    max-width:430px; box-shadow:0 24px 60px rgba(0,0,0,.22); animation:pop .18s ease;
+  }
+  @keyframes pop{from{transform:translateY(8px) scale(.98); opacity:0;} to{transform:none; opacity:1;}}
+  .modal-icon{
+    width:46px; height:46px; border-radius:15px; display:flex; align-items:center;
+    justify-content:center; font-size:21px; margin-bottom:14px;
+  }
+  .modal h3{font-size:18px; font-weight:800; margin:0 0 4px;}
+  .modal .modal-sub{font-size:12.5px; color:var(--t3); margin:0 0 22px; font-weight:500;}
+  .modal-field{margin-bottom:14px;}
+  .modal-field label{display:block; font-size:12.5px; font-weight:700; color:var(--t2); margin-bottom:7px;}
+  .modal-field input{
+    width:100%; padding:12px 13px; border:1px solid var(--line); border-radius:12px;
+    font-size:14px; font-family:inherit; background:var(--bg); color:var(--t1);
+  }
+  .modal-field input:focus{outline:none; border-color:var(--blue); background:#fff;}
+  .modal-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .modal-actions{display:flex; gap:10px; margin-top:24px;}
+  .modal-actions .btn{flex:1; padding:13px; font-size:14px; border-radius:13px;}
+
+  /* ===== 전표생성기 모달 ===== */
+  .modal.wide{max-width:900px; max-height:90vh; overflow-y:auto;}
+  .v-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px;}
+  .v-grid .modal-field{margin-bottom:0;}
+  .v-bar{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;}
+  .v-bar .lbl{font-size:13px; font-weight:800; color:var(--t1);}
+  .v-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .v-table th{background:var(--blue-bg); color:var(--blue); font-weight:700; padding:9px 8px; font-size:11.5px; border-bottom:1px solid var(--line); text-align:center;}
+  .v-table td{padding:7px 7px; border-bottom:1px solid var(--line);}
+  .v-table input, .v-table select{width:100%; padding:7px 8px; border:1px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit; background:var(--bg); color:var(--t1);}
+  .v-table input:focus, .v-table select:focus{outline:none; border-color:var(--blue); background:#fff;}
+  .v-table input[type=number]{text-align:right;}
+  .dept-preview{display:flex; flex-wrap:wrap; gap:7px; margin-top:16px;}
+  .dept-chip{font-size:11.5px; background:var(--bg); border:1px solid var(--line); border-radius:9px; padding:6px 10px; color:var(--t2); font-weight:600;}
+  .dept-chip b{color:var(--t1); font-weight:800; margin-left:3px;}
+  .v-foot{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:18px; padding-top:16px; border-top:1px solid var(--line);}
+  .v-total{font-size:13px; color:var(--t2); font-weight:600;}
+  .v-total b{color:var(--t1); font-weight:800;}
+  .v-foot .acts{display:flex; gap:10px;}
+  .v-foot .acts .btn{padding:11px 20px; border-radius:12px;}
+  .v-hint{font-size:11.5px; color:var(--t3); margin-top:6px; line-height:1.5;}
+
+  @media(max-width:720px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+    body{padding:20px 16px 60px;}
+  }
+</style>
+</head>
+<body>
+<!-- ===== 비밀번호 잠금 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;" onkeydown="if(event.key==='Enter')gateCheck()" onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1B6FE0'" onmouseout="this.style.background='#3182F6'">들어가기</button>
+  </div>
+</div>
+<script>
+  const GATE_PW_HASH = 'fbdb32e45b2566ac0a1ead4d585162645698e431dfec179c69ccffb31d996a03';
+  (function(){
+    if(sessionStorage.getItem('gm_auth')==='ok'){
+      document.getElementById('gate').style.display='none';
+    } else {
+      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
+    }
+  })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  }
+</script>
+
+<a class="back-link" href="index.html">‹ 총무 관리 대시보드</a>
+
+<div class="page-head">
+  <div>
+    <h1>🧥 피복 관리 시스템</h1>
+    <p class="page-sub">입고·출고·재고 현황을 품목별로 한눈에 관리합니다 · 수산이앤에스 <span id="syncBadge" class="sync-badge loading">☁ 연결 중…</span></p>
+  </div>
+  <div class="head-btns">
+    <button class="btn green sm" onclick="exportStock()">📊 재고현황 엑셀</button>
+    <button class="btn purple sm" onclick="exportTxns()">🧾 입출고 내역 엑셀</button>
+    <button class="btn sm" onclick="openVoucher()">📑 전표생성기</button>
+    <button class="btn line sm" onclick="backupJSON()">💾 백업</button>
+    <button class="btn line sm" onclick="document.getElementById('restoreFile').click()">📂 복원</button>
+    <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="restoreJSON(this)">
+    <button class="btn line sm" onclick="resetData()">↺ 초기화</button>
+  </div>
+</div>
+
+<!-- 통계 -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="icon-circle" style="background:var(--blue-bg); color:var(--blue);">👕</div>
+    <div class="num" id="statKinds">0<small>종</small></div>
+    <div class="lbl">관리 품목 종류</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-circle" style="background:var(--green-bg); color:var(--green);">📦</div>
+    <div class="num" id="statStock">0</div>
+    <div class="lbl">총 재고 수량</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-circle" style="background:var(--purple-bg); color:var(--purple);">💰</div>
+    <div class="num" id="statValue">₩0</div>
+    <div class="lbl">총 재고 금액</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-circle" style="background:var(--orange-bg); color:var(--orange);">⚠️</div>
+    <div class="num" id="statLow">0<small>건</small></div>
+    <div class="lbl">재고 부족 사이즈</div>
+  </div>
+</div>
+
+<!-- 입출고 등록 -->
+<div class="form-card">
+  <h2 class="section-title">✍️ 입출고 등록</h2>
+  <div class="seg">
+    <button id="segIn" class="on-in" onclick="setTxnType('in')">📥 입고</button>
+    <button id="segOut" onclick="setTxnType('out')">📤 출고</button>
+  </div>
+  <div class="form-row">
+    <div class="field">
+      <label>날짜</label>
+      <input type="date" id="fDate">
+    </div>
+    <div class="field">
+      <label>품명</label>
+      <select id="fItem" onchange="onItemChange()"></select>
+    </div>
+    <div class="field">
+      <label>사이즈</label>
+      <select id="fSize"></select>
+    </div>
+    <div class="field qty">
+      <label>수량</label>
+      <input type="number" id="fQty" min="1" value="1">
+    </div>
+    <div class="field price" id="priceField">
+      <label>구입단가(원)</label>
+      <input type="number" id="fPrice" min="0" step="100" value="0">
+    </div>
+    <div class="field" id="makerField">
+      <label>제조사</label>
+      <input type="text" id="fMaker" placeholder="예: 대한피복">
+    </div>
+    <div class="field grow">
+      <label id="partyLabel">거래처</label>
+      <input type="text" id="fParty" placeholder="예: ○○상사">
+    </div>
+    <div class="field grow">
+      <label>비고</label>
+      <input type="text" id="fNote" placeholder="비고 입력">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button class="btn" id="submitBtn" onclick="addTxn()">+ 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 재고 현황 -->
+<div class="section-head">
+  <h2 class="section-title" style="margin:0;">📊 품목별 재고 현황</h2>
+</div>
+<div class="tabs" id="catTabs"></div>
+<div class="item-grid" id="itemGrid"></div>
+
+<!-- 입출고 내역 -->
+<div class="section-head">
+  <h2 class="section-title" style="margin:0;">🧾 입출고 내역 <span id="txnCount" style="color:var(--t3); font-weight:500; font-size:12.5px;"></span></h2>
+</div>
+<div class="filter-bar">
+  <select id="filterType" onchange="renderTxns()">
+    <option value="all">전체 구분</option>
+    <option value="in">입고만</option>
+    <option value="out">출고만</option>
+  </select>
+  <select id="filterGroup" onchange="renderTxns()">
+    <option value="all">전체 품목</option>
+  </select>
+  <input type="text" id="filterSearch" placeholder="검색 (품명·거래처·비고)" oninput="renderTxns()" style="flex:1; min-width:160px;">
+</div>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>날짜</th><th>구분</th><th>품명</th><th>사이즈</th>
+        <th>입고</th><th>출고</th><th>단위</th><th>구입단가</th>
+        <th>제조사</th><th>거래처 / 수령처</th><th>비고</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="txnBody"></tbody>
+  </table>
+</div>
+
+<!-- 정보수정 모달 -->
+<div class="modal-overlay" id="editModal" onclick="if(event.target===this) closeEditModal()">
+  <div class="modal">
+    <div class="modal-icon" id="mIcon">✏️</div>
+    <h3 id="mTitle">정보수정</h3>
+    <p class="modal-sub" id="mSub"></p>
+    <div class="modal-field">
+      <label>제조사</label>
+      <input type="text" id="mMaker" placeholder="예: 대한피복">
+    </div>
+    <div class="modal-grid">
+      <div class="modal-field">
+        <label>단위</label>
+        <input type="text" id="mUnit" placeholder="예: 벌, 개">
+      </div>
+      <div class="modal-field">
+        <label>구입단가 (원)</label>
+        <input type="number" id="mPrice" min="0" step="100">
+      </div>
+    </div>
+    <div class="modal-field">
+      <label>안전재고 <span style="color:var(--t3); font-weight:500;">(이 수량 이하면 부족 표시)</span></label>
+      <input type="number" id="mSafety" min="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn line" onclick="closeEditModal()">취소</button>
+      <button class="btn" onclick="saveEditModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 전표생성기 모달 (피복비) -->
+<div class="modal-overlay" id="voucherModal" onclick="if(event.target===this) closeVoucher()">
+  <div class="modal wide">
+    <div class="modal-icon" style="background:var(--blue-bg); color:var(--blue);">📑</div>
+    <h3>피복비 전표생성기</h3>
+    <p class="modal-sub">매입(입고) 금액을 7개 부서에 <b style="color:var(--t2)">인원수 기준</b>으로 안분합니다 · 계정과목: <b style="color:var(--t2)">피복비</b></p>
+
+    <div class="v-grid">
+      <div class="modal-field"><label>사업장</label><input type="text" id="vLocation" value="본사"></div>
+      <div class="modal-field"><label>기표일</label><input type="date" id="vDocDate"></div>
+      <div class="modal-field"><label>출납예정일</label><input type="date" id="vPayDate"></div>
+      <div class="modal-field"><label>사용월</label><input type="month" id="vYM"></div>
+    </div>
+
+    <div class="v-bar">
+      <span class="lbl">청구 건 (거래처별)</span>
+      <div style="display:flex; gap:8px;">
+        <button class="btn line sm" onclick="loadInboundToVoucher()">📥 입고내역 불러오기</button>
+        <button class="btn line sm" onclick="addVoucherRow()">+ 행 추가</button>
+      </div>
+    </div>
+    <table class="v-table">
+      <thead><tr>
+        <th style="width:23%">거래처(제조사)</th>
+        <th style="width:17%">공급가액</th>
+        <th style="width:15%">부가세</th>
+        <th style="width:13%">증빙</th>
+        <th style="width:26%">적요</th>
+        <th style="width:6%"></th>
+      </tr></thead>
+      <tbody id="vBody"></tbody>
+    </table>
+    <div class="v-hint">· 공급가액 입력 시 부가세는 10%로 자동 계산되며 직접 수정할 수 있습니다.<br>· '입고내역 불러오기'는 선택한 사용월의 입고 거래를 거래처별로 합산해 자동 입력합니다.</div>
+
+    <div class="dept-preview" id="vDeptPreview"></div>
+
+    <div class="v-foot">
+      <div class="v-total" id="vTotalLine"></div>
+      <div class="acts">
+        <button class="btn line" onclick="closeVoucher()">취소</button>
+        <button class="btn" onclick="generateVoucher()">📊 전표 엑셀 생성</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============== 데이터 정의 ============== */
+const TOP_SIZES = ['90','95','100','105','110','115','120'];        // 상의 90~120, 5단위
+const BOTTOM_SIZES = ['28','30','32','34','36','38','40','42'];      // 하의 28~42, 2단위
+const VEST_SIZES = ['M','L','XL','2XL','3XL','4XL','5XL'];           // 조끼
+
+const GROUPS = {
+  winter: { name:'동복',    icon:'🧥', color:'var(--blue)',   bg:'var(--blue-bg)' },
+  spring: { name:'춘추복',  icon:'🧣', color:'var(--green)',  bg:'var(--green-bg)' },
+  summer: { name:'하복',    icon:'👕', color:'var(--orange)', bg:'var(--orange-bg)' },
+  sweat:  { name:'땀흡수복', icon:'💧', color:'var(--purple)', bg:'var(--purple-bg)' },
+  vest:   { name:'조끼',    icon:'🦺', color:'var(--red)',    bg:'var(--red-bg)' },
+};
+
+const DEFAULT_ITEMS = [
+  // 상의 (사이즈: 90~120)
+  { key:'sweat_long',    group:'sweat',  name:'땀흡수복 긴팔티', sizes:TOP_SIZES,    unit:'벌', maker:'AK F&C',      price:43500,  safety:5 },
+  { key:'sweat_short',   group:'sweat',  name:'땀흡수복 반팔티', sizes:TOP_SIZES,    unit:'벌', maker:'AK F&C',      price:43000,  safety:5 },
+  { key:'winter_top',    group:'winter', name:'동복 상의',       sizes:TOP_SIZES,    unit:'벌', maker:'크레타에스엔씨', price:117727, safety:5 },
+  { key:'spring_top',    group:'spring', name:'춘추복 상의',     sizes:TOP_SIZES,    unit:'벌', maker:'AK F&C',      price:46000,  safety:5 },
+  { key:'summer_top',    group:'summer', name:'하복 상의',       sizes:TOP_SIZES,    unit:'벌', maker:'AK F&C',      price:43500,  safety:5 },
+  // 조끼 (사이즈: M~5XL)
+  { key:'vest',          group:'vest',   name:'조끼',            sizes:VEST_SIZES,   unit:'개', maker:'AK F&C',      price:21000,  safety:10 },
+  // 하의 (사이즈: 28~42)
+  { key:'winter_bottom', group:'winter', name:'동복 하의',       sizes:BOTTOM_SIZES, unit:'벌', maker:'크레타에스엔씨', price:54091,  safety:5 },
+  { key:'spring_bottom', group:'spring', name:'춘추복 하의',     sizes:BOTTOM_SIZES, unit:'벌', maker:'우성기업',     price:25500,  safety:5 },
+  { key:'summer_bottom', group:'summer', name:'하복 하의',       sizes:BOTTOM_SIZES, unit:'벌', maker:'AK F&C',      price:22000,  safety:5 },
+];
+
+// ── 실제 재고 초기값 (2026-04-15 기준, Sheet: 1.재고현황) ────────────────────
+// 기존 로컬스토리지/Supabase 데이터가 없을 때만 사용
+const SEED_TXNS = [
+  {id:'r0001',date:'2025-01-01',key:'sweat_long',size:'95',type:'in',qty:11,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0002',date:'2025-01-01',key:'sweat_long',size:'100',type:'in',qty:24,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0003',date:'2025-01-01',key:'sweat_long',size:'105',type:'in',qty:28,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0004',date:'2025-01-01',key:'sweat_long',size:'110',type:'in',qty:20,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0005',date:'2025-01-01',key:'sweat_long',size:'115',type:'in',qty:11,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0006',date:'2025-01-01',key:'sweat_long',size:'120',type:'in',qty:10,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0007',date:'2025-01-01',key:'sweat_short',size:'95',type:'in',qty:1,price:43000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0008',date:'2025-01-01',key:'sweat_short',size:'100',type:'in',qty:11,price:43000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0009',date:'2025-01-01',key:'sweat_short',size:'105',type:'in',qty:18,price:43000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0010',date:'2025-01-01',key:'sweat_short',size:'110',type:'in',qty:12,price:43000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0011',date:'2025-01-01',key:'sweat_short',size:'115',type:'in',qty:3,price:43000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0012',date:'2025-01-01',key:'vest',size:'M',type:'in',qty:8,price:21000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0013',date:'2025-01-01',key:'vest',size:'L',type:'in',qty:7,price:21000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0014',date:'2025-01-01',key:'vest',size:'XL',type:'in',qty:47,price:21000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0015',date:'2025-01-01',key:'vest',size:'2XL',type:'in',qty:21,price:21000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0016',date:'2025-01-01',key:'vest',size:'3XL',type:'in',qty:45,price:21000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0017',date:'2025-01-01',key:'vest',size:'4XL',type:'in',qty:24,price:21000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0018',date:'2025-01-01',key:'vest',size:'5XL',type:'in',qty:9,price:21000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0019',date:'2025-01-01',key:'winter_top',size:'90',type:'in',qty:3,price:117727,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0020',date:'2025-01-01',key:'winter_top',size:'95',type:'in',qty:20,price:117727,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0021',date:'2025-01-01',key:'winter_top',size:'100',type:'in',qty:30,price:117727,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0022',date:'2025-01-01',key:'winter_top',size:'105',type:'in',qty:54,price:117727,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0023',date:'2025-01-01',key:'winter_top',size:'110',type:'in',qty:30,price:117727,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0024',date:'2025-01-01',key:'winter_top',size:'115',type:'in',qty:27,price:117727,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0025',date:'2025-01-01',key:'winter_top',size:'120',type:'in',qty:3,price:117727,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0026',date:'2025-01-01',key:'summer_top',size:'90',type:'in',qty:8,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0027',date:'2025-01-01',key:'summer_top',size:'95',type:'in',qty:2,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0028',date:'2025-01-01',key:'summer_top',size:'100',type:'in',qty:17,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0029',date:'2025-01-01',key:'summer_top',size:'105',type:'in',qty:3,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0030',date:'2025-01-01',key:'summer_top',size:'110',type:'in',qty:8,price:43500,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0031',date:'2025-01-01',key:'spring_top',size:'90',type:'in',qty:16,price:46000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0032',date:'2025-01-01',key:'spring_top',size:'95',type:'in',qty:19,price:46000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0033',date:'2025-01-01',key:'spring_top',size:'100',type:'in',qty:33,price:46000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0034',date:'2025-01-01',key:'spring_top',size:'105',type:'in',qty:18,price:46000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0035',date:'2025-01-01',key:'spring_top',size:'110',type:'in',qty:30,price:46000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0036',date:'2025-01-01',key:'spring_top',size:'115',type:'in',qty:32,price:46000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0037',date:'2025-01-01',key:'spring_top',size:'120',type:'in',qty:10,price:46000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0038',date:'2025-01-01',key:'winter_bottom',size:'28',type:'in',qty:6,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0039',date:'2025-01-01',key:'winter_bottom',size:'30',type:'in',qty:30,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0040',date:'2025-01-01',key:'winter_bottom',size:'32',type:'in',qty:50,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0041',date:'2025-01-01',key:'winter_bottom',size:'34',type:'in',qty:31,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0042',date:'2025-01-01',key:'winter_bottom',size:'36',type:'in',qty:13,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0043',date:'2025-01-01',key:'winter_bottom',size:'38',type:'in',qty:21,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0044',date:'2025-01-01',key:'winter_bottom',size:'40',type:'in',qty:15,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0045',date:'2025-01-01',key:'winter_bottom',size:'42',type:'in',qty:3,price:54091,maker:"크레타에스엔씨",party:"",note:"2024년 이월 재고"},
+  {id:'r0046',date:'2025-01-01',key:'summer_bottom',size:'28',type:'in',qty:4,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0047',date:'2025-01-01',key:'summer_bottom',size:'30',type:'in',qty:12,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0048',date:'2025-01-01',key:'summer_bottom',size:'32',type:'in',qty:3,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0049',date:'2025-01-01',key:'summer_bottom',size:'34',type:'in',qty:10,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0050',date:'2025-01-01',key:'summer_bottom',size:'36',type:'in',qty:19,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0051',date:'2025-01-01',key:'summer_bottom',size:'38',type:'in',qty:17,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0052',date:'2025-01-01',key:'summer_bottom',size:'40',type:'in',qty:11,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0053',date:'2025-01-01',key:'summer_bottom',size:'42',type:'in',qty:5,price:22000,maker:"AK F&C",party:"",note:"2024년 이월 재고"},
+  {id:'r0054',date:'2025-01-01',key:'spring_bottom',size:'28',type:'in',qty:3,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0055',date:'2025-01-01',key:'spring_bottom',size:'30',type:'in',qty:22,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0056',date:'2025-01-01',key:'spring_bottom',size:'32',type:'in',qty:23,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0057',date:'2025-01-01',key:'spring_bottom',size:'34',type:'in',qty:36,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0058',date:'2025-01-01',key:'spring_bottom',size:'36',type:'in',qty:26,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0059',date:'2025-01-01',key:'spring_bottom',size:'38',type:'in',qty:25,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0060',date:'2025-01-01',key:'spring_bottom',size:'40',type:'in',qty:13,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0061',date:'2025-01-01',key:'spring_bottom',size:'42',type:'in',qty:12,price:25500,maker:"우성기업",party:"",note:"2024년 이월 재고"},
+  {id:'r0062',date:'2025-01-03',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"김관우",note:"신규"},
+  {id:'r0063',date:'2025-01-03',key:'sweat_long',size:'105',type:'out',qty:2,price:0,maker:"",party:"김정환,정재영",note:"신규"},
+  {id:'r0064',date:'2025-01-03',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"김학동",note:"신규"},
+  {id:'r0065',date:'2025-01-06',key:'vest',size:'M',type:'out',qty:2,price:0,maker:"",party:"한빛1사업소",note:"교환(오염)"},
+  {id:'r0066',date:'2025-01-06',key:'vest',size:'L',type:'out',qty:6,price:0,maker:"",party:"한빛1사업소",note:"교환(오염)"},
+  {id:'r0067',date:'2025-01-06',key:'vest',size:'XL',type:'out',qty:13,price:0,maker:"",party:"한빛1사업소",note:"교환(오염)"},
+  {id:'r0068',date:'2025-01-06',key:'vest',size:'2XL',type:'out',qty:18,price:0,maker:"",party:"한빛1사업소",note:"교환(오염)"},
+  {id:'r0069',date:'2025-01-06',key:'vest',size:'3XL',type:'out',qty:4,price:0,maker:"",party:"한빛1사업소",note:"교환(오염)"},
+  {id:'r0070',date:'2025-01-06',key:'vest',size:'4XL',type:'out',qty:1,price:0,maker:"",party:"한빛1사업소",note:"교환(오염)"},
+  {id:'r0071',date:'2025-01-06',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0072',date:'2025-01-06',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0073',date:'2025-01-06',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0074',date:'2025-01-06',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0075',date:'2025-01-06',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0076',date:'2025-01-06',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0077',date:'2025-01-06',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0078',date:'2025-01-06',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0079',date:'2025-01-06',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"강성준",note:"신규"},
+  {id:'r0080',date:'2025-01-06',key:'winter_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"권도윤",note:"교환(찢어짐)"},
+  {id:'r0081',date:'2025-01-16',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0082',date:'2025-01-16',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0083',date:'2025-01-16',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0084',date:'2025-01-16',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0085',date:'2025-01-16',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0086',date:'2025-01-16',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0087',date:'2025-01-16',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0088',date:'2025-01-16',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김상현",note:"신규"},
+  {id:'r0089',date:'2025-01-16',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0090',date:'2025-01-16',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0091',date:'2025-01-16',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0092',date:'2025-01-16',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0093',date:'2025-01-16',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0094',date:'2025-01-16',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0095',date:'2025-01-16',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0096',date:'2025-01-16',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0097',date:'2025-01-16',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"김선수",note:"신규"},
+  {id:'r0098',date:'2025-01-16',key:'winter_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0099',date:'2025-01-16',key:'spring_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0100',date:'2025-01-16',key:'summer_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0101',date:'2025-01-16',key:'vest',size:'4XL',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0102',date:'2025-01-16',key:'sweat_long',size:'115',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0103',date:'2025-01-16',key:'sweat_short',size:'115',type:'out',qty:2,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0104',date:'2025-01-16',key:'winter_bottom',size:'40',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0105',date:'2025-01-16',key:'spring_bottom',size:'40',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0106',date:'2025-01-16',key:'summer_bottom',size:'40',type:'out',qty:1,price:0,maker:"",party:"박정준",note:"신규"},
+  {id:'r0107',date:'2025-01-16',key:'winter_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0108',date:'2025-01-16',key:'spring_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0109',date:'2025-01-16',key:'summer_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0110',date:'2025-01-16',key:'vest',size:'L',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0111',date:'2025-01-16',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0112',date:'2025-01-16',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0113',date:'2025-01-16',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0114',date:'2025-01-16',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0115',date:'2025-01-16',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"유나현",note:"신규"},
+  {id:'r0116',date:'2025-01-16',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0117',date:'2025-01-16',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0118',date:'2025-01-16',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0119',date:'2025-01-16',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0120',date:'2025-01-16',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0121',date:'2025-01-16',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0122',date:'2025-01-16',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0123',date:'2025-01-16',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0124',date:'2025-01-16',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"전유성",note:"신규"},
+  {id:'r0125',date:'2025-02-03',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0126',date:'2025-02-03',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0127',date:'2025-02-03',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0128',date:'2025-02-03',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0129',date:'2025-02-03',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0130',date:'2025-02-03',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0131',date:'2025-02-03',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0132',date:'2025-02-03',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0133',date:'2025-02-03',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이승원",note:"신규"},
+  {id:'r0134',date:'2025-02-06',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"고리3사업소",note:"찢어짐"},
+  {id:'r0135',date:'2025-02-06',key:'winter_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"고리3사업소",note:"찢어짐"},
+  {id:'r0136',date:'2025-02-06',key:'winter_top',size:'110',type:'out',qty:3,price:0,maker:"",party:"고리3사업소",note:"찢어짐"},
+  {id:'r0137',date:'2025-02-06',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"고리3사업소",note:"찢어짐"},
+  {id:'r0138',date:'2025-02-07',key:'vest',size:'M',type:'in',qty:15,price:21000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0139',date:'2025-02-07',key:'vest',size:'L',type:'in',qty:100,price:21000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0140',date:'2025-02-07',key:'vest',size:'XL',type:'in',qty:140,price:21000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0141',date:'2025-02-07',key:'vest',size:'2XL',type:'in',qty:200,price:21000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0142',date:'2025-02-07',key:'vest',size:'3XL',type:'in',qty:45,price:21000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0143',date:'2025-02-10',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0144',date:'2025-02-10',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0145',date:'2025-02-10',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0146',date:'2025-02-10',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0147',date:'2025-02-10',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0148',date:'2025-02-10',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0149',date:'2025-02-10',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0150',date:'2025-02-10',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0151',date:'2025-02-10',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"허성준",note:"신규"},
+  {id:'r0152',date:'2025-02-13',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"박용성",note:"찢어짐"},
+  {id:'r0153',date:'2025-02-18',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0154',date:'2025-02-18',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0155',date:'2025-02-18',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0156',date:'2025-02-18',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0157',date:'2025-02-18',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0158',date:'2025-02-18',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0159',date:'2025-02-18',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0160',date:'2025-02-18',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0161',date:'2025-02-18',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"서유빈",note:"신규"},
+  {id:'r0162',date:'2025-02-18',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0163',date:'2025-02-18',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0164',date:'2025-02-18',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0165',date:'2025-02-18',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0166',date:'2025-02-18',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0167',date:'2025-02-18',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0168',date:'2025-02-18',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0169',date:'2025-02-18',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0170',date:'2025-02-18',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"이상진",note:"신규"},
+  {id:'r0171',date:'2025-02-24',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김의현",note:"찢어짐"},
+  {id:'r0172',date:'2025-03-05',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김용섭",note:"신규"},
+  {id:'r0173',date:'2025-03-05',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김용섭",note:"신규"},
+  {id:'r0174',date:'2025-03-05',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김용섭",note:"신규"},
+  {id:'r0175',date:'2025-03-05',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"김용섭",note:"신규"},
+  {id:'r0176',date:'2025-03-05',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"김용섭",note:"신규"},
+  {id:'r0177',date:'2025-03-05',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"김용섭",note:"신규"},
+  {id:'r0178',date:'2025-03-05',key:'winter_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0179',date:'2025-03-05',key:'spring_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0180',date:'2025-03-05',key:'summer_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0181',date:'2025-03-05',key:'vest',size:'2XL',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0182',date:'2025-03-05',key:'sweat_long',size:'100',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0183',date:'2025-03-05',key:'sweat_short',size:'100',type:'out',qty:6,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0184',date:'2025-03-05',key:'winter_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0185',date:'2025-03-05',key:'spring_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0186',date:'2025-03-05',key:'summer_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"김준수,박영재,이수형",note:"신규"},
+  {id:'r0187',date:'2025-03-05',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0188',date:'2025-03-05',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0189',date:'2025-03-05',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0190',date:'2025-03-05',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0191',date:'2025-03-05',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0192',date:'2025-03-05',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0193',date:'2025-03-05',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0194',date:'2025-03-05',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0195',date:'2025-03-05',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이원기",note:"신규"},
+  {id:'r0196',date:'2025-03-05',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0197',date:'2025-03-05',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0198',date:'2025-03-05',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0199',date:'2025-03-05',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0200',date:'2025-03-05',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0201',date:'2025-03-05',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0202',date:'2025-03-05',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0203',date:'2025-03-05',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0204',date:'2025-03-05',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0205',date:'2025-03-05',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0206',date:'2025-03-05',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0207',date:'2025-03-05',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0208',date:'2025-03-05',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0209',date:'2025-03-05',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0210',date:'2025-03-05',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0211',date:'2025-03-05',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0212',date:'2025-03-05',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0213',date:'2025-03-05',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"박선우",note:"신규"},
+  {id:'r0214',date:'2025-03-05',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0215',date:'2025-03-05',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0216',date:'2025-03-05',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0217',date:'2025-03-05',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0218',date:'2025-03-05',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0219',date:'2025-03-05',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0220',date:'2025-03-05',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0221',date:'2025-03-05',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0222',date:'2025-03-05',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"박희수",note:"신규"},
+  {id:'r0223',date:'2025-03-05',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0224',date:'2025-03-05',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0225',date:'2025-03-05',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0226',date:'2025-03-05',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0227',date:'2025-03-05',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0228',date:'2025-03-05',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0229',date:'2025-03-05',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0230',date:'2025-03-05',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0231',date:'2025-03-05',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"조찬영",note:"신규"},
+  {id:'r0232',date:'2025-03-05',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0233',date:'2025-03-05',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0234',date:'2025-03-05',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0235',date:'2025-03-05',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0236',date:'2025-03-05',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0237',date:'2025-03-05',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0238',date:'2025-03-05',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0239',date:'2025-03-05',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0240',date:'2025-03-05',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"신규"},
+  {id:'r0241',date:'2025-03-05',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0242',date:'2025-03-05',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0243',date:'2025-03-05',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0244',date:'2025-03-05',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0245',date:'2025-03-05',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0246',date:'2025-03-05',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0247',date:'2025-03-05',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0248',date:'2025-03-05',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0249',date:'2025-03-05',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"김민석",note:"신규"},
+  {id:'r0250',date:'2025-03-05',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0251',date:'2025-03-05',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0252',date:'2025-03-05',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0253',date:'2025-03-05',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0254',date:'2025-03-05',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0255',date:'2025-03-05',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0256',date:'2025-03-05',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0257',date:'2025-03-05',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0258',date:'2025-03-05',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"한준원",note:"신규"},
+  {id:'r0259',date:'2025-03-12',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"신승훈",note:"신규"},
+  {id:'r0260',date:'2025-03-12',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"신승훈",note:"신규"},
+  {id:'r0261',date:'2025-03-12',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"신승훈",note:"신규"},
+  {id:'r0262',date:'2025-03-12',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"신승훈",note:"신규"},
+  {id:'r0263',date:'2025-03-13',key:'summer_top',size:'90',type:'in',qty:8,price:43500,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0264',date:'2025-03-13',key:'summer_top',size:'95',type:'in',qty:20,price:43500,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0265',date:'2025-03-13',key:'summer_top',size:'100',type:'in',qty:21,price:43500,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0266',date:'2025-03-13',key:'summer_top',size:'105',type:'in',qty:32,price:43500,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0267',date:'2025-03-13',key:'summer_top',size:'110',type:'in',qty:22,price:43500,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0268',date:'2025-03-13',key:'summer_top',size:'115',type:'in',qty:37,price:43500,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0269',date:'2025-03-13',key:'summer_top',size:'120',type:'in',qty:12,price:43500,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0270',date:'2025-03-28',key:'winter_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"박찬덕",note:"신규"},
+  {id:'r0271',date:'2025-03-28',key:'winter_top',size:'100',type:'out',qty:2,price:0,maker:"",party:"최병렬,임동옥",note:"신규"},
+  {id:'r0272',date:'2025-03-28',key:'winter_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"강송균,최규형,김은정",note:"신규"},
+  {id:'r0273',date:'2025-03-28',key:'winter_top',size:'110',type:'out',qty:2,price:0,maker:"",party:"이한별,박웅도",note:"신규"},
+  {id:'r0274',date:'2025-03-28',key:'spring_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"박찬덕",note:"신규"},
+  {id:'r0275',date:'2025-03-28',key:'spring_top',size:'100',type:'out',qty:3,price:0,maker:"",party:"최병렬,임동옥,최규형",note:"신규"},
+  {id:'r0276',date:'2025-03-28',key:'spring_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"강송균,김은정",note:"신규"},
+  {id:'r0277',date:'2025-03-28',key:'spring_top',size:'110',type:'out',qty:2,price:0,maker:"",party:"이한별,박웅도",note:"신규"},
+  {id:'r0278',date:'2025-03-28',key:'summer_top',size:'95',type:'out',qty:2,price:0,maker:"",party:"빅찬덕,임동옥",note:"신규"},
+  {id:'r0279',date:'2025-03-28',key:'summer_top',size:'100',type:'out',qty:2,price:0,maker:"",party:"최병렬,최규형",note:"신규"},
+  {id:'r0280',date:'2025-03-28',key:'summer_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"강송균,김은정",note:"신규"},
+  {id:'r0281',date:'2025-03-28',key:'summer_top',size:'110',type:'out',qty:2,price:0,maker:"",party:"이한별,박웅도",note:"신규"},
+  {id:'r0282',date:'2025-03-28',key:'sweat_long',size:'95',type:'out',qty:2,price:0,maker:"",party:"빅찬덕,임동옥",note:"신규"},
+  {id:'r0283',date:'2025-03-28',key:'sweat_long',size:'100',type:'out',qty:2,price:0,maker:"",party:"최병렬,최규형",note:"신규"},
+  {id:'r0284',date:'2025-03-28',key:'sweat_long',size:'105',type:'out',qty:2,price:0,maker:"",party:"강송균,김은정",note:"신규"},
+  {id:'r0285',date:'2025-03-28',key:'sweat_long',size:'110',type:'out',qty:2,price:0,maker:"",party:"이한별,박웅도",note:"신규"},
+  {id:'r0286',date:'2025-03-28',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"박찬덕",note:"신규"},
+  {id:'r0287',date:'2025-03-28',key:'sweat_short',size:'100',type:'out',qty:6,price:0,maker:"",party:"최병렬,임동옥,최규형",note:"신규"},
+  {id:'r0288',date:'2025-03-28',key:'sweat_short',size:'105',type:'out',qty:4,price:0,maker:"",party:"강송균,김은정",note:"신규"},
+  {id:'r0289',date:'2025-03-28',key:'sweat_short',size:'110',type:'out',qty:4,price:0,maker:"",party:"이한별,박웅도",note:"신규"},
+  {id:'r0290',date:'2025-03-28',key:'vest',size:'L',type:'out',qty:2,price:0,maker:"",party:"빅찬덕,임동옥",note:"신규"},
+  {id:'r0291',date:'2025-03-28',key:'vest',size:'XL',type:'out',qty:2,price:0,maker:"",party:"최병렬,최규형",note:"신규"},
+  {id:'r0292',date:'2025-03-28',key:'vest',size:'2XL',type:'out',qty:2,price:0,maker:"",party:"강송균,김은정",note:"신규"},
+  {id:'r0293',date:'2025-03-28',key:'vest',size:'3XL',type:'out',qty:2,price:0,maker:"",party:"이한별,박웅도",note:"신규"},
+  {id:'r0294',date:'2025-04-16',key:'vest',size:'L',type:'out',qty:3,price:0,maker:"",party:"OH정비보조원용",note:"신규"},
+  {id:'r0295',date:'2025-04-16',key:'vest',size:'XL',type:'out',qty:4,price:0,maker:"",party:"OH정비보조원용",note:"신규"},
+  {id:'r0296',date:'2025-04-16',key:'vest',size:'2XL',type:'out',qty:3,price:0,maker:"",party:"OH정비보조원용",note:"신규"},
+  {id:'r0297',date:'2025-05-07',key:'vest',size:'L',type:'out',qty:11,price:0,maker:"",party:"한울1사업소",note:"교환(오염)"},
+  {id:'r0298',date:'2025-05-07',key:'vest',size:'XL',type:'out',qty:19,price:0,maker:"",party:"한울1사업소",note:"교환(오염)"},
+  {id:'r0299',date:'2025-05-07',key:'vest',size:'2XL',type:'out',qty:16,price:0,maker:"",party:"한울1사업소",note:"교환(오염)"},
+  {id:'r0300',date:'2025-05-07',key:'vest',size:'3XL',type:'out',qty:6,price:0,maker:"",party:"한울1사업소",note:"교환(오염)"},
+  {id:'r0301',date:'2025-05-09',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0302',date:'2025-05-09',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0303',date:'2025-05-09',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0304',date:'2025-05-09',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0305',date:'2025-05-09',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0306',date:'2025-05-09',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0307',date:'2025-05-09',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0308',date:'2025-05-09',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0309',date:'2025-05-09',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"임종진",note:"신규"},
+  {id:'r0310',date:'2025-05-20',key:'sweat_short',size:'90',type:'in',qty:10,price:43000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0311',date:'2025-05-20',key:'sweat_short',size:'95',type:'in',qty:30,price:43000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0312',date:'2025-05-20',key:'sweat_short',size:'100',type:'in',qty:52,price:43000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0313',date:'2025-05-20',key:'sweat_short',size:'105',type:'in',qty:50,price:43000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0314',date:'2025-05-20',key:'sweat_short',size:'110',type:'in',qty:30,price:43000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0315',date:'2025-05-20',key:'sweat_short',size:'115',type:'in',qty:20,price:43000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0316',date:'2025-05-20',key:'sweat_short',size:'120',type:'in',qty:10,price:43000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0317',date:'2025-05-20',key:'sweat_short',size:'100',type:'in',qty:1,price:43000,maker:"AK F&C",party:"월성3사업소",note:"교환"},
+  {id:'r0318',date:'2025-05-20',key:'sweat_short',size:'95',type:'out',qty:1,price:0,maker:"",party:"월성3사업소",note:"교환"},
+  {id:'r0319',date:'2025-05-21',key:'vest',size:'L',type:'out',qty:2,price:0,maker:"",party:"고리3사업소",note:"교환(오염)"},
+  {id:'r0320',date:'2025-05-21',key:'vest',size:'XL',type:'out',qty:2,price:0,maker:"",party:"고리3사업소",note:"교환(오염)"},
+  {id:'r0321',date:'2025-05-21',key:'vest',size:'2XL',type:'out',qty:8,price:0,maker:"",party:"고리3사업소",note:"교환(오염)"},
+  {id:'r0322',date:'2025-05-21',key:'vest',size:'3XL',type:'out',qty:5,price:0,maker:"",party:"고리3사업소",note:"교환(오염)"},
+  {id:'r0323',date:'2025-05-21',key:'vest',size:'4XL',type:'out',qty:1,price:0,maker:"",party:"고리3사업소",note:"교환(오염)"},
+  {id:'r0324',date:'2025-05-21',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0325',date:'2025-05-21',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0326',date:'2025-05-21',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0327',date:'2025-05-21',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0328',date:'2025-05-21',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0329',date:'2025-05-21',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0330',date:'2025-05-21',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0331',date:'2025-05-21',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0332',date:'2025-05-21',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"반현성",note:"신규"},
+  {id:'r0333',date:'2025-05-21',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0334',date:'2025-05-21',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0335',date:'2025-05-21',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0336',date:'2025-05-21',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0337',date:'2025-05-21',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0338',date:'2025-05-21',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0339',date:'2025-05-21',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0340',date:'2025-05-21',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0341',date:'2025-05-21',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"남상영",note:"신규"},
+  {id:'r0342',date:'2025-05-21',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0343',date:'2025-05-21',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0344',date:'2025-05-21',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0345',date:'2025-05-21',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0346',date:'2025-05-21',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0347',date:'2025-05-21',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0348',date:'2025-05-21',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0349',date:'2025-05-21',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0350',date:'2025-05-21',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김영길",note:"신규"},
+  {id:'r0351',date:'2025-05-21',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0352',date:'2025-05-21',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0353',date:'2025-05-21',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0354',date:'2025-05-21',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0355',date:'2025-05-21',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0356',date:'2025-05-21',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0357',date:'2025-05-21',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0358',date:'2025-05-21',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0359',date:'2025-05-21',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"경호준",note:"신규"},
+  {id:'r0360',date:'2025-05-21',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0361',date:'2025-05-21',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0362',date:'2025-05-21',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0363',date:'2025-05-21',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0364',date:'2025-05-21',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0365',date:'2025-05-21',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0366',date:'2025-05-21',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0367',date:'2025-05-21',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0368',date:'2025-05-21',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0369',date:'2025-05-21',key:'winter_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"김경송",note:"신규"},
+  {id:'r0370',date:'2025-05-21',key:'winter_top',size:'100',type:'out',qty:2,price:0,maker:"",party:"이승문,정지훈",note:"신규"},
+  {id:'r0371',date:'2025-05-21',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김도근",note:"신규"},
+  {id:'r0372',date:'2025-05-21',key:'spring_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"김경송",note:"신규"},
+  {id:'r0373',date:'2025-05-21',key:'spring_top',size:'100',type:'out',qty:2,price:0,maker:"",party:"이승문,정지훈",note:"신규"},
+  {id:'r0374',date:'2025-05-21',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김도근",note:"신규"},
+  {id:'r0375',date:'2025-05-21',key:'summer_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"김경송",note:"신규"},
+  {id:'r0376',date:'2025-05-21',key:'summer_top',size:'100',type:'out',qty:2,price:0,maker:"",party:"이승문,정지훈",note:"신규"},
+  {id:'r0377',date:'2025-05-21',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김도근",note:"신규"},
+  {id:'r0378',date:'2025-05-21',key:'vest',size:'L',type:'out',qty:1,price:0,maker:"",party:"김경송",note:"신규"},
+  {id:'r0379',date:'2025-05-21',key:'vest',size:'XL',type:'out',qty:2,price:0,maker:"",party:"이승문,정지훈",note:"신규"},
+  {id:'r0380',date:'2025-05-21',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"김도근",note:"신규"},
+  {id:'r0381',date:'2025-05-21',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"김경송",note:"신규"},
+  {id:'r0382',date:'2025-05-21',key:'sweat_long',size:'100',type:'out',qty:2,price:0,maker:"",party:"이승문,정지훈",note:"신규"},
+  {id:'r0383',date:'2025-05-21',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김도근",note:"신규"},
+  {id:'r0384',date:'2025-05-21',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"김경송",note:"신규"},
+  {id:'r0385',date:'2025-05-21',key:'sweat_short',size:'100',type:'out',qty:4,price:0,maker:"",party:"이승문,정지훈",note:"신규"},
+  {id:'r0386',date:'2025-05-21',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김도근",note:"신규"},
+  {id:'r0387',date:'2025-05-21',key:'winter_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"김도근,이승문,김경송",note:"신규"},
+  {id:'r0388',date:'2025-05-21',key:'spring_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"김도근,이승문,김경송",note:"신규"},
+  {id:'r0389',date:'2025-05-21',key:'summer_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"김도근,이승문,김경송",note:"신규"},
+  {id:'r0390',date:'2025-05-21',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"정지훈",note:"신규"},
+  {id:'r0391',date:'2025-05-21',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"정지훈",note:"신규"},
+  {id:'r0392',date:'2025-05-21',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"정지훈",note:"신규"},
+  {id:'r0393',date:'2025-05-22',key:'summer_bottom',size:'28',type:'in',qty:2,price:22000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0394',date:'2025-05-22',key:'summer_bottom',size:'30',type:'in',qty:10,price:22000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0395',date:'2025-05-22',key:'summer_bottom',size:'32',type:'in',qty:20,price:22000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0396',date:'2025-05-22',key:'summer_bottom',size:'34',type:'in',qty:15,price:22000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0397',date:'2025-05-22',key:'spring_top',size:'105',type:'in',qty:15,price:46000,maker:"AK F&C",party:"",note:"추가구매"},
+  {id:'r0398',date:'2025-05-26',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0399',date:'2025-05-26',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0400',date:'2025-05-26',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0401',date:'2025-05-26',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0402',date:'2025-05-26',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0403',date:'2025-05-26',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0404',date:'2025-05-26',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0405',date:'2025-05-26',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0406',date:'2025-05-26',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"조규현",note:"신규"},
+  {id:'r0407',date:'2025-05-26',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0408',date:'2025-05-26',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0409',date:'2025-05-26',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0410',date:'2025-05-26',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0411',date:'2025-05-26',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0412',date:'2025-05-26',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0413',date:'2025-05-26',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0414',date:'2025-05-26',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0415',date:'2025-05-26',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"추세영",note:"신규"},
+  {id:'r0416',date:'2025-05-26',key:'winter_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0417',date:'2025-05-26',key:'spring_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0418',date:'2025-05-26',key:'summer_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0419',date:'2025-05-26',key:'vest',size:'2XL',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0420',date:'2025-05-26',key:'sweat_long',size:'105',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0421',date:'2025-05-26',key:'sweat_short',size:'105',type:'out',qty:3,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0422',date:'2025-05-26',key:'winter_bottom',size:'32',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0423',date:'2025-05-26',key:'spring_bottom',size:'32',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0424',date:'2025-05-26',key:'summer_bottom',size:'32',type:'out',qty:2,price:0,maker:"",party:"장진웅,조동연",note:"신규"},
+  {id:'r0425',date:'2025-05-26',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0426',date:'2025-05-26',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0427',date:'2025-05-26',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0428',date:'2025-05-26',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0429',date:'2025-05-26',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0430',date:'2025-05-26',key:'sweat_short',size:'105',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0431',date:'2025-05-26',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0432',date:'2025-05-26',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0433',date:'2025-05-26',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"이영연",note:"신규"},
+  {id:'r0434',date:'2025-06-04',key:'winter_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0435',date:'2025-06-04',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"이영욱",note:"신규"},
+  {id:'r0436',date:'2025-06-04',key:'spring_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0437',date:'2025-06-04',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0438',date:'2025-06-04',key:'summer_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0439',date:'2025-06-04',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0440',date:'2025-06-04',key:'vest',size:'2XL',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0441',date:'2025-06-04',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"이영욱",note:"신규"},
+  {id:'r0442',date:'2025-06-04',key:'sweat_long',size:'105',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0443',date:'2025-06-04',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"이영욱",note:"신규"},
+  {id:'r0444',date:'2025-06-04',key:'sweat_short',size:'105',type:'out',qty:6,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0445',date:'2025-06-04',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"이영욱",note:"신규"},
+  {id:'r0446',date:'2025-06-04',key:'winter_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0447',date:'2025-06-04',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"이영욱",note:"신규"},
+  {id:'r0448',date:'2025-06-04',key:'spring_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0449',date:'2025-06-04',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"이영욱",note:"신규"},
+  {id:'r0450',date:'2025-06-04',key:'summer_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"최진혁,최기백,홍창기",note:"신규"},
+  {id:'r0451',date:'2025-06-04',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"이영욱",note:"신규"},
+  {id:'r0452',date:'2025-06-17',key:'sweat_short',size:'100',type:'in',qty:4,price:43000,maker:"AK F&C",party:"한울1사업소",note:"교환"},
+  {id:'r0453',date:'2025-06-17',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"한울1사업소",note:"교환"},
+  {id:'r0454',date:'2025-06-17',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"한울1사업소",note:"교환"},
+  {id:'r0455',date:'2025-06-25',key:'summer_bottom',size:'30',type:'out',qty:2,price:0,maker:"",party:"노영민",note:"교환"},
+  {id:'r0456',date:'2025-06-25',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"정순백",note:"교환"},
+  {id:'r0457',date:'2025-07-01',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김형성",note:"신규"},
+  {id:'r0458',date:'2025-07-02',key:'summer_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"안병창",note:"신규"},
+  {id:'r0459',date:'2025-07-02',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"안병창",note:"신규"},
+  {id:'r0460',date:'2025-07-07',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0461',date:'2025-07-07',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0462',date:'2025-07-07',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0463',date:'2025-07-07',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0464',date:'2025-07-07',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0465',date:'2025-07-07',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0466',date:'2025-07-07',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0467',date:'2025-07-07',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0468',date:'2025-07-07',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"이창은",note:"신규"},
+  {id:'r0469',date:'2025-07-08',key:'summer_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"권도윤",note:"찢어짐"},
+  {id:'r0470',date:'2025-07-16',key:'summer_top',size:'100',type:'out',qty:3,price:0,maker:"",party:"김동욱,남도균,김수용",note:"해외파견자복귀"},
+  {id:'r0471',date:'2025-07-16',key:'sweat_short',size:'100',type:'out',qty:6,price:0,maker:"",party:"김동욱,남도균,김수용",note:"해외파견자복귀"},
+  {id:'r0472',date:'2025-07-16',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"김동욱,남도균,김수용",note:"해외파견자복귀"},
+  {id:'r0473',date:'2025-07-16',key:'summer_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"김동욱,남도균,김수용",note:"해외파견자복귀"},
+  {id:'r0474',date:'2025-07-16',key:'vest',size:'XL',type:'out',qty:3,price:0,maker:"",party:"김동욱,남도균,김수용",note:"해외파견자복귀"},
+  {id:'r0475',date:'2025-07-16',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"남도균",note:"해외파견자복귀"},
+  {id:'r0476',date:'2025-07-16',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"남도균",note:"해외파견자복귀"},
+  {id:'r0477',date:'2025-07-16',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"남도균",note:"해외파견자복귀"},
+  {id:'r0478',date:'2025-07-16',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"남도균",note:"해외파견자복귀"},
+  {id:'r0479',date:'2025-07-16',key:'winter_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"이근찬,최윤호,유석진",note:"신규"},
+  {id:'r0480',date:'2025-07-16',key:'spring_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"이근찬,최윤호,유석진",note:"신규"},
+  {id:'r0481',date:'2025-07-16',key:'summer_top',size:'105',type:'out',qty:3,price:0,maker:"",party:"이근찬,최윤호,유석진",note:"신규"},
+  {id:'r0482',date:'2025-07-16',key:'vest',size:'2XL',type:'out',qty:3,price:0,maker:"",party:"이근찬,최윤호,유석진",note:"신규"},
+  {id:'r0483',date:'2025-07-16',key:'sweat_long',size:'105',type:'out',qty:4,price:0,maker:"",party:"이근찬,최윤호",note:"신규"},
+  {id:'r0484',date:'2025-07-16',key:'sweat_long',size:'100',type:'out',qty:2,price:0,maker:"",party:"유석진",note:"신규"},
+  {id:'r0485',date:'2025-07-16',key:'sweat_short',size:'105',type:'out',qty:4,price:0,maker:"",party:"이근찬,최윤호",note:"신규"},
+  {id:'r0486',date:'2025-07-16',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"유석진",note:"신규"},
+  {id:'r0487',date:'2025-07-16',key:'winter_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"이근찬,최윤호,유석진",note:"신규"},
+  {id:'r0488',date:'2025-07-16',key:'spring_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"이근찬,최윤호,유석진",note:"신규"},
+  {id:'r0489',date:'2025-07-16',key:'summer_bottom',size:'32',type:'out',qty:3,price:0,maker:"",party:"이근찬,최윤호,유석진",note:"신규"},
+  {id:'r0490',date:'2025-07-22',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"이균호",note:"찢어짐"},
+  {id:'r0491',date:'2025-07-23',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김강현",note:"해외파견자복귀"},
+  {id:'r0492',date:'2025-07-23',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"김강현",note:"해외파견자복귀"},
+  {id:'r0493',date:'2025-07-23',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"김강현",note:"해외파견자복귀"},
+  {id:'r0494',date:'2025-07-23',key:'summer_bottom',size:'30',type:'out',qty:2,price:0,maker:"",party:"김유리",note:"찢어짐"},
+  {id:'r0495',date:'2025-07-23',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"김희수",note:"해외파견자복귀"},
+  {id:'r0496',date:'2025-07-23',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"허성천",note:"해외파견자복귀"},
+  {id:'r0497',date:'2025-07-23',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"김정수",note:"해외파견자복귀"},
+  {id:'r0498',date:'2025-07-23',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"김희수",note:"해외파견자복귀"},
+  {id:'r0499',date:'2025-07-23',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"허성천",note:"해외파견자복귀"},
+  {id:'r0500',date:'2025-07-23',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"김정수",note:"해외파견자복귀"},
+  {id:'r0501',date:'2025-07-23',key:'sweat_short',size:'110',type:'out',qty:1,price:0,maker:"",party:"임정식",note:"찢어짐"},
+  {id:'r0502',date:'2025-07-28',key:'summer_top',size:'120',type:'out',qty:1,price:0,maker:"",party:"정보윤",note:"추가지급"},
+  {id:'r0503',date:'2025-08-07',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"최성윤",note:"신규"},
+  {id:'r0504',date:'2025-08-07',key:'vest',size:'3XL',type:'out',qty:3,price:0,maker:"",party:"최성윤",note:"신규"},
+  {id:'r0505',date:'2025-08-11',key:'vest',size:'M',type:'out',qty:1,price:0,maker:"",party:"장세현",note:"신규"},
+  {id:'r0506',date:'2025-08-11',key:'vest',size:'L',type:'out',qty:1,price:0,maker:"",party:"장세현",note:"신규"},
+  {id:'r0507',date:'2025-08-13',key:'summer_bottom',size:'36',type:'out',qty:2,price:0,maker:"",party:"강윤성",note:"찢어짐"},
+  {id:'r0508',date:'2025-08-18',key:'vest',size:'XL',type:'out',qty:35,price:0,maker:"",party:"배종수",note:"OH 일용직 직원"},
+  {id:'r0509',date:'2025-08-18',key:'vest',size:'2XL',type:'out',qty:16,price:0,maker:"",party:"배종수",note:"OH 일용직 직원"},
+  {id:'r0510',date:'2025-08-18',key:'vest',size:'3XL',type:'out',qty:4,price:0,maker:"",party:"배종수",note:"OH 일용직 직원"},
+  {id:'r0511',date:'2025-08-20',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"서유빈",note:"찢어짐"},
+  {id:'r0512',date:'2025-08-20',key:'sweat_short',size:'110',type:'out',qty:1,price:0,maker:"",party:"배병국",note:"찢어짐"},
+  {id:'r0513',date:'2025-08-22',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"신영언",note:"신규"},
+  {id:'r0514',date:'2025-08-22',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"신영언",note:"신규"},
+  {id:'r0515',date:'2025-08-22',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"신영언",note:"신규"},
+  {id:'r0516',date:'2025-08-27',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0517',date:'2025-08-27',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0518',date:'2025-08-28',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"김희수",note:"찢어짐"},
+  {id:'r0519',date:'2025-09-01',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"박철석",note:"추가지급"},
+  {id:'r0520',date:'2025-09-05',key:'spring_bottom',size:'30',type:'in',qty:10,price:25500,maker:"우성기업",party:"허창영",note:""},
+  {id:'r0521',date:'2025-09-05',key:'spring_bottom',size:'32',type:'in',qty:25,price:25500,maker:"우성기업",party:"허창영",note:""},
+  {id:'r0522',date:'2025-09-05',key:'summer_bottom',size:'30',type:'in',qty:10,price:22000,maker:"AK F&C",party:"허창영",note:""},
+  {id:'r0523',date:'2025-09-05',key:'summer_bottom',size:'32',type:'in',qty:30,price:22000,maker:"AK F&C",party:"허창영",note:""},
+  {id:'r0524',date:'2025-09-05',key:'summer_bottom',size:'34',type:'in',qty:10,price:22000,maker:"AK F&C",party:"허창영",note:""},
+  {id:'r0525',date:'2025-09-08',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"이승환",note:"찢어짐"},
+  {id:'r0526',date:'2025-09-09',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"김유리",note:"찢어짐"},
+  {id:'r0527',date:'2025-09-09',key:'vest',size:'L',type:'out',qty:1,price:0,maker:"",party:"김동영",note:"찢어짐"},
+  {id:'r0528',date:'2025-09-09',key:'vest',size:'XL',type:'out',qty:3,price:0,maker:"",party:"김동영",note:"찢어짐"},
+  {id:'r0529',date:'2025-09-09',key:'vest',size:'3XL',type:'out',qty:2,price:0,maker:"",party:"김동영",note:"찢어짐"},
+  {id:'r0530',date:'2025-09-09',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김동영",note:"찢어짐"},
+  {id:'r0531',date:'2025-09-09',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"박소영",note:""},
+  {id:'r0532',date:'2025-09-18',key:'vest',size:'L',type:'out',qty:2,price:0,maker:"",party:"임정식",note:"신고리1,2호기 OH"},
+  {id:'r0533',date:'2025-09-18',key:'vest',size:'XL',type:'out',qty:3,price:0,maker:"",party:"임정식",note:"신고리1,2호기 OH"},
+  {id:'r0534',date:'2025-09-18',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"임정식",note:"신고리1,2호기 OH"},
+  {id:'r0535',date:'2025-09-18',key:'vest',size:'3XL',type:'out',qty:2,price:0,maker:"",party:"임정식",note:"신고리1,2호기 OH"},
+  {id:'r0536',date:'2025-09-18',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"박진욱",note:"찢어짐"},
+  {id:'r0537',date:'2025-09-19',key:'vest',size:'XL',type:'out',qty:2,price:0,maker:"",party:"최변용",note:"찢어짐"},
+  {id:'r0538',date:'2025-09-19',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"최변용",note:"찢어짐"},
+  {id:'r0539',date:'2025-09-25',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"신정호",note:"찢어짐"},
+  {id:'r0540',date:'2025-10-14',key:'sweat_long',size:'90',type:'in',qty:5,price:43500,maker:"AK F&C",party:"",note:"신규입고"},
+  {id:'r0541',date:'2025-10-14',key:'sweat_long',size:'95',type:'in',qty:15,price:43500,maker:"AK F&C",party:"",note:"신규입고"},
+  {id:'r0542',date:'2025-10-14',key:'sweat_long',size:'100',type:'in',qty:26,price:43500,maker:"AK F&C",party:"",note:"신규입고"},
+  {id:'r0543',date:'2025-10-14',key:'sweat_long',size:'105',type:'in',qty:24,price:43500,maker:"AK F&C",party:"",note:"신규입고"},
+  {id:'r0544',date:'2025-10-14',key:'sweat_long',size:'110',type:'in',qty:15,price:43500,maker:"AK F&C",party:"",note:"신규입고"},
+  {id:'r0545',date:'2025-10-14',key:'sweat_long',size:'115',type:'in',qty:10,price:43500,maker:"AK F&C",party:"",note:"신규입고"},
+  {id:'r0546',date:'2025-10-14',key:'sweat_long',size:'120',type:'in',qty:5,price:43500,maker:"AK F&C",party:"",note:"신규입고"},
+  {id:'r0547',date:'2025-10-14',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0548',date:'2025-10-14',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0549',date:'2025-10-14',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0550',date:'2025-10-14',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0551',date:'2025-10-14',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0552',date:'2025-10-14',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0553',date:'2025-10-14',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0554',date:'2025-10-14',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0555',date:'2025-10-14',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"송원범",note:"신규"},
+  {id:'r0556',date:'2025-10-20',key:'winter_bottom',size:'28',type:'out',qty:1,price:0,maker:"",party:"최국열",note:""},
+  {id:'r0557',date:'2025-10-20',key:'winter_bottom',size:'30',type:'out',qty:3,price:0,maker:"",party:"최국열",note:""},
+  {id:'r0558',date:'2025-10-20',key:'winter_bottom',size:'32',type:'out',qty:5,price:0,maker:"",party:"최국열",note:""},
+  {id:'r0559',date:'2025-10-20',key:'winter_bottom',size:'34',type:'out',qty:11,price:0,maker:"",party:"최국열",note:""},
+  {id:'r0560',date:'2025-10-20',key:'winter_bottom',size:'36',type:'out',qty:3,price:0,maker:"",party:"최국열",note:""},
+  {id:'r0561',date:'2025-10-20',key:'winter_bottom',size:'38',type:'out',qty:2,price:0,maker:"",party:"최국열",note:""},
+  {id:'r0562',date:'2025-10-20',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"신상근",note:"신규"},
+  {id:'r0563',date:'2025-10-20',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"신상근",note:"신규"},
+  {id:'r0564',date:'2025-10-20',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"신상근",note:"신규"},
+  {id:'r0565',date:'2025-10-22',key:'sweat_long',size:'100',type:'out',qty:4,price:0,maker:"",party:"김동욱,남도균,이승문,정지훈",note:"신규"},
+  {id:'r0566',date:'2025-10-22',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김경문",note:"신규"},
+  {id:'r0567',date:'2025-10-22',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"김경송",note:"신규"},
+  {id:'r0568',date:'2025-10-27',key:'sweat_long',size:'105',type:'out',qty:2,price:0,maker:"",party:"안현준",note:"신규"},
+  {id:'r0569',date:'2025-10-27',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"정순백",note:"추가"},
+  {id:'r0570',date:'2025-10-28',key:'sweat_long',size:'105',type:'out',qty:4,price:0,maker:"",party:"김효진",note:"신규"},
+  {id:'r0571',date:'2025-10-28',key:'sweat_long',size:'100',type:'out',qty:2,price:0,maker:"",party:"김효진",note:"신규"},
+  {id:'r0572',date:'2025-10-28',key:'sweat_long',size:'100',type:'out',qty:2,price:0,maker:"",party:"유금용,고영근",note:"추가"},
+  {id:'r0573',date:'2025-10-28',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"배종수",note:"추가"},
+  {id:'r0574',date:'2025-10-30',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"구인수",note:"신규"},
+  {id:'r0575',date:'2025-10-30',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"윤수근",note:"신규"},
+  {id:'r0576',date:'2025-10-30',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김영은",note:"신규"},
+  {id:'r0577',date:'2025-10-30',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김형성",note:"신규"},
+  {id:'r0578',date:'2025-10-30',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김형성",note:"신규"},
+  {id:'r0579',date:'2025-10-30',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김형성",note:"신규"},
+  {id:'r0580',date:'2025-11-03',key:'sweat_long',size:'90',type:'out',qty:1,price:0,maker:"",party:"김혜영",note:"신규"},
+  {id:'r0581',date:'2025-11-06',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"남동욱",note:"사이즈교환"},
+  {id:'r0582',date:'2025-11-06',key:'sweat_long',size:'110',type:'in',qty:1,price:43500,maker:"AK F&C",party:"남동욱",note:"사이즈교환"},
+  {id:'r0583',date:'2025-11-24',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0584',date:'2025-11-24',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0585',date:'2025-11-24',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0586',date:'2025-11-24',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0587',date:'2025-11-24',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0588',date:'2025-11-24',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0589',date:'2025-11-24',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0590',date:'2025-11-24',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0591',date:'2025-11-24',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"류호성",note:"신규"},
+  {id:'r0592',date:'2025-11-24',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"최호범",note:"신규"},
+  {id:'r0593',date:'2025-11-27',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김혜영",note:"찢어짐"},
+  {id:'r0594',date:'2025-11-27',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김혜영",note:"찢어짐"},
+  {id:'r0595',date:'2025-11-30',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"추가"},
+  {id:'r0596',date:'2025-12-10',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"최병렬",note:"찢어짐"},
+  {id:'r0597',date:'2025-12-10',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김종명",note:"찢어짐"},
+  {id:'r0598',date:'2025-12-10',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"정석현",note:"신규"},
+  {id:'r0599',date:'2025-12-10',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"황성재",note:"찢어짐"},
+  {id:'r0600',date:'2025-12-11',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"이동근",note:"신규"},
+  {id:'r0601',date:'2025-12-11',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"이동근",note:"신규"},
+  {id:'r0602',date:'2025-12-11',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"이동근",note:"신규"},
+  {id:'r0603',date:'2025-12-11',key:'winter_bottom',size:'38',type:'out',qty:1,price:0,maker:"",party:"이동근",note:"신규"},
+  {id:'r0604',date:'2025-12-11',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"최변용",note:"찢어짐"},
+  {id:'r0605',date:'2025-12-11',key:'winter_bottom',size:'38',type:'out',qty:1,price:0,maker:"",party:"최변용",note:"찢어짐"},
+  {id:'r0606',date:'2025-12-15',key:'winter_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0607',date:'2025-12-15',key:'spring_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0608',date:'2025-12-15',key:'summer_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0609',date:'2025-12-15',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0610',date:'2025-12-15',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0611',date:'2025-12-15',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0612',date:'2025-12-15',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"조재곤",note:"신규"},
+  {id:'r0613',date:'2025-12-15',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0614',date:'2025-12-15',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0615',date:'2025-12-15',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0616',date:'2025-12-15',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0617',date:'2025-12-15',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0618',date:'2025-12-15',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0619',date:'2025-12-15',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0620',date:'2025-12-15',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0621',date:'2025-12-15',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"양희종",note:"신규"},
+  {id:'r0622',date:'2025-12-22',key:'winter_top',size:'110',type:'out',qty:2,price:0,maker:"",party:"안현준",note:"찢어짐"},
+  {id:'r0623',date:'2025-12-22',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"찢어짐"},
+  {id:'r0624',date:'2025-12-22',key:'winter_bottom',size:'40',type:'out',qty:1,price:0,maker:"",party:"안현준",note:"찢어짐"},
+  {id:'r0625',date:'2025-12-22',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"서민재",note:"찢어짐"},
+  {id:'r0626',date:'2025-12-22',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"이래성",note:"찢어짐"},
+  {id:'r0627',date:'2025-12-22',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"찢어짐"},
+  {id:'r0628',date:'2025-12-22',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"김재영",note:"찢어짐"},
+  {id:'r0629',date:'2025-12-29',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0630',date:'2025-12-29',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0631',date:'2025-12-29',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0632',date:'2025-12-29',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0633',date:'2025-12-29',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0634',date:'2025-12-29',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0635',date:'2025-12-29',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0636',date:'2025-12-29',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"신규"},
+  {id:'r0637',date:'2025-12-29',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0638',date:'2025-12-29',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0639',date:'2025-12-29',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0640',date:'2025-12-29',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0641',date:'2025-12-29',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0642',date:'2025-12-29',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0643',date:'2025-12-29',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0644',date:'2025-12-29',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0645',date:'2025-12-29',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0646',date:'2025-12-29',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0647',date:'2025-12-29',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"강윤성",note:"신규"},
+  {id:'r0648',date:'2025-12-29',key:'winter_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0649',date:'2025-12-29',key:'spring_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0650',date:'2025-12-29',key:'summer_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0651',date:'2025-12-29',key:'vest',size:'L',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0652',date:'2025-12-29',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0653',date:'2025-12-29',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0654',date:'2025-12-29',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0655',date:'2025-12-29',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0656',date:'2025-12-29',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"강병우",note:"신규"},
+  {id:'r0657',date:'2025-12-29',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0658',date:'2025-12-29',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0659',date:'2025-12-29',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0660',date:'2025-12-29',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0661',date:'2025-12-29',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0662',date:'2025-12-29',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0663',date:'2025-12-29',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0664',date:'2025-12-29',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0665',date:'2025-12-29',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"허남수",note:"신규"},
+  {id:'r0666',date:'2025-12-29',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0667',date:'2025-12-29',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0668',date:'2025-12-29',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0669',date:'2025-12-29',key:'vest',size:'XL',type:'out',qty:2,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0670',date:'2025-12-29',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0671',date:'2025-12-29',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0672',date:'2025-12-29',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0673',date:'2025-12-29',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0674',date:'2025-12-29',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김규원",note:"신규"},
+  {id:'r0675',date:'2025-12-29',key:'winter_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0676',date:'2025-12-29',key:'spring_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0677',date:'2025-12-29',key:'summer_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0678',date:'2025-12-29',key:'vest',size:'L',type:'out',qty:2,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0679',date:'2025-12-29',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0680',date:'2025-12-29',key:'sweat_short',size:'95',type:'out',qty:2,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0681',date:'2025-12-29',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0682',date:'2025-12-29',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0683',date:'2025-12-29',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"권병구",note:"신규"},
+  {id:'r0684',date:'2025-12-29',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0685',date:'2025-12-29',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0686',date:'2025-12-29',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0687',date:'2025-12-29',key:'vest',size:'2XL',type:'out',qty:2,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0688',date:'2025-12-29',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0689',date:'2025-12-29',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0690',date:'2025-12-29',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0691',date:'2025-12-29',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0692',date:'2025-12-29',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"김선호",note:"신규"},
+  {id:'r0693',date:'2026-01-02',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"송민기",note:"추가"},
+  {id:'r0694',date:'2026-01-05',key:'winter_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0695',date:'2026-01-05',key:'spring_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0696',date:'2026-01-05',key:'summer_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0697',date:'2026-01-05',key:'vest',size:'2XL',type:'out',qty:4,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0698',date:'2026-01-05',key:'sweat_long',size:'105',type:'out',qty:2,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0699',date:'2026-01-05',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0700',date:'2026-01-05',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0701',date:'2026-01-05',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0702',date:'2026-01-05',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0703',date:'2026-01-05',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0704',date:'2026-01-05',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"도규태",note:"신규"},
+  {id:'r0705',date:'2026-01-09',key:'vest',size:'XL',type:'out',qty:4,price:0,maker:"",party:"김유리",note:"추가"},
+  {id:'r0706',date:'2026-01-09',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0707',date:'2026-01-09',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0708',date:'2026-01-09',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0709',date:'2026-01-09',key:'vest',size:'3XL',type:'out',qty:2,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0710',date:'2026-01-09',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0711',date:'2026-01-09',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0712',date:'2026-01-09',key:'winter_bottom',size:'38',type:'out',qty:1,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0713',date:'2026-01-09',key:'spring_bottom',size:'38',type:'out',qty:1,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0714',date:'2026-01-09',key:'summer_bottom',size:'38',type:'out',qty:1,price:0,maker:"",party:"이재봉",note:"추가"},
+  {id:'r0715',date:'2026-01-12',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"이동재",note:"추가"},
+  {id:'r0716',date:'2026-01-13',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"서정재",note:"신규"},
+  {id:'r0717',date:'2026-01-13',key:'spring_top',size:'105',type:'out',qty:6,price:0,maker:"",party:"김강현,이준경,김대성,신정호,박태근,이재승",note:"신규"},
+  {id:'r0718',date:'2026-01-13',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"홍동우",note:"찢어짐"},
+  {id:'r0719',date:'2026-01-13',key:'spring_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"최승표",note:"신규"},
+  {id:'r0720',date:'2026-01-23',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0721',date:'2026-01-23',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0722',date:'2026-01-23',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0723',date:'2026-01-23',key:'vest',size:'XL',type:'out',qty:2,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0724',date:'2026-01-23',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0725',date:'2026-01-23',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0726',date:'2026-01-23',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0727',date:'2026-01-23',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0728',date:'2026-01-23',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"변석주",note:"신규"},
+  {id:'r0729',date:'2026-01-27',key:'sweat_long',size:'115',type:'out',qty:1,price:0,maker:"",party:"이동원",note:"추가"},
+  {id:'r0730',date:'2026-01-27',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"송기태",note:"추가"},
+  {id:'r0731',date:'2026-01-30',key:'winter_top',size:'95',type:'out',qty:4,price:0,maker:"",party:"김혜영",note:"찢어짐"},
+  {id:'r0732',date:'2026-01-30',key:'winter_top',size:'100',type:'out',qty:3,price:0,maker:"",party:"김혜영",note:"찢어짐"},
+  {id:'r0733',date:'2026-01-30',key:'winter_top',size:'105',type:'out',qty:2,price:0,maker:"",party:"김혜영",note:"찢어짐"},
+  {id:'r0734',date:'2026-01-30',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김혜영",note:"찢어짐"},
+  {id:'r0735',date:'2026-01-30',key:'winter_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"김혜영",note:"찢어짐"},
+  {id:'r0736',date:'2026-02-02',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0737',date:'2026-02-02',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0738',date:'2026-02-02',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0739',date:'2026-02-02',key:'vest',size:'2XL',type:'out',qty:2,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0740',date:'2026-02-02',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0741',date:'2026-02-02',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0742',date:'2026-02-02',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0743',date:'2026-02-02',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0744',date:'2026-02-02',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"정재영",note:"신규"},
+  {id:'r0745',date:'2026-02-09',key:'winter_top',size:'100',type:'in',qty:10,price:117727,maker:"크레타에스엔씨",party:"",note:""},
+  {id:'r0746',date:'2026-02-20',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"손영환",note:"추가"},
+  {id:'r0747',date:'2026-02-20',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"손영환",note:"추가"},
+  {id:'r0748',date:'2026-02-20',key:'spring_top',size:'120',type:'out',qty:1,price:0,maker:"",party:"정보윤",note:"추가"},
+  {id:'r0749',date:'2026-02-20',key:'winter_top',size:'120',type:'out',qty:1,price:0,maker:"",party:"정보윤",note:"추가"},
+  {id:'r0750',date:'2026-02-24',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0751',date:'2026-02-24',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0752',date:'2026-02-24',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0753',date:'2026-02-24',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0754',date:'2026-02-24',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0755',date:'2026-02-24',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0756',date:'2026-02-24',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0757',date:'2026-02-24',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0758',date:'2026-02-24',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규"},
+  {id:'r0759',date:'2026-02-24',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0760',date:'2026-02-24',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0761',date:'2026-02-24',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0762',date:'2026-02-24',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0763',date:'2026-02-24',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0764',date:'2026-02-24',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0765',date:'2026-02-24',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0766',date:'2026-02-24',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0767',date:'2026-02-24',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"박재석",note:"신규"},
+  {id:'r0768',date:'2026-03-03',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0769',date:'2026-03-03',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0770',date:'2026-03-03',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0771',date:'2026-03-03',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0772',date:'2026-03-03',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0773',date:'2026-03-03',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0774',date:'2026-03-03',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0775',date:'2026-03-03',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0776',date:'2026-03-03',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"왕지훈",note:"신규"},
+  {id:'r0777',date:'2026-03-03',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0778',date:'2026-03-03',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0779',date:'2026-03-03',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0780',date:'2026-03-03',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0781',date:'2026-03-03',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0782',date:'2026-03-03',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0783',date:'2026-03-03',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0784',date:'2026-03-03',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0785',date:'2026-03-03',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"김용현",note:"신규"},
+  {id:'r0786',date:'2026-03-03',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0787',date:'2026-03-03',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0788',date:'2026-03-03',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0789',date:'2026-03-03',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0790',date:'2026-03-03',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0791',date:'2026-03-03',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0792',date:'2026-03-03',key:'winter_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0793',date:'2026-03-03',key:'spring_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0794',date:'2026-03-03',key:'summer_bottom',size:'34',type:'out',qty:1,price:0,maker:"",party:"배기용",note:"신규"},
+  {id:'r0795',date:'2026-03-03',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0796',date:'2026-03-03',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0797',date:'2026-03-03',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0798',date:'2026-03-03',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0799',date:'2026-03-03',key:'sweat_long',size:'105',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0800',date:'2026-03-03',key:'sweat_short',size:'105',type:'out',qty:2,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0801',date:'2026-03-03',key:'winter_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0802',date:'2026-03-03',key:'spring_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0803',date:'2026-03-03',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"김치윤",note:"신규"},
+  {id:'r0804',date:'2026-03-04',key:'winter_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이태규",note:"신규"},
+  {id:'r0805',date:'2026-03-04',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이태규",note:"신규"},
+  {id:'r0806',date:'2026-03-04',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이태규",note:"신규"},
+  {id:'r0807',date:'2026-03-04',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"이태규",note:"신규"},
+  {id:'r0808',date:'2026-03-04',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이태규",note:"신규"},
+  {id:'r0809',date:'2026-03-04',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이태규",note:"신규"},
+  {id:'r0810',date:'2026-03-04',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이태규",note:"신규"},
+  {id:'r0811',date:'2026-03-04',key:'winter_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0812',date:'2026-03-12',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0813',date:'2026-03-12',key:'summer_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0814',date:'2026-03-12',key:'vest',size:'XL',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0815',date:'2026-03-12',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0816',date:'2026-03-12',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0817',date:'2026-03-12',key:'winter_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0818',date:'2026-03-12',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0819',date:'2026-03-12',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0820',date:'2026-03-16',key:'winter_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0821',date:'2026-03-16',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0822',date:'2026-03-16',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0823',date:'2026-03-16',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0824',date:'2026-03-16',key:'sweat_long',size:'110',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0825',date:'2026-03-16',key:'sweat_short',size:'110',type:'out',qty:2,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0826',date:'2026-03-16',key:'winter_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0827',date:'2026-03-16',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0828',date:'2026-03-16',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"강신용",note:"신규"},
+  {id:'r0829',date:'2026-04-09',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"최창용",note:"교환"},
+  {id:'r0830',date:'2026-04-09',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"윤정태",note:"추가"},
+  {id:'r0831',date:'2026-04-09',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"추가"},
+  {id:'r0832',date:'2026-04-09',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"허영만",note:"추가"},
+  {id:'r0833',date:'2026-04-09',key:'vest',size:'L',type:'out',qty:4,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0834',date:'2026-04-09',key:'vest',size:'XL',type:'out',qty:20,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0835',date:'2026-04-09',key:'vest',size:'2XL',type:'out',qty:15,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0836',date:'2026-04-09',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0837',date:'2026-04-09',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0838',date:'2026-04-09',key:'spring_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0839',date:'2026-04-09',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0840',date:'2026-04-09',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0841',date:'2026-04-09',key:'vest',size:'4XL',type:'out',qty:1,price:0,maker:"",party:"이래성",note:""},
+  {id:'r0842',date:'2026-04-09',key:'spring_top',size:'100',type:'out',qty:3,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0843',date:'2026-04-09',key:'spring_top',size:'105',type:'out',qty:4,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0844',date:'2026-04-09',key:'spring_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0845',date:'2026-04-09',key:'spring_top',size:'115',type:'out',qty:1,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0846',date:'2026-04-09',key:'spring_bottom',size:'32',type:'out',qty:2,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0847',date:'2026-04-09',key:'spring_bottom',size:'34',type:'out',qty:4,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0848',date:'2026-04-09',key:'spring_bottom',size:'36',type:'out',qty:3,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0849',date:'2026-04-09',key:'vest',size:'L',type:'out',qty:1,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0850',date:'2026-04-09',key:'vest',size:'XL',type:'out',qty:5,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0851',date:'2026-04-09',key:'vest',size:'2XL',type:'out',qty:2,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0852',date:'2026-04-09',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"김동현",note:""},
+  {id:'r0853',date:'2026-04-09',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"노동옥",note:""},
+  {id:'r0854',date:'2026-04-10',key:'spring_top',size:'100',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:"신규지급"},
+  {id:'r0855',date:'2026-04-10',key:'spring_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:""},
+  {id:'r0856',date:'2026-04-10',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"오찬혁",note:""},
+  {id:'r0857',date:'2026-04-10',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"오찬혁",note:""},
+  {id:'r0858',date:'2026-04-10',key:'spring_bottom',size:'40',type:'out',qty:1,price:0,maker:"",party:"김경택",note:""},
+  {id:'r0859',date:'2026-04-16',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"박현서",note:""},
+  {id:'r0860',date:'2026-04-16',key:'vest',size:'2XL',type:'out',qty:1,price:0,maker:"",party:"배기용,김치윤,박현서",note:""},
+  {id:'r0861',date:'2026-04-16',key:'vest',size:'3XL',type:'out',qty:1,price:0,maker:"",party:"당진사업소",note:""},
+  {id:'r0862',date:'2026-04-24',key:'sweat_long',size:'100',type:'out',qty:1,price:0,maker:"",party:"이재석",note:""},
+  {id:'r0863',date:'2026-04-24',key:'sweat_short',size:'100',type:'out',qty:2,price:0,maker:"",party:"이재석",note:""},
+  {id:'r0864',date:'2026-04-30',key:'spring_top',size:'95',type:'out',qty:1,price:0,maker:"",party:"박주홍",note:""},
+  {id:'r0865',date:'2026-04-30',key:'spring_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"김영진",note:""},
+  {id:'r0866',date:'2026-04-30',key:'spring_bottom',size:'32',type:'out',qty:2,price:0,maker:"",party:"권병구,김소형",note:""},
+  {id:'r0867',date:'2026-04-30',key:'spring_bottom',size:'36',type:'out',qty:2,price:0,maker:"",party:"경준수,이남준",note:""},
+  {id:'r0868',date:'2026-04-30',key:'sweat_long',size:'95',type:'out',qty:1,price:0,maker:"",party:"박주홍",note:""},
+  {id:'r0869',date:'2026-04-30',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"이태규",note:""},
+  {id:'r0870',date:'2026-04-30',key:'summer_bottom',size:'30',type:'out',qty:1,price:0,maker:"",party:"이태규",note:""},
+  {id:'r0871',date:'2026-04-30',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"강신용",note:""},
+  {id:'r0872',date:'2026-04-30',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"강신용",note:""},
+  {id:'r0873',date:'2026-04-30',key:'summer_bottom',size:'32',type:'out',qty:1,price:0,maker:"",party:"김여주",note:""},
+  {id:'r0874',date:'2026-05-07',key:'summer_bottom',size:'28',type:'out',qty:1,price:0,maker:"",party:"김혜영",note:""},
+  {id:'r0875',date:'2026-05-07',key:'summer_bottom',size:'36',type:'out',qty:1,price:0,maker:"",party:"최창용",note:""},
+  {id:'r0876',date:'2026-05-07',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"신대근",note:""},
+  {id:'r0877',date:'2026-05-07',key:'summer_top',size:'100',type:'out',qty:3,price:0,maker:"",party:"강원문,박성균,노세형",note:""},
+  {id:'r0878',date:'2026-05-07',key:'summer_top',size:'105',type:'out',qty:4,price:0,maker:"",party:"김동현,방흠표,강민섭,박현서",note:""},
+  {id:'r0879',date:'2026-05-07',key:'summer_top',size:'110',type:'out',qty:1,price:0,maker:"",party:"류동기",note:""},
+  {id:'r0880',date:'2026-05-07',key:'summer_top',size:'105',type:'out',qty:1,price:0,maker:"",party:"정창훈",note:""},
+  {id:'r0881',date:'2026-05-07',key:'summer_bottom',size:'32',type:'out',qty:2,price:0,maker:"",party:"강원문,노세형",note:""},
+  {id:'r0882',date:'2026-05-07',key:'summer_bottom',size:'34',type:'out',qty:4,price:0,maker:"",party:"김동현,강민섭,박성균,박성균,박현서",note:""},
+  {id:'r0883',date:'2026-05-07',key:'summer_bottom',size:'36',type:'out',qty:3,price:0,maker:"",party:"박흥표,정창훈,류동기",note:""},
+];
+
+// ──────────────────────────────────────────────────────────────────────────
+
+// 예시 초기 입출고
+
+/* ============== Supabase 클라우드 동기화 ============== */
+const SB_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+const SB_REST = SB_URL + '/rest/v1/app_store';
+const SB_HEADERS = { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json' };
+
+function setSyncStatus(state){
+  const b = document.getElementById('syncBadge'); if(!b) return;
+  const map = { online:['online','☁ 연결됨'], saving:['saving','💾 저장 중…'], loading:['loading','☁ 연결 중…'], offline:['offline','⚠ 오프라인(로컬)'] };
+  const [cls,txt] = map[state] || map.loading;
+  b.className = 'sync-badge ' + cls;
+  b.textContent = txt;
+}
+// 반환: 배열/객체=데이터, null=클라우드에 키 없음, undefined=접속 실패
+async function sbGet(key){
+  try{
+    const r = await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`, { headers:SB_HEADERS });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const rows = await r.json();
+    return rows.length ? rows[0].value : null;
+  }catch(e){ return undefined; }
+}
+async function sbSet(key, value){
+  try{
+    const r = await fetch(`${SB_REST}?on_conflict=key`, {
+      method:'POST',
+      headers:{ ...SB_HEADERS, Prefer:'resolution=merge-duplicates' },
+      body: JSON.stringify({ key, value, updated_at:new Date().toISOString() }),
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return true;
+  }catch(e){ return false; }
+}
+const _pushTimers = {};
+function sbPush(key, value){
+  setSyncStatus('saving');
+  clearTimeout(_pushTimers[key]);
+  _pushTimers[key] = setTimeout(async ()=>{
+    const ok = await sbSet(key, value);
+    setSyncStatus(ok ? 'online' : 'offline');
+  }, 600);
+}
+
+const ITEM_KEY = 'pibok_items_v3';   // v3: 전체 이력 데이터
+const TXN_KEY  = 'pibok_txns_v3';
+
+function loadItems(){
+  try{ const r = JSON.parse(localStorage.getItem(ITEM_KEY)); if(Array.isArray(r)&&r.length) return r; }catch(e){}
+  return DEFAULT_ITEMS.map(x=>({...x}));
+}
+function loadTxns(){
+  try{ const r = localStorage.getItem(TXN_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){}
+  return SEED_TXNS.map((t,i)=>({...t, id:'x'+i}));
+}
+function saveItems(){ try{ localStorage.setItem(ITEM_KEY, JSON.stringify(ITEMS)); }catch(e){} sbPush(ITEM_KEY, ITEMS); }
+function saveTxns(){ try{ localStorage.setItem(TXN_KEY, JSON.stringify(TXNS)); }catch(e){} sbPush(TXN_KEY, TXNS); }
+
+let ITEMS = loadItems();
+let TXNS  = loadTxns();
+let activeGroup = 'all';
+let txnType = 'in';
+
+const itemOf = key => ITEMS.find(i=>i.key===key);
+const won = n => '₩' + (n||0).toLocaleString('ko-KR');
+const numFmt = n => (n||0).toLocaleString('ko-KR');
+
+/* ============== 재고 계산 ============== */
+// stock[key][size] = 입고합 - 출고합
+function computeStock(){
+  const stock = {};
+  ITEMS.forEach(it=>{ stock[it.key] = {}; it.sizes.forEach(s=> stock[it.key][s]=0); });
+  TXNS.forEach(t=>{
+    if(!stock[t.key] || !(t.size in stock[t.key])) return;
+    stock[t.key][t.size] += (t.type==='in' ? t.qty : -t.qty);
+  });
+  return stock;
+}
+
+/* ============== 렌더링 ============== */
+function renderStats(){
+  const stock = computeStock();
+  let totalQty=0, totalVal=0, lowCnt=0;
+  ITEMS.forEach(it=>{
+    it.sizes.forEach(s=>{
+      const q = stock[it.key][s];
+      totalQty += q;
+      totalVal += q * it.price;
+      if(q <= it.safety) lowCnt++;
+    });
+  });
+  document.getElementById('statKinds').innerHTML = ITEMS.length + '<small>종</small>';
+  document.getElementById('statStock').textContent = numFmt(totalQty);
+  document.getElementById('statValue').textContent = won(totalVal);
+  document.getElementById('statLow').innerHTML = lowCnt + '<small>건</small>';
+}
+
+function renderTabs(){
+  const wrap = document.getElementById('catTabs');
+  wrap.innerHTML = '';
+  const tabs = [['all','전체']].concat(Object.entries(GROUPS).map(([k,g])=>[k, g.icon+' '+g.name]));
+  tabs.forEach(([key,label])=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (activeGroup===key?' active':'');
+    b.textContent = label;
+    b.onclick = ()=>{ activeGroup=key; renderTabs(); renderItems(); };
+    wrap.appendChild(b);
+  });
+}
+
+function renderItems(){
+  const stock = computeStock();
+  const grid = document.getElementById('itemGrid');
+  grid.innerHTML = '';
+  const list = activeGroup==='all' ? ITEMS : ITEMS.filter(i=>i.group===activeGroup);
+
+  list.forEach(it=>{
+    const g = GROUPS[it.group];
+    let sumQty=0, sumVal=0, lowSizes=0;
+    const cells = it.sizes.map(s=>{
+      const q = stock[it.key][s];
+      sumQty += q; sumVal += q*it.price;
+      let cls='size-cell';
+      if(q<=0){ cls+=' zero'; } else if(q<=it.safety){ cls+=' low'; }
+      if(q<=it.safety) lowSizes++;
+      return `<div class="${cls}"><div class="size-lbl">${s}</div><div class="size-qty">${q}<span class="size-unit">${it.unit}</span></div></div>`;
+    }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+      <div class="item-head">
+        <div class="item-icon" style="background:${g.bg}; color:${g.color};">${g.icon}</div>
+        <div>
+          <div class="item-title">${it.name}</div>
+          <div class="item-meta">제조사 <b>${it.maker||'-'}</b> · 단위 <b>${it.unit}</b> · 구입단가 <b>${won(it.price)}</b> · 안전재고 <b>${it.safety}${it.unit}</b></div>
+        </div>
+        <div class="grow"></div>
+        <button class="btn line sm" onclick="editItem('${it.key}')">✏️ 정보수정</button>
+      </div>
+      <div class="size-grid">${cells}</div>
+      <div class="item-foot">
+        <span><span class="k">총 재고</span><b>${numFmt(sumQty)}${it.unit}</b></span>
+        <span><span class="k">재고 금액</span><b>${won(sumVal)}</b></span>
+        <span><span class="k">부족 사이즈</span><b style="color:${lowSizes?'var(--orange)':'var(--t1)'}">${lowSizes}개</b></span>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function renderTxns(){
+  const body = document.getElementById('txnBody');
+  const ftype = document.getElementById('filterType').value;
+  const fgroup = document.getElementById('filterGroup').value;
+  const fsearch = (document.getElementById('filterSearch').value||'').trim().toLowerCase();
+
+  let rows = TXNS.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.id>a.id?1:-1));
+  if(ftype!=='all') rows = rows.filter(t=>t.type===ftype);
+  if(fgroup!=='all') rows = rows.filter(t=> itemOf(t.key) && itemOf(t.key).group===fgroup);
+  if(fsearch){
+    rows = rows.filter(t=>{
+      const it = itemOf(t.key);
+      const hay = `${it?it.name:''} ${t.maker||''} ${t.party||''} ${t.note||''}`.toLowerCase();
+      return hay.includes(fsearch);
+    });
+  }
+
+  document.getElementById('txnCount').textContent = `(${rows.length}건)`;
+
+  if(!rows.length){
+    body.innerHTML = '<tr><td colspan="12" class="empty">해당 조건의 입출고 내역이 없습니다.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = rows.map(t=>{
+    const it = itemOf(t.key);
+    const name = it ? it.name : t.key;
+    const unit = it ? it.unit : '';
+    const inQty  = t.type==='in'  ? numFmt(t.qty) : '';
+    const outQty = t.type==='out' ? numFmt(t.qty) : '';
+    const price  = t.type==='in' && t.price ? won(t.price) : '-';
+    return `<tr>
+      <td>${t.date||''}</td>
+      <td><span class="pill ${t.type}">${t.type==='in'?'입고':'출고'}</span></td>
+      <td class="left">${name}</td>
+      <td>${t.size||''}</td>
+      <td class="num" style="color:var(--blue); font-weight:700;">${inQty}</td>
+      <td class="num" style="color:var(--green); font-weight:700;">${outQty}</td>
+      <td>${unit}</td>
+      <td class="num">${price}</td>
+      <td>${t.maker||'-'}</td>
+      <td class="left">${t.party||'-'}</td>
+      <td class="left">${t.note||''}</td>
+      <td><button class="del-btn" onclick="delTxn('${t.id}')" title="삭제">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ============== 폼 동작 ============== */
+function fillItemSelect(){
+  const sel = document.getElementById('fItem');
+  sel.innerHTML = ITEMS.map(i=>`<option value="${i.key}">${GROUPS[i.group].name} · ${i.name}</option>`).join('');
+  const fg = document.getElementById('filterGroup');
+  fg.innerHTML = '<option value="all">전체 품목</option>' +
+    Object.entries(GROUPS).map(([k,g])=>`<option value="${k}">${g.icon} ${g.name}</option>`).join('');
+  onItemChange();
+}
+function onItemChange(){
+  const it = itemOf(document.getElementById('fItem').value);
+  if(!it) return;
+  const sel = document.getElementById('fSize');
+  sel.innerHTML = it.sizes.map(s=>`<option value="${s}">${s}</option>`).join('');
+  document.getElementById('fPrice').value = it.price;
+  document.getElementById('fMaker').value = it.maker || '';
+}
+function setTxnType(type){
+  txnType = type;
+  document.getElementById('segIn').className  = type==='in'  ? 'on-in'  : '';
+  document.getElementById('segOut').className = type==='out' ? 'on-out' : '';
+  // 출고 시에는 단가/제조사 숨김, 거래처 → 수령처 라벨 변경
+  const isIn = type==='in';
+  document.getElementById('priceField').style.display = isIn ? '' : 'none';
+  document.getElementById('makerField').style.display = isIn ? '' : 'none';
+  document.getElementById('partyLabel').textContent = isIn ? '거래처' : '수령부서 / 수령자';
+  document.getElementById('fParty').placeholder = isIn ? '예: ○○상사' : '예: 생산1팀 / 홍길동';
+  const btn = document.getElementById('submitBtn');
+  btn.className = 'btn' + (isIn ? '' : ' green');
+  btn.textContent = isIn ? '+ 입고 등록' : '+ 출고 등록';
+}
+function addTxn(){
+  const it = itemOf(document.getElementById('fItem').value);
+  if(!it){ alert('품목을 선택하세요.'); return; }
+  const date = document.getElementById('fDate').value;
+  const size = document.getElementById('fSize').value;
+  const qty = parseInt(document.getElementById('fQty').value, 10);
+  if(!date){ alert('날짜를 입력하세요.'); return; }
+  if(!qty || qty<1){ alert('수량을 1 이상 입력하세요.'); return; }
+
+  const price = txnType==='in' ? (parseInt(document.getElementById('fPrice').value,10)||0) : 0;
+  const maker = txnType==='in' ? document.getElementById('fMaker').value.trim() : '';
+  const party = document.getElementById('fParty').value.trim();
+  const note  = document.getElementById('fNote').value.trim();
+
+  // 출고 시 재고 부족 경고
+  if(txnType==='out'){
+    const cur = computeStock()[it.key][size];
+    if(qty > cur){
+      if(!confirm(`현재 ${it.name} ${size} 재고는 ${cur}${it.unit}입니다.\n${qty}${it.unit} 출고 시 재고가 마이너스가 됩니다. 계속할까요?`)) return;
+    }
+  }
+  // 입고 시 단가가 바뀌면 품목 마스터 단가 갱신
+  if(txnType==='in' && price>0 && price!==it.price){
+    it.price = price; saveItems();
+  }
+  if(txnType==='in' && maker && maker!==it.maker){
+    it.maker = maker; saveItems();
+  }
+
+  TXNS.push({ id:'x'+Date.now(), date, key:it.key, size, type:txnType, qty, price, maker, party, note });
+  saveTxns();
+  // 폼 일부 리셋
+  document.getElementById('fQty').value = 1;
+  document.getElementById('fNote').value = '';
+  renderAll();
+}
+function delTxn(id){
+  if(!confirm('이 입출고 내역을 삭제할까요?\n(재고 수량이 다시 계산됩니다.)')) return;
+  TXNS = TXNS.filter(t=>t.id!==id);
+  saveTxns();
+  renderAll();
+}
+
+let editingKey = null;
+function editItem(key){
+  const it = itemOf(key);
+  if(!it) return;
+  editingKey = key;
+  const g = GROUPS[it.group];
+  const icon = document.getElementById('mIcon');
+  icon.textContent = g.icon;
+  icon.style.background = g.bg;
+  icon.style.color = g.color;
+  document.getElementById('mTitle').textContent = it.name + ' 정보수정';
+  document.getElementById('mSub').textContent = `${g.name} · 사이즈 ${it.sizes.length}종 (${it.sizes[0]}~${it.sizes[it.sizes.length-1]})`;
+  document.getElementById('mMaker').value = it.maker || '';
+  document.getElementById('mUnit').value = it.unit;
+  document.getElementById('mPrice').value = it.price;
+  document.getElementById('mSafety').value = it.safety;
+  document.getElementById('editModal').classList.add('show');
+  setTimeout(()=> document.getElementById('mMaker').focus(), 50);
+}
+function closeEditModal(){
+  document.getElementById('editModal').classList.remove('show');
+  editingKey = null;
+}
+function saveEditModal(){
+  const it = itemOf(editingKey);
+  if(!it) return;
+  it.maker = document.getElementById('mMaker').value.trim();
+  it.unit = document.getElementById('mUnit').value.trim() || it.unit;
+  it.price = parseInt(document.getElementById('mPrice').value, 10) || 0;
+  it.safety = parseInt(document.getElementById('mSafety').value, 10) || 0;
+  saveItems();
+  closeEditModal();
+  renderAll();
+}
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeEditModal(); closeVoucher(); } });
+
+function resetData(){
+  if(!confirm('모든 품목 정보와 입출고 내역을 초기 상태로 되돌릴까요?\n(클라우드 데이터도 초기화됩니다.)')) return;
+  localStorage.removeItem(ITEM_KEY);
+  localStorage.removeItem(TXN_KEY);
+  ITEMS = loadItems();
+  TXNS = loadTxns();
+  saveItems(); saveTxns();
+  fillItemSelect();
+  renderAll();
+}
+
+/* ============== 엑셀 내보내기 (토스 스타일 서식) ============== */
+const XF = '맑은 고딕';
+const XBORDER = {
+  top:{style:'thin',color:{rgb:'E5E8EB'}}, bottom:{style:'thin',color:{rgb:'E5E8EB'}},
+  left:{style:'thin',color:{rgb:'E5E8EB'}}, right:{style:'thin',color:{rgb:'E5E8EB'}},
+};
+const ST = {
+  title:   { font:{name:XF, sz:16, bold:true, color:{rgb:'191F28'}}, alignment:{horizontal:'left', vertical:'center'} },
+  sub:     { font:{name:XF, sz:10, color:{rgb:'8B95A1'}}, alignment:{horizontal:'left', vertical:'center'} },
+  header:  { font:{name:XF, sz:11, bold:true, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'3182F6'}}, alignment:{horizontal:'center', vertical:'center'}, border:XBORDER },
+  cell:    { font:{name:XF, sz:10.5, color:{rgb:'191F28'}}, alignment:{horizontal:'center', vertical:'center'}, border:XBORDER },
+  cellAlt: { font:{name:XF, sz:10.5, color:{rgb:'191F28'}}, alignment:{horizontal:'center', vertical:'center'}, fill:{fgColor:{rgb:'FAFBFC'}}, border:XBORDER },
+};
+function leftify(s){ return {...s, alignment:{horizontal:'left', vertical:'center'}}; }
+function numify(s){ return {...s, alignment:{horizontal:'right', vertical:'center'}}; }
+function statusStyle(label, alt){
+  const base = alt ? ST.cellAlt : ST.cell;
+  if(label==='정상')    return {...base, font:{name:XF, sz:10.5, bold:true, color:{rgb:'1DB67F'}}, fill:{fgColor:{rgb:'E6F9F0'}}};
+  if(label==='부족')    return {...base, font:{name:XF, sz:10.5, bold:true, color:{rgb:'FF9800'}}, fill:{fgColor:{rgb:'FFF4E5'}}};
+  return {...base, font:{name:XF, sz:10.5, bold:true, color:{rgb:'F04452'}}, fill:{fgColor:{rgb:'FDEAEC'}}};
+}
+function gubunStyle(type, alt){
+  const base = alt ? ST.cellAlt : ST.cell;
+  if(type==='in')  return {...base, font:{name:XF, sz:10.5, bold:true, color:{rgb:'3182F6'}}, fill:{fgColor:{rgb:'EBF2FF'}}};
+  return {...base, font:{name:XF, sz:10.5, bold:true, color:{rgb:'1DB67F'}}, fill:{fgColor:{rgb:'E6F9F0'}}};
+}
+// aoa + 셀별 스타일/포맷 적용 후 시트 생성
+function buildSheet(matrix){
+  // matrix: [{v, s, z, t}] 2차원 배열
+  const aoa = matrix.map(row=> row.map(c=> c.v));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  matrix.forEach((row, r)=>{
+    row.forEach((c, col)=>{
+      const ref = XLSX.utils.encode_cell({r, c:col});
+      if(!ws[ref]) ws[ref] = {v:c.v};
+      if(c.s) ws[ref].s = c.s;
+      if(c.z) ws[ref].z = c.z;
+      if(c.t) ws[ref].t = c.t;
+    });
+  });
+  return ws;
+}
+function dateLabel(){
+  const d = new Date();
+  return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+}
+
+function exportStock(){
+  const stock = computeStock();
+  const headers = ['그룹','품명','사이즈','재고수량','단위','구입단가','재고금액','안전재고','제조사','상태'];
+  const NC = headers.length;
+  const m = [];
+  // 제목 / 부제 (병합)
+  m.push([{v:'피복 재고현황', s:ST.title}].concat(Array(NC-1).fill({v:'', s:ST.title})));
+  m.push([{v:`수산이앤에스 · ${dateLabel()} 기준 · 총 ${ITEMS.length}품목`, s:ST.sub}].concat(Array(NC-1).fill({v:'', s:ST.sub})));
+  m.push(headers.map(h=>({v:h, s:ST.header})));
+
+  let rowi = 0;
+  ITEMS.forEach(it=>{
+    it.sizes.forEach(s=>{
+      const q = stock[it.key][s];
+      const status = q<=0 ? '재고없음' : (q<=it.safety ? '부족' : '정상');
+      const alt = rowi % 2 === 1;
+      const base = alt ? ST.cellAlt : ST.cell;
+      m.push([
+        {v:GROUPS[it.group].name, s:base},
+        {v:it.name, s:leftify(base)},
+        {v:s, s:base},
+        {v:q, t:'n', z:'#,##0', s:numify(base)},
+        {v:it.unit, s:base},
+        {v:it.price, t:'n', z:'₩#,##0', s:numify(base)},
+        {v:q*it.price, t:'n', z:'₩#,##0', s:numify(base)},
+        {v:it.safety, t:'n', z:'#,##0', s:numify(base)},
+        {v:it.maker||'-', s:leftify(base)},
+        {v:status, s:statusStyle(status, alt)},
+      ]);
+      rowi++;
+    });
+  });
+
+  const ws = buildSheet(m);
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:NC-1}},
+    {s:{r:1,c:0}, e:{r:1,c:NC-1}},
+  ];
+  ws['!cols'] = [{wch:9},{wch:16},{wch:8},{wch:10},{wch:6},{wch:12},{wch:14},{wch:9},{wch:14},{wch:10}];
+  ws['!rows'] = [{hpt:26},{hpt:18},{hpt:22}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '재고현황');
+  XLSX.writeFile(wb, `피복_재고현황_${todayStr()}.xlsx`);
+}
+
+function exportTxns(){
+  const headers = ['날짜','구분','품명','사이즈','입고','출고','단위','구입단가','제조사','거래처/수령처','비고'];
+  const NC = headers.length;
+  const m = [];
+  m.push([{v:'피복 입출고 내역', s:ST.title}].concat(Array(NC-1).fill({v:'', s:ST.title})));
+  m.push([{v:`수산이앤에스 · ${dateLabel()} 출력 · 총 ${TXNS.length}건`, s:ST.sub}].concat(Array(NC-1).fill({v:'', s:ST.sub})));
+  m.push(headers.map(h=>({v:h, s:ST.header})));
+
+  const sorted = TXNS.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  sorted.forEach((t, i)=>{
+    const it = itemOf(t.key);
+    const alt = i % 2 === 1;
+    const base = alt ? ST.cellAlt : ST.cell;
+    m.push([
+      {v:t.date||'', s:base},
+      {v:t.type==='in'?'입고':'출고', s:gubunStyle(t.type, alt)},
+      {v:it?it.name:t.key, s:leftify(base)},
+      {v:t.size||'', s:base},
+      {v:t.type==='in'?t.qty:'', t:t.type==='in'?'n':'s', z:'#,##0', s:numify(base)},
+      {v:t.type==='out'?t.qty:'', t:t.type==='out'?'n':'s', z:'#,##0', s:numify(base)},
+      {v:it?it.unit:'', s:base},
+      {v:t.type==='in'?t.price:'', t:t.type==='in'?'n':'s', z:'₩#,##0', s:numify(base)},
+      {v:t.maker||'', s:leftify(base)},
+      {v:t.party||'', s:leftify(base)},
+      {v:t.note||'', s:leftify(base)},
+    ]);
+  });
+
+  const ws = buildSheet(m);
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:NC-1}},
+    {s:{r:1,c:0}, e:{r:1,c:NC-1}},
+  ];
+  ws['!cols'] = [{wch:12},{wch:7},{wch:16},{wch:8},{wch:8},{wch:8},{wch:6},{wch:12},{wch:14},{wch:18},{wch:20}];
+  ws['!rows'] = [{hpt:26},{hpt:18},{hpt:22}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '입출고내역');
+  XLSX.writeFile(wb, `피복_입출고내역_${todayStr()}.xlsx`);
+}
+function todayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/* ============== 피복비 전표생성기 (7개 부서 인원수 안분) ============== */
+const DEPTS = [ // [부서명, 코스트센터, 인원수, 유형]
+  ['경영지원팀','경영지원팀',10,'판관비'],
+  ['재무기획팀','재무기획팀',6,'판관비'],
+  ['IT팀','IT팀',3,'판관비'],
+  ['품질안전본부','품질안전본부',10,'제조비용'],
+  ['사업본부','사업본부',32,'제조비용'],
+  ['엔지니어링본부','엔지니어링본부',28,'제조비용'],
+  ['마케팅본부','마케팅본부',5,'제조비용'],
+];
+const TOTAL_HEAD = DEPTS.reduce((s,d)=>s+d[2], 0);
+const ACCT = '피복비';
+function acctName(dtype){ return dtype==='판관비' ? `판관비_${ACCT}` : `제조비용_${ACCT}`; }
+function vFmtYM(ym){ if(!ym) return ''; const [y,m]=ym.split('-'); return `${y.slice(2)}년 ${m}월`; }
+function vFmtYMFull(ym){ if(!ym) return ''; const [y,m]=ym.split('-'); return `${y}년 ${m}월`; }
+
+// 공급가액을 7개 부서에 인원수 기준으로 안분 (마지막 부서가 잔액 흡수)
+function allocateClothing(amount, memo, vendor, docDate){
+  const rows=[]; let alloc=0;
+  DEPTS.forEach((d,i)=>{
+    const [dept,cc,head,dtype]=d;
+    const amt = (i===DEPTS.length-1) ? amount-alloc : Math.trunc(amount*head/TOTAL_HEAD);
+    if(amt===0) return;
+    rows.push({계정과목:acctName(dtype), 적요:memo, 귀속부서:dept, 코스트센터:cc, 차변금액:amt, 대변금액:0, 거래처:vendor, 증빙:'', 기표일:docDate, 출납예정일:''});
+    alloc += amt;
+  });
+  return rows;
+}
+
+let voucherItems = [];
+
+function openVoucher(){
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  if(!document.getElementById('vDocDate').value) document.getElementById('vDocDate').value = today;
+  if(!document.getElementById('vYM').value) document.getElementById('vYM').value = today.slice(0,7);
+  if(voucherItems.length===0) voucherItems.push({vendor:'', supply:0, vat:0, evid:'세금계산서', memo:''});
+  renderVoucher();
+  document.getElementById('voucherModal').classList.add('show');
+}
+function closeVoucher(){ document.getElementById('voucherModal').classList.remove('show'); }
+function addVoucherRow(){ voucherItems.push({vendor:'', supply:0, vat:0, evid:'세금계산서', memo:''}); renderVoucher(); }
+
+function loadInboundToVoucher(){
+  const ym = document.getElementById('vYM').value;
+  const loc = document.getElementById('vLocation').value;
+  const map = {};
+  TXNS.filter(t=>t.type==='in').forEach(t=>{
+    if(ym && (t.date||'').slice(0,7)!==ym) return;
+    const amt = (t.qty||0)*(t.price||0);
+    if(amt<=0) return;
+    const vendor = t.party || t.maker || '-';
+    if(!map[vendor]) map[vendor] = {vendor, supply:0, names:new Set()};
+    map[vendor].supply += amt;
+    const it = itemOf(t.key); if(it) map[vendor].names.add(it.name);
+  });
+  const arr = Object.values(map);
+  if(!arr.length){
+    alert(ym ? `${vFmtYMFull(ym)}에 입고된 내역이 없습니다.\n사용월을 변경하거나 직접 입력해 주세요.` : '입고 내역이 없습니다.');
+    return;
+  }
+  voucherItems = arr.map(g=>({
+    vendor:g.vendor, supply:g.supply, vat:Math.round(g.supply*0.1), evid:'세금계산서',
+    memo:`${loc} ${vFmtYM(ym)} 피복 구입 (${[...g.names].join(', ')})`
+  }));
+  renderVoucher();
+}
+
+// 입력 중 표 전체를 다시 그리면 포커스가 풀려 타이핑이 끊기므로,
+// 값만 갱신하고 같은 행의 부가세 칸/합계만 직접 업데이트한다.
+function vOnVendor(i, el){ voucherItems[i].vendor = el.value; }
+function vOnMemo(i, el){ voucherItems[i].memo = el.value; }
+function vOnEvid(i, el){ voucherItems[i].evid = el.value; }
+function vOnSupply(i, el){
+  const val = Number(el.value) || 0;
+  voucherItems[i].supply = val;
+  voucherItems[i].vat = Math.round(val * 0.1);
+  const vatInput = el.closest('tr').querySelector('.v-vat');
+  if(vatInput) vatInput.value = voucherItems[i].vat;
+  renderVoucherTotal();
+}
+function vOnVat(i, el){
+  voucherItems[i].vat = Number(el.value) || 0;
+  renderVoucherTotal();
+}
+function vDeleteRow(i){ voucherItems.splice(i, 1); renderVoucher(); }
+
+function renderVoucher(){
+  const body = document.getElementById('vBody');
+  body.innerHTML = voucherItems.map((it,i)=>`
+    <tr>
+      <td><input class="v-vendor" value="${it.vendor||''}" oninput="vOnVendor(${i}, this)" placeholder="예: 대한피복"></td>
+      <td><input class="v-supply" type="number" inputmode="numeric" min="0" step="1000" value="${it.supply ? it.supply : ''}" oninput="vOnSupply(${i}, this)" placeholder="0"></td>
+      <td><input class="v-vat" type="number" inputmode="numeric" min="0" step="100" value="${it.vat ? it.vat : ''}" oninput="vOnVat(${i}, this)" placeholder="0"></td>
+      <td><select onchange="vOnEvid(${i}, this)">
+        <option ${it.evid==='세금계산서'?'selected':''}>세금계산서</option>
+        <option ${it.evid==='카드'?'selected':''}>카드</option>
+      </select></td>
+      <td><input class="v-memo" value="${it.memo||''}" oninput="vOnMemo(${i}, this)" placeholder="적요"></td>
+      <td style="text-align:center;"><button class="del-btn" onclick="vDeleteRow(${i})" title="삭제">🗑</button></td>
+    </tr>`).join('');
+  renderVoucherTotal();
+}
+function renderVoucherTotal(){
+  const supply = voucherItems.reduce((s,x)=>s+(x.supply||0), 0);
+  const vat = voucherItems.reduce((s,x)=>s+(x.vat||0), 0);
+  document.getElementById('vTotalLine').innerHTML =
+    `공급가액 <b>${won(supply)}</b> &nbsp;·&nbsp; 부가세 <b>${won(vat)}</b> &nbsp;·&nbsp; 합계 <b>${won(supply+vat)}</b>`;
+  const prev = document.getElementById('vDeptPreview');
+  if(supply>0){
+    let alloc = 0;
+    prev.innerHTML = '<span class="dept-chip" style="background:var(--blue-bg); border-color:#BBD5FF; color:var(--blue);">7개 부서 안분 미리보기</span>' +
+      DEPTS.map((d,i)=>{
+        const amt = (i===DEPTS.length-1) ? supply-alloc : Math.trunc(supply*d[2]/TOTAL_HEAD);
+        alloc += amt;
+        return `<span class="dept-chip">${d[0]}<b>${won(amt)}</b></span>`;
+      }).join('');
+  } else { prev.innerHTML = ''; }
+}
+
+function generateVoucher(){
+  const items = voucherItems.filter(it=>it.supply>0);
+  if(!items.length){ alert('공급가액이 입력된 청구 건이 없습니다.'); return; }
+  const loc = document.getElementById('vLocation').value;
+  const docDate = document.getElementById('vDocDate').value;
+  const payDate = document.getElementById('vPayDate').value;
+  const ym = document.getElementById('vYM').value;
+
+  const groups = [];
+  items.forEach(it=>{
+    const isCard = it.evid==='카드';
+    const vatAcct = isCard ? '카드매입부가세' : '일반매입부가세';
+    const payAcct = isCard ? '법인카드미지급금' : '미지급금_일반';
+    const evid = isCard ? '카드매입' : '전자세금계산서(일반)';
+    const memo = it.memo || `${loc} ${vFmtYM(ym)} 피복비`;
+    const rows = allocateClothing(it.supply, memo, it.vendor, docDate);
+    rows.push({계정과목:vatAcct, 적요:memo, 귀속부서:'', 코스트센터:'', 차변금액:it.vat, 대변금액:0, 거래처:it.vendor, 증빙:evid, 기표일:docDate, 출납예정일:''});
+    rows.push({계정과목:payAcct, 적요:memo, 귀속부서:'', 코스트센터:'', 차변금액:0, 대변금액:it.supply+it.vat, 거래처:it.vendor, 증빙:'', 기표일:docDate, 출납예정일:payDate});
+    groups.push({label:`  ▶  피복비  |  ${it.vendor||'-'}  |  ${vFmtYMFull(ym)}분 (${evid} ${docDate})`, rows});
+  });
+
+  // ===== 토스 스타일 엑셀 =====
+  const header = ['계정과목','적요','귀속부서','코스트센터','차변금액','대변금액','거래처','증빙','기표일','출납예정일'];
+  const NC = header.length;
+  const now = new Date();
+  const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const labelStyle = { font:{name:XF, sz:11, bold:true, color:{rgb:'3182F6'}}, fill:{fgColor:{rgb:'EBF2FF'}}, alignment:{horizontal:'left', vertical:'center'}, border:XBORDER };
+  const sumStyle   = { font:{name:XF, sz:10.5, bold:true, color:{rgb:'191F28'}}, fill:{fgColor:{rgb:'F2F4F6'}}, alignment:{horizontal:'center', vertical:'center'}, border:XBORDER };
+  const sumNum     = { ...sumStyle, alignment:{horizontal:'right', vertical:'center'} };
+
+  const m = [];
+  const merges = [];
+  m.push([{v:'수산이앤에스 피복비 전표입력 참조', s:ST.title}].concat(Array(NC-1).fill({v:'', s:ST.title})));
+  merges.push({s:{r:0,c:0}, e:{r:0,c:NC-1}});
+  m.push([{v:`생성: ${nowStr} · 계정과목: 피복비 · 7개 부서 인원수 안분`, s:ST.sub}].concat(Array(NC-1).fill({v:'', s:ST.sub})));
+  merges.push({s:{r:1,c:0}, e:{r:1,c:NC-1}});
+
+  groups.forEach(g=>{
+    m.push(Array(NC).fill({v:''}));               // 그룹 사이 빈 줄
+    const labelRow = m.length;
+    m.push([{v:g.label, s:labelStyle}].concat(Array(NC-1).fill({v:'', s:labelStyle})));
+    merges.push({s:{r:labelRow,c:0}, e:{r:labelRow,c:NC-1}});
+    m.push(header.map(h=>({v:h, s:ST.header})));
+    let dSum=0, cSum=0, ri=0;
+    g.rows.forEach(r=>{
+      const base = (ri++ % 2 === 1) ? ST.cellAlt : ST.cell;
+      m.push([
+        {v:r['계정과목'], s:leftify(base)},
+        {v:r['적요'], s:leftify(base)},
+        {v:r['귀속부서'], s:base},
+        {v:r['코스트센터'], s:base},
+        {v:r['차변금액']||0, t:'n', z:'#,##0', s:numify(base)},
+        {v:r['대변금액']||0, t:'n', z:'#,##0', s:numify(base)},
+        {v:r['거래처'], s:leftify(base)},
+        {v:r['증빙'], s:leftify(base)},
+        {v:r['기표일'], s:base},
+        {v:r['출납예정일'], s:base},
+      ]);
+      dSum += r['차변금액']||0; cSum += r['대변금액']||0;
+    });
+    m.push([
+      {v:'합 계', s:sumStyle},{v:'', s:sumStyle},{v:'', s:sumStyle},{v:'', s:sumStyle},
+      {v:dSum, t:'n', z:'#,##0', s:sumNum},{v:cSum, t:'n', z:'#,##0', s:sumNum},
+      {v:'', s:sumStyle},{v:'', s:sumStyle},{v:'', s:sumStyle},{v:'', s:sumStyle},
+    ]);
+  });
+
+  const ws = buildSheet(m);
+  ws['!merges'] = merges;
+  ws['!cols'] = [{wch:18},{wch:42},{wch:14},{wch:14},{wch:13},{wch:14},{wch:18},{wch:22},{wch:12},{wch:12}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '피복비전표');
+  XLSX.writeFile(wb, `피복비전표_${(ym||'').replace('-','') || todayStr()}.xlsx`);
+}
+
+/* ============== 클라우드 로드 / 백업 / 복원 ============== */
+async function sbInit(){
+  setSyncStatus('loading');
+  const [itemsCloud, txnsCloud] = await Promise.all([sbGet(ITEM_KEY), sbGet(TXN_KEY)]);
+  if(itemsCloud===undefined && txnsCloud===undefined){ setSyncStatus('offline'); return; }
+  let changed = false;
+  if(Array.isArray(itemsCloud) && itemsCloud.length){
+    ITEMS = itemsCloud; try{ localStorage.setItem(ITEM_KEY, JSON.stringify(ITEMS)); }catch(e){} changed = true;
+  } else if(itemsCloud===null){
+    ITEMS = DEFAULT_ITEMS.map(x=>({...x}));
+    try{ localStorage.setItem(ITEM_KEY, JSON.stringify(ITEMS)); }catch(e){}
+    await sbSet(ITEM_KEY, ITEMS);
+    changed = true;
+  }
+  if(Array.isArray(txnsCloud) && txnsCloud.length){
+    TXNS = txnsCloud; try{ localStorage.setItem(TXN_KEY, JSON.stringify(TXNS)); }catch(e){} changed = true;
+  } else if(txnsCloud===null){
+    // 새 키 → SEED_TXNS로 초기화하여 Supabase에 저장
+    TXNS = SEED_TXNS.map((t,i)=>({...t, id: t.id||('x'+i)}));
+    try{ localStorage.setItem(TXN_KEY, JSON.stringify(TXNS)); }catch(e){}
+    await sbSet(TXN_KEY, TXNS);
+    changed = true;
+  }
+  setSyncStatus('online');
+  if(changed){ fillItemSelect(); renderAll(); }
+}
+function backupJSON(){
+  const data = { _type:'soosan-uniform-backup', _at:new Date().toISOString(), items:ITEMS, txns:TXNS };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `피복관리_백업_${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function restoreJSON(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const d = JSON.parse(reader.result);
+      if(!d.items || !d.txns) throw new Error('형식 오류');
+      if(!confirm('백업 파일의 내용으로 덮어쓸까요?\n현재 데이터(클라우드 포함)가 교체됩니다.')) return;
+      ITEMS = d.items; TXNS = d.txns;
+      saveItems(); saveTxns();
+      fillItemSelect(); renderAll();
+      alert('복원이 완료되었습니다.');
+    }catch(e){ alert('복원 실패: 올바른 백업 파일이 아닙니다.'); }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* ============== 초기화 ============== */
+function renderAll(){
+  renderStats();
+  renderTabs();
+  renderItems();
+  renderTxns();
+}
+(function init(){
+  const d = new Date();
+  document.getElementById('fDate').value =
+    `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  fillItemSelect();
+  setTxnType('in');
+  renderAll();
+  sbInit();
+})();
+</script>
+</body>
+</html>
