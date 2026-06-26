@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -340,15 +340,15 @@
       <tbody>
         <tr><td style="padding:3px 6px; font-weight:700; color:var(--t2);">선급금</td>
           <td style="padding:3px 4px;"><input type="number" id="cmPrepayAmt" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;"></td>
-          <td style="padding:3px 4px;"><input type="number" id="cmPrepayRate" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;"></td>
+          <td style="padding:3px 4px;"><input type="number" id="cmPrepayRate" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;" oninput="calcPayAmt('Prepay')"></td>
           <td style="padding:3px 4px;"><input type="date" id="cmPrepayDate" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg);"></td></tr>
         <tr><td style="padding:3px 6px; font-weight:700; color:var(--t2);">중도금</td>
           <td style="padding:3px 4px;"><input type="number" id="cmMidAmt" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;"></td>
-          <td style="padding:3px 4px;"><input type="number" id="cmMidRate" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;"></td>
+          <td style="padding:3px 4px;"><input type="number" id="cmMidRate" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;" oninput="calcPayAmt('Mid')"></td>
           <td style="padding:3px 4px;"><input type="date" id="cmMidDate" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg);"></td></tr>
         <tr><td style="padding:3px 6px; font-weight:700; color:var(--t2);">잔금</td>
           <td style="padding:3px 4px;"><input type="number" id="cmBalAmt" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;"></td>
-          <td style="padding:3px 4px;"><input type="number" id="cmBalRate" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;"></td>
+          <td style="padding:3px 4px;"><input type="number" id="cmBalRate" placeholder="0" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg); text-align:right;" oninput="calcPayAmt('Bal')"></td>
           <td style="padding:3px 4px;"><input type="date" id="cmBalDate" style="width:100%; padding:8px; border:1px solid var(--line); border-radius:9px; font-family:inherit; background:var(--bg);"></td></tr>
       </tbody>
     </table>
@@ -726,6 +726,13 @@ function togglePayTermEtc(){
   const isEtc = document.getElementById('cmPayTerm').value === 'etc';
   document.getElementById('cmPayTermEtc').style.display = isEtc ? '' : 'none';
 }
+function calcPayAmt(key) {
+  const supply = parseFloat(document.getElementById('cmSupply').value) || 0;
+  const rate = parseFloat(document.getElementById('cm'+key+'Rate').value) || 0;
+  const amt = Math.round(supply * rate / 100);
+  document.getElementById('cm'+key+'Amt').value = amt || '';
+}
+
 function openCaseModal(id){
   editingCaseId = id || null;
   const c = id ? CASES.find(x=>x.id===id) : null;
@@ -1096,76 +1103,11 @@ function renderAll(){ populateFilterOptions(); renderStats(); renderTabs(); rend
     <div class="om-info-box" id="omInfoBox">
       <b>포함 순서:</b><br>
       1️⃣ 구매발주서 (ERP 엑셀 업로드 시 엑셀 생성, PDF 업로드 시 PDF 생성)<br>
-      2️⃣ <span id="omCondLabel">구매계약 일반조건</span> (내장)<br>
+      2️⃣ <span id="omCondLabel">구매계약 일반조건</span> <span id="omCondSavedBadge" style="color:var(--green);font-size:11px;"></span><br>
       3️⃣ 구매시방서 (아래에서 업로드)
     </div>
 
     <!-- 고정 사항 안내 -->
-    <div style="background:var(--bg);border-radius:12px;padding:13px 15px;font-size:12px;color:var(--t2);margin-bottom:16px;line-height:1.8;">
-      <b style="color:var(--t1);font-size:12.5px;">📌 고정 기재 사항</b><br>
-      · 발주 승인 : <b>이 동 걸</b><br>
-      · 납품장소 : <b>담당자와 협의</b><br>
-      · 지불방법 : <b>당사 지불조건에 따름</b>
-    </div>
-
-    <!-- 변동 사항 입력 -->
-    <div style="margin-bottom:16px;">
-      <div style="font-size:12.5px;font-weight:800;color:var(--t1);margin-bottom:12px;">✏️ 변동 기재 사항</div>
-
-      <div class="om-field">
-        <label>구매사양서 번호</label>
-        <input type="text" id="omSpecNo" placeholder="예: ES-26-008" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;background:var(--bg);color:var(--t1);">
-      </div>
-
-      <div class="om-field">
-        <label>지급 조건</label>
-        <select id="omPayTermSel" onchange="omPayTermSelChange()" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--t1);margin-bottom:6px;">
-          <option value="">-- 선택 --</option>
-          <option value="납품 후 30일 이내 계약금액의 100% 현금지급">납품 후 30일 이내 계약금액의 100% 현금지급</option>
-          <option value="납품 후 60일 이내 계약금액의 100% 현금지급">납품 후 60일 이내 계약금액의 100% 현금지급</option>
-          <option value="납품 후 90일 이내 계약금액의 100% 현금지급">납품 후 90일 이내 계약금액의 100% 현금지급</option>
-          <option value="기타">직접 입력</option>
-        </select>
-        <input type="text" id="omPayTermEtc" placeholder="지급 조건을 직접 입력하세요" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--t1);display:none;">
-      </div>
-
-      <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px;">이행보증증권</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
-        <div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:4px;">선급금이행보증</div>
-          <select id="omBondAdv" onchange="omBondChange('Adv')" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--t1);">
-            <option value="해당없음">해당없음</option>
-            <option value="계약금액의 10%">10%</option>
-            <option value="계약금액의 20%">20%</option>
-            <option value="계약금액의 30%">30%</option>
-            <option value="직접입력">직접입력</option>
-          </select>
-          <input type="text" id="omBondAdvEtc" placeholder="예: 계약금액의 15%" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:inherit;background:var(--bg);margin-top:4px;display:none;">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:4px;">계약이행보증</div>
-          <select id="omBondPerf" onchange="omBondChange('Perf')" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--t1);">
-            <option value="해당없음">해당없음</option>
-            <option value="계약금액의 10%">10%</option>
-            <option value="계약금액의 20%">20%</option>
-            <option value="계약금액의 30%">30%</option>
-            <option value="직접입력">직접입력</option>
-          </select>
-          <input type="text" id="omBondPerfEtc" placeholder="예: 계약금액의 10%" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:inherit;background:var(--bg);margin-top:4px;display:none;">
-        </div>
-        <div>
-          <div style="font-size:11px;color:var(--t3);margin-bottom:4px;">하자이행보증(년수)</div>
-          <select id="omBondDef" onchange="omBondChange('Def')" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:inherit;background:var(--bg);color:var(--t1);">
-            <option value="해당없음">해당없음</option>
-            <option value="계약금액의 5% (1년)">5% (1년)</option>
-            <option value="계약금액의 5% (2년)">5% (2년)</option>
-            <option value="계약금액의 10% (1년)">10% (1년)</option>
-            <option value="직접입력">직접입력</option>
-          </select>
-          <input type="text" id="omBondDefEtc" placeholder="예: 계약금액의 5% (1년)" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:inherit;background:var(--bg);margin-top:4px;display:none;">
-        </div>
-      </div>
-    </div>
 
     
     <div class="om-field">
@@ -1195,6 +1137,17 @@ function renderAll(){ populateFilterOptions(); renderStats(); renderTabs(); rend
         <div class="om-txt" id="omSpecTxt">구매시방서 PDF를 업로드하세요</div>
       </div>
       <input type="file" id="omSpecFile" accept=".pdf" style="display:none" onchange="onSpecFileChange(this)">
+    </div>
+    <div class="om-field">
+      <label>② 일반조건 PDF <span style="color:var(--t3);font-weight:500;">(한 번 업로드하면 자동 저장)</span></label>
+      <div class="om-upload-box" id="omCondBox" onclick="document.getElementById('omCondFile').click()" style="border-color:var(--green);background:var(--green-bg);">
+        <div class="om-icon">📋</div>
+        <div class="om-txt" id="omCondTxt">일반조건 PDF를 업로드하세요 (저장 후 다음부터 자동 사용)</div>
+      </div>
+      <input type="file" id="omCondFile" accept=".pdf" style="display:none" onchange="onCondFileChange(this)">
+      <div id="omCondClearWrap" style="display:none;margin-top:6px;">
+        <button onclick="clearCondFile()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;padding:0;">✕ 저장된 일반조건 삭제</button>
+      </div>
     </div>
     <div class="om-progress" id="omProgress">PDF 생성 중... 잠시 기다려 주세요 ⏳</div>
     
@@ -1236,16 +1189,6 @@ function openOrderModal(caseId) {
   document.getElementById('omSpecFile').value = '';
   document.getElementById('omProgress').style.display = 'none';
   document.getElementById('omGenBtn').disabled = false;
-  // 변동사항 초기화
-  document.getElementById('omSpecNo').value = '';
-  document.getElementById('omPayTermSel').value = '';
-  document.getElementById('omPayTermEtc').style.display = 'none';
-  document.getElementById('omPayTermEtc').value = '';
-  ['Adv','Perf','Def'].forEach(k => {
-    document.getElementById('omBond'+k).value = '해당없음';
-    document.getElementById('omBond'+k+'Etc').style.display = 'none';
-    document.getElementById('omBond'+k+'Etc').value = '';
-  });
   document.getElementById('orderModal').classList.add('show');
 }
 function closeOrderModal() { document.getElementById('orderModal').classList.remove('show'); }
@@ -1263,6 +1206,89 @@ function onSpecFileChange(input) {
   _specFile = f;
   document.getElementById('omSpecTxt').textContent = '✅ ' + f.name;
   document.getElementById('omSpecBox').classList.add('has-file');
+}
+
+// ===== 일반조건 PDF — IndexedDB 저장 (대용량 지원) =====
+const COND_DB_NAME = 'soosan_cond_db';
+const COND_DB_STORE = 'cond_files';
+function openCondDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(COND_DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(COND_DB_STORE);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+function condDbGet(key) {
+  return openCondDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(COND_DB_STORE, 'readonly');
+    const req = tx.objectStore(COND_DB_STORE).get(key);
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror = e => reject(e.target.error);
+  }));
+}
+function condDbSet(key, value) {
+  return openCondDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(COND_DB_STORE, 'readwrite');
+    const req = tx.objectStore(COND_DB_STORE).put(value, key);
+    req.onsuccess = () => resolve();
+    req.onerror = e => reject(e.target.error);
+  }));
+}
+function condDbDelete(key) {
+  return openCondDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(COND_DB_STORE, 'readwrite');
+    const req = tx.objectStore(COND_DB_STORE).delete(key);
+    req.onsuccess = () => resolve();
+    req.onerror = e => reject(e.target.error);
+  }));
+}
+
+function getCondDbKey(isService){ return isService ? 'service' : 'purchase'; }
+
+async function loadCondUI(isService) {
+  const saved = await condDbGet(getCondDbKey(isService));
+  const badge = document.getElementById('omCondSavedBadge');
+  if(saved) {
+    document.getElementById('omCondTxt').textContent = '저장된 일반조건 사용 중 (새 파일 업로드 시 교체)';
+    document.getElementById('omCondBox').classList.add('has-file');
+    document.getElementById('omCondClearWrap').style.display = '';
+    if(badge) badge.textContent = '(고화질 저장됨)';
+  } else {
+    document.getElementById('omCondTxt').textContent = '일반조건 PDF를 업로드하세요 (저장 후 다음부터 자동 사용)';
+    document.getElementById('omCondBox').classList.remove('has-file');
+    document.getElementById('omCondClearWrap').style.display = 'none';
+    if(badge) badge.textContent = '(내장 저화질)';
+  }
+}
+
+function onCondFileChange(input) {
+  if(!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const isService = (CASES.find(x=>x.id===_orderCaseId)||{}).type === 'service';
+  const reader = new FileReader();
+  document.getElementById('omCondTxt').textContent = '저장 중...';
+  reader.onload = async function(e) {
+    try {
+      await condDbSet(getCondDbKey(isService), e.target.result);
+      document.getElementById('omCondTxt').textContent = file.name + ' (저장 완료)';
+      document.getElementById('omCondBox').classList.add('has-file');
+      document.getElementById('omCondClearWrap').style.display = '';
+      const badge = document.getElementById('omCondSavedBadge');
+      if(badge) badge.textContent = '(고화질 저장됨)';
+    } catch(err) {
+      alert('저장 실패: ' + err.message);
+      document.getElementById('omCondTxt').textContent = '일반조건 PDF를 업로드하세요';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function clearCondFile() {
+  const isService = (CASES.find(x=>x.id===_orderCaseId)||{}).type === 'service';
+  await condDbDelete(getCondDbKey(isService));
+  document.getElementById('omCondFile').value = '';
+  loadCondUI(isService);
 }
 
 async function readFileAsArrayBuffer(file) {
@@ -1307,7 +1333,7 @@ function makeTextImageBytes(text, opt) {
 
   let size = opt.fontSize || 10;
   const weight = opt.weight || 600;
-  const family = 'Malgun Gothic, 맑은 고딕, Gulim, 굴림, sans-serif';
+  const family = opt.font || 'Gulim, 굴림, Dotum, 돋움, sans-serif';
   const value = String(text || '');
 
   while(size > 6) {
@@ -1422,7 +1448,8 @@ async function generateOrderPDF() {
 
     // 2. 일반조건 (내장 base64)
     prog.textContent = '일반조건 추가 중...';
-    const condB64 = isService ? COND_SERVICE_B64 : COND_PURCHASE_B64;
+    const savedCondDataUrl = await condDbGet(getCondDbKey(isService));
+    const condB64 = savedCondDataUrl ? savedCondDataUrl.split(',')[1] : (isService ? COND_SERVICE_B64 : COND_PURCHASE_B64);
     const condBytes = b64ToUint8Array(condB64);
     const condDoc = await PDFDocument.load(condBytes, { ignoreEncryption: true });
     const condPageIndices = condDoc.getPageIndices();
@@ -1590,3 +1617,7 @@ async function generateOrderExcel() {
 
 </body>
 </html>
+
+
+
+
