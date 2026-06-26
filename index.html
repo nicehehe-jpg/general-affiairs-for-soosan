@@ -645,13 +645,22 @@
       <h1 class="greet">안녕하세요, 아스터님 👋</h1>
       <p class="greet-sub">오늘 처리할 업무를 확인하세요. <span id="syncBadge" class="sync-badge loading">☁ 연결 중…</span></p>
     </div>
-    <button class="mail-hero-btn" onclick="openDashMailModal()">
-      <span class="ic">✉️</span>
-      <span class="txt">
-        <span class="main">메일 보내기</span>
-        <span class="sub">아웃룩으로 전송</span>
-      </span>
-    </button>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="mail-hero-btn" onclick="openDashMailModal()">
+        <span class="ic">✉️</span>
+        <span class="txt">
+          <span class="main">메일 보내기</span>
+          <span class="sub">아웃룩으로 전송</span>
+        </span>
+      </button>
+      <button class="mail-hero-btn" onclick="location.href='ms-outlook:'" style="background:linear-gradient(135deg,#0078D4,#106EBE);">
+        <span class="ic">📥</span>
+        <span class="txt">
+          <span class="main">받은편지함</span>
+          <span class="sub">아웃룩 열기</span>
+        </span>
+      </button>
+    </div>
   </div>
 
   <!-- ===== 자주 가는 사이트 ===== -->
