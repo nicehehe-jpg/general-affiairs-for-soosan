@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>가계부 - Toss Style Ultimate</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --toss-blue: #0064ff;
+      --toss-bg: #f2f4f6;
+      --toss-card: #ffffff;
+      --toss-text-main: #191f28;
+      --toss-text-sub: #4e5968;
+      --toss-text-grey: #8b95a1;
+      --toss-border: #e5e8eb;
+      --toss-danger: #f04452;
+      --toss-success: #3182f6;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--toss-bg);
+      color: var(--toss-text-main);
+      line-height: 1.5;
+      padding-bottom: 80px;
+    }
+
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid var(--toss-border);
+    }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .back-btn { font-size: 20px; text-decoration: none; color: var(--toss-text-main); cursor: pointer; }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+    .card {
+      background: var(--toss-card);
+      border-radius: 24px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .summary-title { font-size: 15px; color: var(--toss-text-sub); margin-bottom: 8px; }
+    .summary-amount { font-size: 28px; font-weight: 800; margin-bottom: 16px; }
+    .summary-diff { font-size: 14px; color: var(--toss-text-grey); }
+    .summary-diff span { font-weight: 600; }
+
+    .fab {
+      position: fixed; bottom: 24px; right: 24px;
+      width: 56px; height: 56px; border-radius: 28px;
+      background: var(--toss-blue); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; border: none; cursor: pointer;
+      box-shadow: 0 8px 16px rgba(0, 100, 255, 0.3);
+      z-index: 200;
+    }
+
+    .chart-container { height: 200px; margin: 20px 0; }
+    .category-list { margin-top: 20px; }
+    .category-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid var(--toss-border);
+    }
+    .category-item:last-child { border-bottom: none; }
+    .cat-info { display: flex; align-items: center; gap: 12px; }
+    .cat-icon { width: 40px; height: 40px; border-radius: 12px; background: var(--toss-bg); 
+                display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .cat-name { font-weight: 600; font-size: 15px; }
+    .cat-amount { font-weight: 700; font-size: 15px; }
+    .cat-percent { font-size: 12px; color: var(--toss-text-grey); margin-left: 8px; }
+
+    .history-title { font-size: 17px; font-weight: 700; margin: 24px 0 12px 4px; }
+    .history-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 0; border-bottom: 1px solid var(--toss-border);
+    }
+    .history-item:last-child { border-bottom: none; }
+    .hist-main { display: flex; flex-direction: column; }
+    .hist-desc { font-weight: 600; font-size: 16px; }
+    .hist-sub { font-size: 13px; color: var(--toss-text-grey); margin-top: 2px; }
+    .hist-amount { font-weight: 700; font-size: 16px; }
+    .hist-amount.expense { color: var(--toss-text-main); }
+    .hist-amount.income { color: var(--toss-success); }
+
+    .modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); display: none; align-items: flex-end; z-index: 300;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: white; width: 100%; border-radius: 24px 24px 0 0;
+      padding: 24px; animation: slideUp 0.3s ease-out; max-height: 90vh; overflow-y: auto;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    
+    .input-group { margin-bottom: 20px; }
+    .input-label { font-size: 13px; color: var(--toss-text-sub); margin-bottom: 8px; display: block; font-weight: 600; }
+    .input-field { 
+      width: 100%; border: none; background: var(--toss-bg); padding: 16px;
+      border-radius: 16px; font-size: 16px; font-weight: 600; outline: none;
+    }
+    .type-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .type-tab { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--toss-border);
+                background: white; font-weight: 600; cursor: pointer; text-align: center; }
+    .type-tab.active { background: var(--toss-blue); color: white; border-color: var(--toss-blue); }
+    
+    .option-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+    .option-btn { padding: 10px; border-radius: 12px; border: 1px solid var(--toss-border); 
+                  font-size: 12px; text-align: center; cursor: pointer; background: white; }
+    .option-btn.active { border-color: var(--toss-blue); color: var(--toss-blue); background: rgba(0,100,255,0.05); font-weight: 600; }
+
+    .submit-btn {
+      width: 100%; padding: 18px; border-radius: 16px; background: var(--toss-blue);
+      color: white; border: none; font-size: 17px; font-weight: 700; cursor: pointer;
+    }
+
+    .empty { text-align: center; padding: 40px 0; color: var(--toss-text-grey); font-size: 14px; }
+    
+    .delete-btn { color: var(--toss-text-grey); font-size: 12px; border: none; background: none; cursor: pointer; margin-left: 10px; }
+    .delete-btn:hover { color: var(--toss-danger); }
+
+    /* 설정 섹션 */
+    .settings-btn { font-size: 20px; cursor: pointer; }
+    .settings-list { margin-top: 10px; }
+    .settings-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--toss-bg); border-radius: 12px; margin-bottom: 8px; }
+    .settings-item span { font-weight: 600; font-size: 14px; }
+    .settings-remove { color: var(--toss-danger); border: none; background: none; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <a href="index.html" class="back-btn">✕</a>
+  <h1>가계부</h1>
+  <div class="settings-btn" onclick="openSettings()">⚙️</div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <p class="summary-title">이번 달 쓴 돈</p>
+    <p class="summary-amount" id="totalExpense">0원</p>
+    <p class="summary-diff" id="monthDiff">지난달보다 <span>0원</span> 덜 썼어요</p>
+  </div>
+
+  <div class="card">
+    <p class="summary-title">지출 통계</p>
+    <div class="chart-container">
+      <canvas id="expenseChart"></canvas>
+    </div>
+    <div class="category-list" id="categoryList"></div>
+  </div>
+
+  <h2 class="history-title">최근 내역</h2>
+  <div class="card" style="padding: 8px 20px;">
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<button class="fab" onclick="openModal()">+</button>
+
+<!-- 입력 모달 -->
+<div class="modal" id="inputModal" onclick="if(event.target==this) closeModal()">
+  <div class="modal-content">
+    <div class="type-tabs">
+      <div class="type-tab active" onclick="setType('expense', this)">지출</div>
+      <div class="type-tab" onclick="setType('income', this)">수입</div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">날짜</label>
+      <input type="date" id="date" class="input-field">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">금액</label>
+      <input type="text" id="amount" class="input-field" placeholder="얼마를 썼나요?" oninput="formatAmount(this)">
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">결제 수단</label>
+      <div class="option-grid" id="methodSelect"></div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">카테고리</label>
+      <div class="option-grid" id="catSelect">
+        <div class="option-btn active" onclick="setCat('식비', this)">🍽️ 식비</div>
+        <div class="option-btn" onclick="setCat('교통', this)">🚗 교통</div>
+        <div class="option-btn" onclick="setCat('쇼핑', this)">🛍️ 쇼핑</div>
+        <div class="option-btn" onclick="setCat('의료', this)">🏥 의료</div>
+        <div class="option-btn" onclick="setCat('문화', this)">🎬 문화</div>
+        <div class="option-btn" onclick="setCat('생활', this)">🏠 생활</div>
+        <div class="option-btn" onclick="setCat('통신', this)">📱 통신</div>
+        <div class="option-btn" onclick="setCat('기타', this)">📌 기타</div>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label">내용</label>
+      <input type="text" id="desc" class="input-field" placeholder="어디에 썼나요?">
+    </div>
+
+    <button class="submit-btn" onclick="saveEntry()">입력 완료</button>
+  </div>
+</div>
+
+<!-- 설정 모달 -->
+<div class="modal" id="settingsModal" onclick="if(event.target==this) closeSettings()">
+  <div class="modal-content">
+    <h2 style="font-size: 18px; margin-bottom: 20px;">⚙️ 결제 수단 설정</h2>
+    <div class="input-group">
+      <label class="input-label">새 결제 수단 추가 (카드/계좌 등)</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="newMethod" class="input-field" placeholder="예: 신한카드, 월급계좌">
+        <button class="submit-btn" style="width: 80px; padding: 0;" onclick="addMethod()">추가</button>
+      </div>
+    </div>
+    <div class="settings-list" id="settingsList"></div>
+    <button class="submit-btn" style="background: var(--toss-border); color: var(--toss-text-main); margin-top: 20px;" onclick="closeSettings()">닫기</button>
+  </div>
+</div>
+
+<script>
+  let data = JSON.parse(localStorage.getItem('toss_ledger_v3') || '[]');
+  let methods = JSON.parse(localStorage.getItem('toss_methods') || '["💵 현금", "💳 카드", "🏦 계좌"]');
+  let currentType = 'expense';
+  let currentCat = '식비';
+  let currentMethod = methods[0];
+  let chart = null;
+
+  const icons = {
+    '식비': '🍽️', '교통': '🚗', '쇼핑': '🛍️', '의료': '🏥',
+    '문화': '🎬', '생활': '🏠', '통신': '📱', '기타': '📌', '수입': '💰'
+  };
+
+  function formatAmount(el) {
+    let value = el.value.replace(/[^0-9]/g, '');
+    if(value) {
+      el.value = parseInt(value).toLocaleString();
+    } else {
+      el.value = '';
+    }
+  }
+
+  function openModal() { 
+    document.getElementById('inputModal').classList.add('active'); 
+    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+    renderMethodOptions();
+  }
+  function closeModal() { document.getElementById('inputModal').classList.remove('active'); }
+
+  function openSettings() {
+    document.getElementById('settingsModal').classList.add('active');
+    renderSettingsList();
+  }
+  function closeSettings() { document.getElementById('settingsModal').classList.remove('active'); }
+
+  function renderMethodOptions() {
+    const grid = document.getElementById('methodSelect');
+    grid.innerHTML = methods.map((m, idx) => `
+      <div class="option-btn ${m === currentMethod ? 'active' : ''}" onclick="setMethod('${m}', this)">${m}</div>
+    `).join('');
+    if(!methods.includes(currentMethod)) currentMethod = methods[0];
+  }
+
+  function renderSettingsList() {
+    const list = document.getElementById('settingsList');
+    list.innerHTML = methods.map((m, idx) => `
+      <div class="settings-item">
+        <span>${m}</span>
+        <button class="settings-remove" onclick="removeMethod(${idx})">삭제</button>
+      </div>
+    `).join('');
+  }
+
+  function addMethod() {
+    const val = document.getElementById('newMethod').value.trim();
+    if(!val) return;
+    methods.push(val);
+    localStorage.setItem('toss_methods', JSON.stringify(methods));
+    document.getElementById('newMethod').value = '';
+    renderSettingsList();
+    renderMethodOptions();
+  }
+
+  function removeMethod(idx) {
+    if(methods.length <= 1) return alert('최소 한 개의 결제 수단은 있어야 합니다.');
+    methods.splice(idx, 1);
+    localStorage.setItem('toss_methods', JSON.stringify(methods));
+    renderSettingsList();
+    renderMethodOptions();
+  }
+
+  function setType(type, el) {
+    currentType = type;
+    document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function setCat(cat, el) {
+    currentCat = cat;
+    document.querySelectorAll('#catSelect .option-btn').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function setMethod(method, el) {
+    currentMethod = method;
+    document.querySelectorAll('#methodSelect .option-btn').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function saveEntry() {
+    const amountStr = document.getElementById('amount').value.replace(/,/g, '');
+    const date = document.getElementById('date').value;
+    const desc = document.getElementById('desc').value || currentCat;
+    if(!amountStr || !date) return alert('금액과 날짜를 입력해주세요');
+
+    data.unshift({
+      id: Date.now(),
+      type: currentType,
+      cat: currentType === 'income' ? '수입' : currentCat,
+      method: currentMethod,
+      amount: parseInt(amountStr),
+      desc: desc,
+      date: date
+    });
+
+    localStorage.setItem('toss_ledger_v3', JSON.stringify(data));
+    updateUI();
+    closeModal();
+    
+    document.getElementById('amount').value = '';
+    document.getElementById('desc').value = '';
+  }
+
+  function deleteEntry(id) {
+    if(!confirm('삭제하시겠습니까?')) return;
+    data = data.filter(i => i.id !== id);
+    localStorage.setItem('toss_ledger_v3', JSON.stringify(data));
+    updateUI();
+  }
+
+  function updateUI() {
+    const now = new Date();
+    const currentMonthStr = now.toISOString().substring(0, 7);
+    
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthStr = lastMonth.toISOString().substring(0, 7);
+
+    const thisMonthData = data.filter(i => i.date.startsWith(currentMonthStr));
+    const lastMonthData = data.filter(i => i.date.startsWith(lastMonthStr));
+
+    const thisExp = thisMonthData.filter(i => i.type === 'expense').reduce((a, b) => a + b.amount, 0);
+    const lastExp = lastMonthData.filter(i => i.type === 'expense').reduce((a, b) => a + b.amount, 0);
+
+    document.getElementById('totalExpense').textContent = thisExp.toLocaleString() + '원';
+    
+    const diff = thisExp - lastExp;
+    const diffText = diff > 0 ? `지난달보다 <span>${diff.toLocaleString()}원</span> 더 썼어요` : 
+                     diff < 0 ? `지난달보다 <span>${Math.abs(diff).toLocaleString()}원</span> 덜 썼어요` : 
+                     `지난달과 똑같이 썼어요`;
+    document.getElementById('monthDiff').innerHTML = diffText;
+
+    renderHistory(data);
+    renderStats(thisMonthData);
+  }
+
+  function renderHistory(items) {
+    const list = document.getElementById('historyList');
+    if(items.length === 0) {
+      list.innerHTML = '<div class="empty">내역이 없어요</div>';
+      return;
+    }
+    list.innerHTML = items.slice(0, 30).map(i => `
+      <div class="history-item">
+        <div class="hist-main">
+          <span class="hist-desc">${i.desc}</span>
+          <span class="hist-sub">${i.cat} · ${i.method} · ${i.date}</span>
+        </div>
+        <div style="display:flex; align-items:center;">
+          <span class="hist-amount ${i.type}">${i.type === 'expense' ? '-' : '+'}${i.amount.toLocaleString()}원</span>
+          <button class="delete-btn" onclick="deleteEntry(${i.id})">✕</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderStats(items) {
+    const expItems = items.filter(i => i.type === 'expense');
+    const catTotals = {};
+    expItems.forEach(i => catTotals[i.cat] = (catTotals[i.cat] || 0) + i.amount);
+
+    const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]);
+    const total = expItems.reduce((a, b) => a + b.amount, 0);
+
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    if(chart) chart.destroy();
+    
+    if(sortedCats.length === 0) {
+      document.querySelector('.chart-container').style.display = 'none';
+      document.getElementById('categoryList').innerHTML = '<div class="empty">이번 달 지출 통계가 없어요</div>';
+      return;
+    }
+    document.querySelector('.chart-container').style.display = 'block';
+
+    chart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: sortedCats.map(c => c[0]),
+        datasets: [{
+          data: sortedCats.map(c => c[1]),
+          backgroundColor: ['#0064ff', '#3182f6', '#4e5968', '#8b95a1', '#e5e8eb', '#f2f4f6'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutout: '70%',
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    document.getElementById('categoryList').innerHTML = sortedCats.map(([cat, amt]) => `
+      <div class="category-item">
+        <div class="cat-info">
+          <div class="cat-icon">${icons[cat] || '📌'}</div>
+          <div>
+            <div class="cat-name">${cat}</div>
+            <div class="cat-percent">${Math.round(amt/total*100)}%</div>
+          </div>
+        </div>
+        <div class="cat-amount">${amt.toLocaleString()}원</div>
+      </div>
+    `).join('');
+  }
+
+  updateUI();
+</script>
+
+</body>
+</html>

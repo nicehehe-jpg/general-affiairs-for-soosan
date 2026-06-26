@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>협회 관리</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F8FA;--card:#FFF;--line:#E2E5EA;--line2:#F0F2F5;
+  --blue:#3182F6;--blue-bg:#EBF3FE;
+  --green:#00C471;--green-bg:#E8FAF2;
+  --orange:#FF9500;--orange-bg:#FFF5E6;
+  --red:#F04452;--red-bg:#FEF0F1;
+  --t1:#191F28;--t2:#4E5968;--t3:#8B95A1;--t4:#B0B8C1;
+  --font:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+body{background:var(--bg);font-family:var(--font);color:var(--t1);min-height:100vh}
+
+/* 헤더 */
+.header{background:var(--card);border-bottom:1px solid var(--line);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:200}
+.header-left{display:flex;align-items:center;gap:12px}
+.dot{width:8px;height:8px;background:var(--blue);border-radius:50%}
+.logo{font-size:15px;font-weight:700}
+.sync-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.sync-badge.online{background:var(--green-bg);color:var(--green)}
+.sync-badge.saving{background:var(--orange-bg);color:var(--orange)}
+.sync-badge.loading{background:var(--blue-bg);color:var(--blue)}
+.sync-badge.offline{background:var(--line2);color:var(--t3)}
+.header-right{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--t3)}
+
+/* 컨테이너 */
+.container{max-width:1300px;margin:0 auto;padding:24px 28px}
+
+/* 탭 */
+.tabs{display:flex;gap:2px;background:var(--line2);border-radius:10px;padding:4px;width:fit-content;margin-bottom:22px}
+.tab{padding:7px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--t3);transition:all .15s}
+.tab.active{background:var(--card);color:var(--t1);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.panel{display:none}.panel.active{display:block}
+
+/* 연도 네비게이터 */
+.year-nav{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.year-nav-btn{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--t2)}
+.year-nav-btn:hover{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+.year-label{font-size:18px;font-weight:800;color:var(--t1)}
+.year-sub{font-size:12px;color:var(--t3)}
+
+/* 통계 */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.stat-label{font-size:11px;color:var(--t3);font-weight:500;margin-bottom:8px}
+.stat-value{font-size:24px;font-weight:800}
+.c-blue{color:var(--blue)}.c-green{color:var(--green)}.c-orange{color:var(--orange)}.c-red{color:var(--red)}
+.stat-sub{font-size:11px;color:var(--t3);margin-top:4px}
+
+/* 카드 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-title-left{display:flex;align-items:center;gap:8px}
+.badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--blue-bg);color:var(--blue)}
+
+/* 버튼 */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:var(--font)}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1a6ef7}
+.btn-secondary{background:var(--line2);color:var(--t2)}.btn-secondary:hover{background:var(--line)}
+.btn-danger{background:var(--red-bg);color:var(--red)}.btn-danger:hover{background:#fdd}
+.btn-sm{padding:5px 11px;font-size:12px}
+
+/* 필터바 */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-select,.search-input{padding:7px 12px;border-radius:8px;border:1px solid var(--line);font-size:13px;font-family:var(--font);color:var(--t1);background:var(--card);outline:none}
+.filter-select:focus,.search-input:focus{border-color:var(--blue)}
+.search-input{min-width:200px;flex:1}
+
+/* 테이블 */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--bg);padding:9px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--t2);border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#FAFBFC}
+tbody tr.done-row td{color:var(--t4);text-decoration:line-through}
+tbody tr.done-row .tag{opacity:.5}
+
+/* 태그 */
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.tag-red{background:var(--red-bg);color:var(--red)}
+.tag-orange{background:var(--orange-bg);color:var(--orange)}
+.tag-green{background:var(--green-bg);color:var(--green)}
+.tag-blue{background:var(--blue-bg);color:var(--blue)}
+.tag-gray{background:var(--line2);color:var(--t3)}
+
+/* D-day */
+.dday{font-size:12px;font-weight:700}
+.dday.over{color:var(--red)}.dday.urgent{color:var(--red)}
+.dday.soon{color:var(--orange)}.dday.ok{color:var(--green)}.dday.far{color:var(--t3)}
+
+/* 모달 */
+.modal-overlay{position:fixed;inset:0;background:rgba(25,31,40,.45);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:20px;padding:26px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2);animation:pop .15s ease}
+@keyframes pop{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.modal h3{font-size:17px;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--t3);margin-bottom:22px}
+.pm-field{margin-bottom:14px}
+.pm-field label{display:block;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:5px}
+.pm-field input,.pm-field select,.pm-field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:var(--font);background:var(--bg);color:var(--t1);outline:none}
+.pm-field input:focus,.pm-field select:focus,.pm-field textarea:focus{border-color:var(--blue);background:#fff}
+.pm-field textarea{resize:vertical;min-height:60px}
+.pm-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:10px;margin-top:22px}
+.modal-actions .btn{flex:1;padding:12px;font-size:14px;border-radius:12px;justify-content:center}
+
+/* 타임라인 */
+.tl-wrap{display:flex;flex-direction:column;gap:8px}
+.tl-row{display:flex;gap:8px;align-items:flex-start}
+.tl-month{font-size:11px;font-weight:700;color:var(--t3);width:28px;flex-shrink:0;padding-top:4px}
+.tl-chips{display:flex;flex-wrap:wrap;gap:4px;flex:1}
+.tl-chip{padding:3px 9px;border-radius:6px;font-size:11px;cursor:pointer;line-height:1.4;transition:opacity .15s}
+.tl-chip:hover{opacity:.8}
+.tl-done{background:var(--green-bg);color:var(--green)}
+.tl-over{background:var(--line2);color:var(--t3)}
+.tl-urgent{background:var(--red-bg);color:var(--red);font-weight:700}
+.tl-soon{background:var(--orange-bg);color:var(--orange);font-weight:600}
+.tl-future{background:var(--blue-bg);color:var(--blue)}
+.tl-empty{color:var(--t4);font-size:12px;padding:4px 0}
+
+/* 면허 섹션 구분 */
+.section-sep td{background:var(--bg);font-size:11px;font-weight:700;color:var(--t3);padding:6px 12px;letter-spacing:.5px}
+
+@media(max-width:900px){.stats{grid-template-columns:1fr 1fr}.container{padding:16px}.pm-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- ===== 비밀번호 잠금 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;" onkeydown="if(event.key==='Enter')gateCheck()" onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1B6FE0'" onmouseout="this.style.background='#3182F6'">들어가기</button>
+  </div>
+</div>
+<script>
+  const GATE_PW_HASH = 'fbdb32e45b2566ac0a1ead4d585162645698e431dfec179c69ccffb31d996a03';
+  (function(){
+    if(sessionStorage.getItem('gm_auth')==='ok'){
+      document.getElementById('gate').style.display='none';
+    } else {
+      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
+    }
+  })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  }
+</script>
+
+<div class="header">
+  <div class="header-left">
+    <div class="dot"></div>
+    <span class="logo">수산이앤에스 · 협회 관리</span>
+    <span id="syncBadge" class="sync-badge loading">☁ 연결 중…</span>
+  </div>
+  <div class="header-right">
+    <span>오늘 <strong id="todayStr"></strong></span>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" data-panel="schedule" onclick="switchTab(this)">📅 납부 일정</button>
+    <button class="tab" data-panel="license" onclick="switchTab(this)">📋 면허 등록 현황</button>
+    <button class="tab" data-panel="annual" onclick="switchTab(this)">📊 연간 현황</button>
+  </div>
+
+  <!-- ===== 납부 일정 ===== -->
+  <div class="panel active" id="panel-schedule">
+
+    <!-- 연도 네비게이터 -->
+    <div class="year-nav">
+      <button class="year-nav-btn" onclick="changeYear(-1)">‹</button>
+      <div>
+        <div class="year-label" id="yearLabel">2025년</div>
+        <div class="year-sub" id="yearSub"></div>
+      </div>
+      <button class="year-nav-btn" onclick="changeYear(1)">›</button>
+      <button class="btn btn-secondary btn-sm" onclick="gotoCurrentYear()">올해</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-label">연간 납부 총액</div><div class="stat-value c-blue" id="statTotal">-</div><div class="stat-sub">원</div></div>
+      <div class="stat"><div class="stat-label">납부 완료</div><div class="stat-value c-green" id="statDone">-</div><div class="stat-sub">건</div></div>
+      <div class="stat"><div class="stat-label">D-30 이내</div><div class="stat-value c-orange" id="statSoon">-</div><div class="stat-sub">건</div></div>
+      <div class="stat"><div class="stat-label">기한 초과</div><div class="stat-value c-red" id="statOver">-</div><div class="stat-sub">건</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-left">📅 납부 일정 <span class="badge" id="scheduleBadge">-</span></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal()">＋ 항목 추가</button>
+      </div>
+      <div class="filter-bar">
+        <select class="filter-select" id="filterStatus" onchange="renderSchedule()">
+          <option value="">전체 상태</option>
+          <option value="over">⚠️ 기한 초과</option>
+          <option value="urgent">🔴 D-7 이내</option>
+          <option value="soon">🟡 D-30 이내</option>
+          <option value="future">🔵 예정</option>
+          <option value="done">✅ 완료</option>
+        </select>
+        <select class="filter-select" id="filterMonth" onchange="renderSchedule()">
+          <option value="">전체 월</option>
+          <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+          <option value="4">4월</option><option value="5">5월</option><option value="6">6월</option>
+          <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+          <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+        </select>
+        <input class="search-input" id="searchSch" placeholder="협회명 또는 세부내역 검색" oninput="renderSchedule()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>완료</th><th>협회명</th><th>세부내역</th><th>납부기한</th><th>납부일자</th>
+            <th>D-day</th><th style="text-align:right">금액</th><th>비고</th><th>관리</th>
+          </tr></thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="card-title-left">📆 월별 타임라인</div></div>
+      <div class="tl-wrap" id="timeline"></div>
+    </div>
+  </div>
+
+  <!-- ===== 면허 등록 현황 ===== -->
+  <div class="panel" id="panel-license">
+
+    <!-- 면허 요약 카드 -->
+    <div class="stats" id="licStats"></div>
+
+    <!-- 면허 목록 (업종별) -->
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-left">📋 면허 등록 현황 <span class="badge" id="licBadge">-</span></div>
+        <div style="display:flex;gap:6px">
+          <select class="filter-select" id="licTabSel" onchange="renderLicTab()" style="font-size:12px;padding:5px 10px">
+            <option value="all">전체</option>
+            <option value="lic">면허 목록</option>
+            <option value="person">등록 인력</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="openLicModal()">＋ 추가</button>
+        </div>
+      </div>
+      <div class="filter-bar">
+        <select class="filter-select" id="filterLic" onchange="renderLicense()"><option value="">전체 업종</option></select>
+        <input class="search-input" id="searchLic" placeholder="업종·성명·협회·등록번호 검색" oninput="renderLicense()">
+      </div>
+      <div id="licContent"></div>
+    </div>
+  </div>
+
+  <!-- ===== 연간 현황 ===== -->
+  <div class="panel" id="panel-annual">
+    <div class="card">
+      <div class="card-title"><div class="card-title-left">📊 협회별 연간 납부 현황 (전체 연도)</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>협회명</th><th>세부내역</th><th>연도</th><th style="text-align:right">금액</th><th>납부기한</th><th>비고</th></tr></thead>
+          <tbody id="annualBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 납부 항목 모달 ===== -->
+<div class="modal-overlay" id="schModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="modalTitle">납부 항목 추가</h3>
+    <p class="modal-sub">납부 정보를 입력하세요. 매년 반복되는 항목은 연도만 바꿔서 계속 관리할 수 있습니다.</p>
+    <div class="pm-row">
+      <div class="pm-field"><label>협회명 *</label><input id="mAssoc" list="assocList" placeholder="예: 한국전기공사협회"><datalist id="assocList"></datalist></div>
+      <div class="pm-field"><label>세부내역 *</label><input id="mDetail" placeholder="예: 통상회비"></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>납부기한 *</label><input id="mDate" type="date"></div>
+      <div class="pm-field"><label>납부일자</label><input id="mPaidDate" type="date" title="실제 납부한 날짜"></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>금액 (원)</label><input id="mAmount" type="number" min="0" placeholder="0"></div>
+    </div>
+    <div class="pm-field"><label>비고</label><textarea id="mNote" rows="2" placeholder="산정 방법, 기술자 명단 등"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 면허 등록 모달 ===== -->
+<div class="modal-overlay" id="licModal" onclick="if(event.target===this)closeLicModal()">
+  <div class="modal">
+    <h3 id="licModalTitle">면허 등록 인력 추가</h3>
+    <p class="modal-sub">면허 등록 인력 정보를 입력하세요.</p>
+    <div class="pm-row">
+      <div class="pm-field"><label>업종 *</label><input id="lLicense" list="licList" placeholder="예: 전기공사업"><datalist id="licList"></datalist></div>
+      <div class="pm-field"><label>협회명 *</label><input id="lAssoc" list="lAssocList" placeholder="예: 한국전기공사협회"><datalist id="lAssocList"></datalist></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>등록번호</label><input id="lRegNo" placeholder="예: 울산-00508"></div>
+      <div class="pm-field"><label>기술부분/전문분야</label><input id="lField" placeholder="예: 전기 / 전기설비"></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>성명 *</label><input id="lName" placeholder="예: 홍길동"></div>
+      <div class="pm-field"><label>등급/자격</label><input id="lGrade" placeholder="예: 특급기술자"></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>입사일</label><input id="lJoinDate" type="date"></div>
+      <div class="pm-field"><label>수첩등재일</label><input id="lRegDate" type="date"></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>발급번호</label><input id="lIssueNo" placeholder="예: A3200605705"></div>
+      <div class="pm-field"><label>등록 연월일</label><input id="lRegYMD" type="date"></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>만료일</label><input id="lExpiry" type="date"></div>
+      <div class="pm-field"><label>구분</label>
+        <select id="lRole"><option value="">-</option><option value="주인력">주인력</option><option value="보조인력">보조인력</option></select>
+      </div>
+    </div>
+    <div class="pm-field"><label>비고</label><input id="lNote" placeholder="예: 학사, 기사, 산업기사 등"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeLicModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveLicModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Supabase ─────────────────────────────────────────────────────────────── */
+const SB_URL='https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+const SB_REST=SB_URL+'/rest/v1/app_store';
+const SB_HEADERS={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+const STORE_SCH='assoc_schedules_v1';
+const STORE_LIC='assoc_licenses_v1';
+
+function setSyncStatus(s){
+  const b=document.getElementById('syncBadge');if(!b)return;
+  const m={online:['online','☁ 연결됨'],saving:['saving','💾 저장 중…'],loading:['loading','☁ 연결 중…'],offline:['offline','⚠ 오프라인']};
+  const[cls,txt]=m[s]||m.loading; b.className='sync-badge '+cls; b.textContent=txt;
+}
+async function sbGet(key){
+  try{const r=await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`,{headers:SB_HEADERS});
+    if(!r.ok)throw 0; const rows=await r.json(); return rows.length?rows[0].value:null;
+  }catch(e){return undefined;}
+}
+async function sbSet(key,value){
+  try{const r=await fetch(`${SB_REST}?on_conflict=key`,{method:'POST',
+    headers:{...SB_HEADERS,Prefer:'resolution=merge-duplicates'},
+    body:JSON.stringify({key,value,updated_at:new Date().toISOString()})});
+    return r.ok;
+  }catch(e){return false;}
+}
+let _t1=null,_t2=null;
+function sbPushSch(){setSyncStatus('saving');clearTimeout(_t1);_t1=setTimeout(async()=>{const ok=await sbSet(STORE_SCH,SCHEDULES);setSyncStatus(ok?'online':'offline');},600);}
+function sbPushLic(){setSyncStatus('saving');clearTimeout(_t2);_t2=setTimeout(async()=>{const ok=await sbSet(STORE_LIC,LICENSES);setSyncStatus(ok?'online':'offline');},600);}
+
+/* ── 기본 데이터 (2025년 기준) ──────────────────────────────────────────── */
+const SEED_SCH=[
+  {id:'s1', assoc:'한국소방시설협회',     detail:'기술자 연회비',         date:'2025-01-20', amount:50000,    note:'기술자 1명: 백영생'},
+  {id:'s2', assoc:'한국소방안전원',       detail:'기술자 연회비',         date:'2025-01-20', amount:180000,   note:'기술자 5명: 정순백, 백영생, 배종일, 문일태, 유현수'},
+  {id:'s3', assoc:'한국원전환경복원산업협회',detail:'임원사 연회비',     date:'2025-01-15', amount:1200000,  note:'세미나 참여 등'},
+  {id:'s4', assoc:'한국원자력학회',       detail:'연회비',                date:'2025-01-16', amount:3000000,  note:'춘추계 학회 참석'},
+  {id:'s5', assoc:'한국전기공사협회',     detail:'통상회비',              date:'2025-02-10', amount:14110000, note:'전년도 전기공사실적 신고 후 납부'},
+  {id:'s6', assoc:'한국전기공사협회',     detail:'시공능력평가수수료',    date:'2025-02-10', amount:100000,   note:'전년도 전기공사실적 신고 후 납부'},
+  {id:'s7', assoc:'한국정보통신공사협회', detail:'연회비',                date:'2025-02-03', amount:200000,   note:'무실적 신고 후 납부'},
+  {id:'s8', assoc:'한국정보통신공사협회', detail:'실적평가수수료',        date:'2025-02-03', amount:100000,   note:'무실적 신고 후 납부'},
+  {id:'s9', assoc:'한국소방시설협회',     detail:'통상회비',              date:'2025-02-03', amount:600000,   note:'무실적 신고 후 납부'},
+  {id:'s10',assoc:'한국소방시설협회',     detail:'실적평가수수료',        date:'2025-02-03', amount:100000,   note:'무실적 신고 후 납부'},
+  {id:'s11',assoc:'대한기계설비건설협회', detail:'연회비',                date:'2025-02-03', amount:500000,   note:'무실적 신고'},
+  {id:'s12',assoc:'한국엔지니어링협회',   detail:'기본회비',              date:'2025-03-14', amount:400000,   note:'전 회원사 400,000원'},
+  {id:'s13',assoc:'한국산업기술진흥협회', detail:'연회비',                date:'2025-03-10', amount:5400000,  note:'월 500,000원×12 (선납 10%할인)'},
+  {id:'s14',assoc:'한국산업기술진흥협회', detail:'임원사 연회비',         date:'2025-03-10', amount:2000000,  note:'2025-03~2026-02'},
+  {id:'s15',assoc:'엔지니어링공제조합',   detail:'배당금 수령',           date:'2025-04-09', amount:-53000000,note:'배당금 5,300좌×10,000원 (수입)'},
+  {id:'s16',assoc:'기계설비공제조합',     detail:'배당금 수령',           date:'2025-04-02', amount:-3060000, note:'배당금 102좌×30,000원 (수입)'},
+  {id:'s17',assoc:'한국원자력산업협회',   detail:'연회비',                date:'2025-04-30', amount:3000000,  note:''},
+  {id:'s18',assoc:'기계설비공제조합',     detail:'정기신용평가',          date:'2025-05-09', amount:0,        note:'25년 신용평가: A등급 (유효: 2026-06-30)'},
+  {id:'s19',assoc:'해외건설협회',         detail:'통상회비',              date:'2025-05-16', amount:1949382,  note:'기성액×3/10,000×1,400원'},
+  {id:'s20',assoc:'엔지니어링공제조합',   detail:'정기신용평가',          date:'2025-06-19', amount:0,        note:'25년 신용평가: A등급'},
+  {id:'s21',assoc:'엔지니어링공제조합',   detail:'한도거래약정 갱신',     date:'2025-06-26', amount:0,        note:'약정기간: 2025-06-26~2028-08-31'},
+  {id:'s22',assoc:'한국무역협회',         detail:'연회비',                date:'2025-07-18', amount:150000,   note:''},
+  {id:'s23',assoc:'한국엔지니어링협회',   detail:'통상회비',              date:'2025-07-22', amount:7055000,  note:'2024년 매출 87,549백만원 기준'},
+  {id:'s24',assoc:'대한전기협회',         detail:'KEPIC-Week 행사 후원', date:'2025-07-29', amount:2200000,  note:'후원 1,100,000원×2구좌'},
+  {id:'s25',assoc:'한국정보통신공사협회', detail:'기술자 경력관리수수료', date:'2025-06-30', amount:80000,    note:'기술자 4명: 서동권, 손동필, 양희종, 정찬희'},
+  {id:'s26',assoc:'엔지니어링공제조합',   detail:'한도거래약정(신용평가)',date:'2025-08-31', amount:0,        note:'약정기간: 2025-06-26~2028-08-31'},
+  {id:'s27',assoc:'한국원전수출산업협회', detail:'연회비',                date:'2026-03-18', amount:3000000,  note:'정회원사 C등급 (마케팅본부 진행)'},
+  {id:'s28',assoc:'한국소방시설협회',     detail:'기술자 연회비',         date:'2026-01-15', amount:50000,    note:'기술자 1명: 백영생'},
+  {id:'s29',assoc:'한국소방안전원',       detail:'기술자 연회비',         date:'2026-01-23', amount:180000,   note:'기술자 5명'},
+  {id:'s30',assoc:'한국원전환경복원산업협회',detail:'임원사 연회비',     date:'2026-01-13', amount:1200000,  note:''},
+  {id:'s31',assoc:'한국원자력학회',       detail:'연회비',                date:'2026-01-13', amount:3000000,  note:''},
+  {id:'s32',assoc:'한국전기공사협회',     detail:'통상회비',              date:'2026-02-11', amount:14110000, note:'전년도 전기공사실적 신고 후 납부'},
+  {id:'s33',assoc:'한국전기공사협회',     detail:'시공능력평가수수료',    date:'2026-02-11', amount:100000,   note:''},
+  {id:'s34',assoc:'한국정보통신공사협회', detail:'연회비',                date:'2026-02-11', amount:200000,   note:''},
+  {id:'s35',assoc:'한국소방시설협회',     detail:'통상회비',              date:'2026-02-11', amount:600000,   note:''},
+  {id:'s36',assoc:'대한기계설비건설협회', detail:'연회비',                date:'2026-02-11', amount:500000,   note:''},
+];
+
+// license: 업종, assoc: 협회, regNo: 등록번호, field: 기술부분/전문분야
+// name: 성명, grade: 등급, joinDate: 입사일, regDate: 수첩등재일
+// issueNo: 발급번호, regYMD: 등록연월일, expiry: 만료일, role: 주/보조인력, note: 비고
+const SEED_LIC=[
+  // ── 전기공사업 (등록번호: 울산-00508 / 한국전기공사협회) ────────────────
+  {id:'l1', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'이정은',grade:'특급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'A3200605705',regYMD:'2006-06-12',expiry:'',role:'',note:''},
+  {id:'l2', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'장영훈',grade:'특급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'A6200605705',regYMD:'2006-07-03',expiry:'',role:'',note:''},
+  {id:'l3', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'조희주',grade:'특급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'A3200400241',regYMD:'2004-01-20',expiry:'',role:'',note:''},
+  {id:'l4', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'이준호',grade:'특급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'A8200604922',regYMD:'2006-06-12',expiry:'',role:'',note:''},
+  {id:'l5', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'박용성',grade:'초급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'D4200102760',regYMD:'2001-03-22',expiry:'',role:'',note:''},
+  {id:'l6', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'김경택',grade:'초급기술자',joinDate:'2012-11-25',regDate:'2013-11-27',issueNo:'D9201306207',regYMD:'2013-11-25',expiry:'',role:'',note:''},
+  {id:'l7', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'양용우',grade:'초급기술자',joinDate:'2013-11-25',regDate:'2013-11-27',issueNo:'D8201306208',regYMD:'2013-11-25',expiry:'',role:'',note:''},
+  {id:'l8', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'김동욱',grade:'초급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'D8200507317',regYMD:'2005-11-21',expiry:'',role:'',note:''},
+  {id:'l9', license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'이균호',grade:'초급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'D8200106616',regYMD:'2001-07-25',expiry:'',role:'',note:''},
+  {id:'l10',license:'전기공사업',assoc:'한국전기공사협회',regNo:'울산-00508',field:'',
+   name:'김동찬',grade:'초급기술자',joinDate:'2012-06-23',regDate:'2012-07-23',issueNo:'D9200501638',regYMD:'2005-03-16',expiry:'',role:'',note:''},
+  // ── 정보통신공사업 (등록번호: 520071 / 한국정보통신공사협회) ─────────────
+  {id:'l11',license:'정보통신공사업',assoc:'한국정보통신공사협회',regNo:'520071',field:'',
+   name:'정찬희',grade:'고급',joinDate:'2023-05-10',regDate:'2023-05-09',issueNo:'201202301035L',regYMD:'',expiry:'',role:'',note:''},
+  {id:'l12',license:'정보통신공사업',assoc:'한국정보통신공사협회',regNo:'520071',field:'',
+   name:'서동권',grade:'초급',joinDate:'2012-06-25',regDate:'2000-10-19',issueNo:'401200006297L',regYMD:'',expiry:'',role:'',note:''},
+  {id:'l13',license:'정보통신공사업',assoc:'한국정보통신공사협회',regNo:'520071',field:'',
+   name:'손동필',grade:'초급',joinDate:'2012-06-25',regDate:'2000-10-19',issueNo:'401200006298L',regYMD:'',expiry:'',role:'',note:''},
+  {id:'l14',license:'정보통신공사업',assoc:'한국정보통신공사협회',regNo:'520071',field:'',
+   name:'양희종',grade:'초급',joinDate:'2012-06-25',regDate:'2000-10-19',issueNo:'401200006296L',regYMD:'',expiry:'',role:'',note:''},
+  // ── 전문소방시설공사업 (등록번호: 제 2012-1 호 / 한국소방시설협회) ─────────
+  {id:'l15',license:'전문소방시설공사업',assoc:'한국소방시설협회',regNo:'제 2012-1 호',field:'',
+   name:'백영생',grade:'소방설비기사(기계)',joinDate:'',regDate:'2012-01-11',issueNo:'09201010898U',regYMD:'2012-01-11',expiry:'',role:'주인력',note:''},
+  {id:'l16',license:'전문소방시설공사업',assoc:'한국소방시설협회',regNo:'제 2012-1 호',field:'',
+   name:'정순백',grade:'소방설비기사(전기)',joinDate:'',regDate:'2012-01-11',issueNo:'03202030785N',regYMD:'2012-01-11',expiry:'',role:'주인력',note:''},
+  {id:'l17',license:'전문소방시설공사업',assoc:'한국소방시설협회',regNo:'제 2012-1 호',field:'',
+   name:'배종일',grade:'소방설비기사(전기)',joinDate:'',regDate:'2016-01-01',issueNo:'02201090350M',regYMD:'2016-01-01',expiry:'',role:'주인력',note:''},
+  {id:'l18',license:'전문소방시설공사업',assoc:'한국소방시설협회',regNo:'제 2012-1 호',field:'',
+   name:'문일태',grade:'소방설비기사(전기)',joinDate:'',regDate:'2016-11-21',issueNo:'04201062321C',regYMD:'2016-11-21',expiry:'',role:'보조인력',note:''},
+  {id:'l19',license:'전문소방시설공사업',assoc:'한국소방시설협회',regNo:'제 2012-1 호',field:'',
+   name:'유현수',grade:'소방설비기사(전기)',joinDate:'',regDate:'2020-05-11',issueNo:'18204051192D',regYMD:'2020-05-11',expiry:'',role:'보조인력',note:''},
+  // ── 기계설비·가스공사업 (울산남구2012-10-03 / 울산광역시 북구청) ──────────
+  {id:'l20',license:'기계설비·가스공사업',assoc:'울산광역시 북구청',regNo:'울산남구2012-10-03',field:'기계설비공사',
+   name:'김영학',grade:'',joinDate:'2012-02-11',regDate:'',issueNo:'98205090036F',regYMD:'',expiry:'',role:'',note:''},
+  {id:'l21',license:'기계설비·가스공사업',assoc:'울산광역시 북구청',regNo:'울산남구2012-10-03',field:'기계설비공사',
+   name:'김종만',grade:'',joinDate:'2012-02-11',regDate:'',issueNo:'04201210028F',regYMD:'',expiry:'',role:'',note:''},
+  {id:'l22',license:'기계설비·가스공사업',assoc:'울산광역시 북구청',regNo:'울산남구2012-10-03',field:'기계설비공사',
+   name:'정연기',grade:'',joinDate:'2012-02-11',regDate:'',issueNo:'99204031207A',regYMD:'',expiry:'',role:'',note:''},
+  {id:'l23',license:'기계설비·가스공사업',assoc:'울산광역시 북구청',regNo:'울산남구2012-10-03',field:'기계설비공사',
+   name:'조희주',grade:'',joinDate:'2012-02-11',regDate:'',issueNo:'93206170119',regYMD:'',expiry:'',role:'',note:''},
+  // ── 엔지니어링업 (제 E-15-000027 호 / 한국엔지니어링협회) ──────────────
+  {id:'l24',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기설비',
+   name:'김윤성',grade:'초급기술자',joinDate:'',regDate:'2013-02-14',issueNo:'',regYMD:'',expiry:'',role:'',note:'학사'},
+  {id:'l25',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기설비',
+   name:'김진백',grade:'특급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'기사'},
+  {id:'l26',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기설비',
+   name:'박윤수',grade:'특급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'산업기사'},
+  {id:'l27',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기설비',
+   name:'이창희',grade:'초급기술자',joinDate:'',regDate:'2013-02-14',issueNo:'',regYMD:'',expiry:'',role:'',note:'학사'},
+  {id:'l28',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기설비',
+   name:'최영호',grade:'고급기술자',joinDate:'',regDate:'2017-06-26',issueNo:'',regYMD:'',expiry:'',role:'',note:'기사'},
+  {id:'l29',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기전자응용',
+   name:'류재규',grade:'초급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'기사'},
+  {id:'l30',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기전자응용',
+   name:'서진교',grade:'특급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'학사'},
+  {id:'l31',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'전기/전기전자응용',
+   name:'이한혁',grade:'특급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'산업기사'},
+  {id:'l32',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'정보통신/정보관리',
+   name:'김동극',grade:'초급기술자',joinDate:'',regDate:'2012-08-03',issueNo:'',regYMD:'',expiry:'',role:'',note:'기사'},
+  {id:'l33',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'정보통신/정보관리',
+   name:'박강민',grade:'특급기술자',joinDate:'',regDate:'2013-06-03',issueNo:'',regYMD:'',expiry:'',role:'',note:'기사'},
+  {id:'l34',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'정보통신/정보관리',
+   name:'이필주',grade:'특급기술자',joinDate:'',regDate:'2012-08-03',issueNo:'',regYMD:'',expiry:'',role:'',note:'기사'},
+  {id:'l35',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'정보통신/정보관리',
+   name:'최돈갑',grade:'초급기술자',joinDate:'',regDate:'2012-08-03',issueNo:'',regYMD:'',expiry:'',role:'',note:'기사'},
+  {id:'l36',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'원자력/원자력방사선관리',
+   name:'김명윤',grade:'중급기술자',joinDate:'',regDate:'2013-02-14',issueNo:'',regYMD:'',expiry:'',role:'',note:'학사'},
+  {id:'l37',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'원자력/원자력방사선관리',
+   name:'송두고',grade:'특급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'학사'},
+  {id:'l38',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'원자력/원자력방사선관리',
+   name:'이동연',grade:'초급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'학사'},
+  {id:'l39',license:'엔지니어링업',assoc:'한국엔지니어링협회',regNo:'제 E-15-000027 호',field:'원자력/원자력방사선관리',
+   name:'최성훈',grade:'특급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'전문대학'},
+];
+
+/* ── 상태 ──────────────────────────────────────────────────────────────────── */
+let SCHEDULES=[], LICENSES=[], doneSet=new Set();
+let selectedYear=new Date().getFullYear();
+let editingSchId=null, editingLicId=null;
+
+function uid(){ return 'id'+Date.now()+Math.random().toString(36).slice(2,6); }
+
+function loadLocal(){
+  try{ const s=localStorage.getItem(STORE_SCH); if(s){const p=JSON.parse(s);if(Array.isArray(p))return{sch:p};} }catch(e){}
+  return null;
+}
+function loadLocalLic(){
+  try{ const s=localStorage.getItem(STORE_LIC); if(s){const p=JSON.parse(s);if(Array.isArray(p))return p;} }catch(e){}
+  return null;
+}
+function loadDone(){
+  try{ const s=localStorage.getItem('assoc_done'); if(s){const p=JSON.parse(s);if(Array.isArray(p))return new Set(p);} }catch(e){}
+  return new Set();
+}
+function saveDone(){ localStorage.setItem('assoc_done',JSON.stringify([...doneSet])); sbPushSch(); }
+function saveSch(){ localStorage.setItem(STORE_SCH,JSON.stringify(SCHEDULES)); sbPushSch(); }
+function saveLic(){ localStorage.setItem(STORE_LIC,JSON.stringify(LICENSES)); sbPushLic(); }
+
+/* ── 날짜 유틸 ─────────────────────────────────────────────────────────────── */
+const TODAY=new Date(); TODAY.setHours(0,0,0,0);
+function dday(dateStr){
+  if(!dateStr)return null;
+  const d=new Date(dateStr); d.setHours(0,0,0,0);
+  return Math.round((d-TODAY)/(86400000));
+}
+function fmtDate(s){ return s?s.replace(/-/g,'.'):'-'; }
+function fmtMoney(n){
+  if(n===null||n===undefined||n==='')return '-';
+  if(n===0)return '확인필요';
+  if(n<0)return '▼ '+Math.abs(n).toLocaleString()+'원';
+  return n.toLocaleString()+'원';
+}
+function getStatus(s){
+  if(doneSet.has(s.id))return 'done';
+  if(!s.date)return 'future';
+  const d=dday(s.date);
+  if(d<0)return 'over';
+  if(d<=7)return 'urgent';
+  if(d<=30)return 'soon';
+  return 'future';
+}
+
+/* ── 연도 ──────────────────────────────────────────────────────────────────── */
+function changeYear(delta){ selectedYear+=delta; renderAll(); }
+function gotoCurrentYear(){ selectedYear=new Date().getFullYear(); renderAll(); }
+function getYearSchedules(){
+  return SCHEDULES.filter(s=>s.date&&s.date.startsWith(selectedYear+''));
+}
+
+/* ── 탭 ──────────────────────────────────────────────────────────────────── */
+function switchTab(btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
+}
+
+/* ── 납부 일정 렌더링 ────────────────────────────────────────────────────── */
+function renderSchedule(){
+  const fSt=document.getElementById('filterStatus').value;
+  const fMo=document.getElementById('filterMonth').value;
+  const sq=document.getElementById('searchSch').value.toLowerCase();
+  const yearSch=getYearSchedules();
+
+  // 연도 헤더
+  document.getElementById('yearLabel').textContent=selectedYear+'년';
+  const curY=new Date().getFullYear();
+  document.getElementById('yearSub').textContent=
+    selectedYear===curY?'📍 현재 연도':selectedYear<curY?`${curY-selectedYear}년 전`:`${selectedYear-curY}년 후`;
+
+  // 통계
+  const paid=yearSch.filter(s=>s.amount>0).reduce((a,s)=>a+s.amount,0);
+  const done=yearSch.filter(s=>doneSet.has(s.id)).length;
+  const soon=yearSch.filter(s=>!doneSet.has(s.id)&&['urgent','soon'].includes(getStatus(s))).length;
+  const over=yearSch.filter(s=>!doneSet.has(s.id)&&getStatus(s)==='over').length;
+  document.getElementById('statTotal').textContent=paid.toLocaleString();
+  document.getElementById('statDone').textContent=done;
+  document.getElementById('statSoon').textContent=soon;
+  document.getElementById('statOver').textContent=over;
+
+  // 필터
+  const filtered=yearSch.filter(s=>{
+    const st=getStatus(s);
+    if(fSt&&fSt!==st)return false;
+    if(fMo&&s.date&&(parseInt(s.date.slice(5,7)))!==Number(fMo))return false;
+    if(sq&&!s.assoc.includes(sq)&&!s.detail.toLowerCase().includes(sq))return false;
+    return true;
+  }).sort((a,b)=>a.date>b.date?1:-1);
+
+  document.getElementById('scheduleBadge').textContent=filtered.length+'건';
+
+  const tb=document.getElementById('scheduleBody');
+  if(!filtered.length){
+    tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--t3)">해당 항목 없음</td></tr>';
+    return;
+  }
+
+  tb.innerHTML=filtered.map(s=>{
+    const st=getStatus(s);
+    const d=s.date?dday(s.date):null;
+    let ddayTxt='-',ddayCls='far';
+    if(doneSet.has(s.id)){ddayTxt='완료';ddayCls='ok';}
+    else if(d===null){ddayTxt='-';}
+    else if(d<0){ddayTxt=`D+${Math.abs(d)}`;ddayCls='over';}
+    else if(d<=7){ddayTxt=`D-${d}`;ddayCls='urgent';}
+    else if(d<=30){ddayTxt=`D-${d}`;ddayCls='soon';}
+    else{ddayTxt=`D-${d}`;ddayCls='far';}
+
+    const stTag=doneSet.has(s.id)?'<span class="tag tag-green">완료</span>':
+      st==='over'?'<span class="tag tag-red">기한초과</span>':
+      st==='urgent'?'<span class="tag tag-red">긴급</span>':
+      st==='soon'?'<span class="tag tag-orange">임박</span>':'<span class="tag tag-blue">예정</span>';
+
+    const amtStyle=s.amount<0?'color:var(--green)':'';
+    return `<tr class="${doneSet.has(s.id)?'done-row':''}">
+      <td><input type="checkbox" ${doneSet.has(s.id)?'checked':''} onchange="toggleDone('${s.id}')" style="width:16px;height:16px;cursor:pointer"></td>
+      <td style="font-weight:600">${s.assoc}</td>
+      <td style="color:var(--t2)">${s.detail}</td>
+      <td style="font-family:monospace;font-size:12px">${fmtDate(s.date)}</td>
+      <td style="padding:4px 12px">
+        <input type="date" value="${s.paidDate||''}"
+          style="border:none;background:transparent;font-family:monospace;font-size:12px;
+            color:${s.paidDate?'var(--green)':'var(--t4)'};cursor:pointer;outline:none;width:120px;
+            font-family:var(--font)"
+          title="클릭하여 납부일자 입력"
+          onchange="savePaidDate('${s.id}',this.value)"
+          onfocus="this.style.background='var(--green-bg)';this.style.borderRadius='6px'"
+          onblur="this.style.background='transparent';this.style.color=this.value?'var(--green)':'var(--t4)'">
+      </td>
+      <td><span class="dday ${ddayCls}">${ddayTxt}</span> ${stTag}</td>
+      <td style="text-align:right;font-family:monospace;${amtStyle}">${fmtMoney(s.amount)}</td>
+      <td style="font-size:11px;color:var(--t3);max-width:180px">${s.note||''}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-secondary btn-sm" onclick="openModal('${s.id}')">수정</button>
+        <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:none" onclick="deleteSch('${s.id}')">삭제</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  renderTimeline(yearSch);
+}
+
+function renderTimeline(yearSch){
+  const tl=document.getElementById('timeline');
+  const rows=[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>{
+    const items=yearSch.filter(s=>s.date&&parseInt(s.date.slice(5,7))===m);
+    if(!items.length)return '';
+    const chips=items.map(s=>{
+      const st=getStatus(s);
+      const cls=doneSet.has(s.id)?'tl-done':st==='over'?'tl-over':st==='urgent'?'tl-urgent':st==='soon'?'tl-soon':'tl-future';
+      const short=s.assoc.replace('한국','').replace('협회','').replace('공사','').slice(0,5);
+      return `<span class="tl-chip ${cls}" title="${s.assoc} - ${s.detail}\n${s.date}\n${s.amount?s.amount.toLocaleString()+'원':''}" onclick="openModal('${s.id}')">${short} ${s.detail.slice(0,4)}</span>`;
+    }).join('');
+    return `<div class="tl-row"><div class="tl-month">${m}월</div><div class="tl-chips">${chips}</div></div>`;
+  }).filter(Boolean).join('');
+  tl.innerHTML=rows||'<div class="tl-empty">이 연도에 납부 일정이 없습니다. ＋ 항목 추가로 등록하세요.</div>';
+}
+
+/* ── 완료 토글 ──────────────────────────────────────────────────────────── */
+function savePaidDate(id, paidDate){
+  const idx=SCHEDULES.findIndex(s=>s.id===id);
+  if(idx<0)return;
+  SCHEDULES[idx].paidDate=paidDate;
+  // 납부일자 입력 시 자동 완료, 삭제 시 완료 해제
+  if(paidDate){ doneSet.add(id); }
+  else{ doneSet.delete(id); }
+  localStorage.setItem('assoc_done',JSON.stringify([...doneSet]));
+  saveSch();
+  renderSchedule();
+}
+
+function toggleDone(id){
+  if(doneSet.has(id))doneSet.delete(id);else doneSet.add(id);
+  localStorage.setItem('assoc_done',JSON.stringify([...doneSet]));
+  sbPushSch();
+  renderSchedule();
+}
+
+/* ── 납부 항목 모달 ─────────────────────────────────────────────────────── */
+function openModal(id){
+  editingSchId=id||null;
+  document.getElementById('modalTitle').textContent=id?'납부 항목 수정':'납부 항목 추가';
+  // 협회명 datalist 채우기
+  const assocs=[...new Set(SCHEDULES.map(s=>s.assoc))].sort();
+  document.getElementById('assocList').innerHTML=assocs.map(a=>`<option value="${a}">`).join('');
+
+  if(id){
+    const s=SCHEDULES.find(x=>x.id===id);
+    if(!s)return;
+    document.getElementById('mAssoc').value=s.assoc;
+    document.getElementById('mDetail').value=s.detail;
+    document.getElementById('mDate').value=s.date||'';
+    document.getElementById('mPaidDate').value=s.paidDate||'';
+    document.getElementById('mAmount').value=s.amount||'';
+    document.getElementById('mNote').value=s.note||'';
+  } else {
+    document.getElementById('mAssoc').value='';
+    document.getElementById('mDetail').value='';
+    document.getElementById('mDate').value=selectedYear+'-01-01';
+    document.getElementById('mPaidDate').value='';
+    document.getElementById('mAmount').value='';
+    document.getElementById('mNote').value='';
+  }
+  document.getElementById('schModal').classList.add('show');
+  setTimeout(()=>document.getElementById('mAssoc').focus(),100);
+}
+function closeModal(){ document.getElementById('schModal').classList.remove('show'); editingSchId=null; }
+function saveModal(){
+  const assoc=document.getElementById('mAssoc').value.trim();
+  const detail=document.getElementById('mDetail').value.trim();
+  const date=document.getElementById('mDate').value;
+  const amount=Number(document.getElementById('mAmount').value)||0;
+  const paidDate=document.getElementById('mPaidDate').value||'';
+  const note=document.getElementById('mNote').value.trim();
+  if(!assoc||!detail||!date){alert('협회명, 세부내역, 납부기한은 필수입니다.');return;}
+  if(editingSchId){
+    const idx=SCHEDULES.findIndex(s=>s.id===editingSchId);
+    if(idx>=0)SCHEDULES[idx]={...SCHEDULES[idx],assoc,detail,date,paidDate,amount,note};
+    // 납부일자 입력 시 자동 완료 처리
+    if(paidDate) doneSet.add(editingSchId);
+    else doneSet.delete(editingSchId);
+  } else {
+    const newId=uid();
+    SCHEDULES.push({id:newId,assoc,detail,date,paidDate,amount,note});
+    // 신규 항목도 납부일자 있으면 자동 완료
+    if(paidDate) doneSet.add(newId);
+  }
+  localStorage.setItem('assoc_done',JSON.stringify([...doneSet]));
+  saveSch(); closeModal(); renderSchedule(); renderAnnual();
+}
+function deleteSch(id){
+  if(!confirm('삭제할까요?'))return;
+  SCHEDULES=SCHEDULES.filter(s=>s.id!==id);
+  doneSet.delete(id);
+  saveSch(); saveDone(); renderSchedule(); renderAnnual();
+}
+
+/* ── 면허 인력 렌더링 ────────────────────────────────────────────────────── */
+function renderLicTab(){ renderLicense(); }
+
+function renderLicense(){
+  const fL=document.getElementById('filterLic').value;
+  const sq=document.getElementById('searchLic').value.toLowerCase();
+  const tab=document.getElementById('licTabSel').value;
+
+  // 업종 필터 옵션 구성
+  const lics=[...new Set(LICENSES.map(l=>l.license))];
+  const sel=document.getElementById('filterLic');
+  sel.innerHTML='<option value="">전체 업종</option>'+lics.map(l=>`<option value="${l}" ${fL===l?'selected':''}>${l}</option>`).join('');
+  // datalist
+  document.getElementById('licList').innerHTML=lics.map(l=>`<option value="${l}">`).join('');
+  const assocs=[...new Set(LICENSES.map(l=>l.assoc))];
+  document.getElementById('lAssocList').innerHTML=assocs.map(a=>`<option value="${a}">`).join('');
+
+  const filtered=LICENSES.filter(l=>{
+    if(fL&&l.license!==fL)return false;
+    if(sq&&![l.license,l.name,l.assoc,l.regNo,l.field,l.grade].some(v=>(v||'').toLowerCase().includes(sq)))return false;
+    return true;
+  });
+
+  document.getElementById('licBadge').textContent=filtered.length+'명';
+
+  // 요약 카드 (업종별 인원수)
+  const byLic={};
+  LICENSES.forEach(l=>{byLic[l.license]=(byLic[l.license]||0)+1;});
+  const licColors=['var(--blue)','var(--green)','var(--orange)','var(--red)','#9b59b6','#1abc9c'];
+  document.getElementById('licStats').innerHTML=Object.entries(byLic).map(([lic,cnt],i)=>`
+    <div class="stat" style="cursor:pointer" onclick="document.getElementById('filterLic').value='${lic}';renderLicense()">
+      <div class="stat-label">${lic}</div>
+      <div class="stat-value" style="color:${licColors[i%licColors.length]}">${cnt}</div>
+      <div class="stat-sub">명 등록</div>
+    </div>`).join('');
+
+  // 면허별 그룹 테이블
+  const groups={};
+  filtered.forEach(l=>{
+    const key=l.license+'||'+l.regNo;
+    if(!groups[key])groups[key]={license:l.license,regNo:l.regNo,assoc:l.assoc,members:[]};
+    groups[key].members.push(l);
+  });
+
+  const html=Object.values(groups).map(g=>`
+    <div style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px 14px;background:var(--bg);border-radius:10px;border-left:3px solid var(--blue)">
+        <span style="font-weight:700;font-size:14px">${g.license}</span>
+        <span class="tag tag-gray" style="font-size:11px">${g.regNo||''}</span>
+        <span style="font-size:12px;color:var(--t3)">${g.assoc}</span>
+        <span class="badge" style="margin-left:auto">${g.members.length}명</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>성명</th><th>전문분야</th><th>등급/자격</th><th>구분</th>
+            <th>수첩등재일</th><th>발급번호</th><th>등록연월일</th><th>비고</th><th>관리</th>
+          </tr></thead>
+          <tbody>
+            ${g.members.map(l=>{
+              const gc=l.grade.includes('특급')?'tag-red':l.grade.includes('고급')?'tag-orange':l.grade.includes('중급')?'tag-blue':l.grade?'tag-gray':'';
+              const rc=l.role==='주인력'?'tag-blue':l.role==='보조인력'?'tag-gray':'';
+              return `<tr>
+                <td style="font-weight:700">${l.name}</td>
+                <td style="font-size:12px;color:var(--t2)">${l.field||'-'}</td>
+                <td>${l.grade?`<span class="tag ${gc}">${l.grade}</span>`:'-'}</td>
+                <td>${l.role?`<span class="tag ${rc}">${l.role}</span>`:'-'}</td>
+                <td style="font-family:monospace;font-size:12px">${l.regDate||'-'}</td>
+                <td style="font-family:monospace;font-size:12px;color:var(--t3)">${l.issueNo||'-'}</td>
+                <td style="font-family:monospace;font-size:12px">${l.regYMD||'-'}</td>
+                <td style="font-size:12px;color:var(--t3)">${l.note||''}</td>
+                <td style="white-space:nowrap">
+                  <button class="btn btn-secondary btn-sm" onclick="openLicModal('${l.id}')">수정</button>
+                  <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:none" onclick="deleteLic('${l.id}')">삭제</button>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('licContent').innerHTML=html||'<div style="text-align:center;padding:32px;color:var(--t3)">검색 결과 없음</div>';
+}
+
+/* ── 면허 모달 ──────────────────────────────────────────────────────────── */
+function openLicModal(id){
+  editingLicId=id||null;
+  document.getElementById('licModalTitle').textContent=id?'면허 등록 인력 수정':'면허 등록 인력 추가';
+  const fields=['lLicense','lAssoc','lRegNo','lField','lName','lGrade','lJoinDate','lRegDate','lIssueNo','lRegYMD','lExpiry','lRole','lNote'];
+  if(id){
+    const l=LICENSES.find(x=>x.id===id);
+    if(!l)return;
+    document.getElementById('lLicense').value=l.license||'';
+    document.getElementById('lAssoc').value=l.assoc||'';
+    document.getElementById('lRegNo').value=l.regNo||'';
+    document.getElementById('lField').value=l.field||'';
+    document.getElementById('lName').value=l.name||'';
+    document.getElementById('lGrade').value=l.grade||'';
+    document.getElementById('lJoinDate').value=l.joinDate||'';
+    document.getElementById('lRegDate').value=l.regDate||'';
+    document.getElementById('lIssueNo').value=l.issueNo||'';
+    document.getElementById('lRegYMD').value=l.regYMD||'';
+    document.getElementById('lExpiry').value=l.expiry||'';
+    document.getElementById('lRole').value=l.role||'';
+    document.getElementById('lNote').value=l.note||'';
+  } else {
+    fields.forEach(f=>document.getElementById(f).value='');
+  }
+  document.getElementById('licModal').classList.add('show');
+  setTimeout(()=>document.getElementById('lName').focus(),100);
+}
+function closeLicModal(){ document.getElementById('licModal').classList.remove('show'); editingLicId=null; }
+function saveLicModal(){
+  const license=document.getElementById('lLicense').value.trim();
+  const name=document.getElementById('lName').value.trim();
+  if(!license||!name){alert('업종과 성명은 필수입니다.');return;}
+  const obj={
+    license, name,
+    assoc:   document.getElementById('lAssoc').value.trim(),
+    regNo:   document.getElementById('lRegNo').value.trim(),
+    field:   document.getElementById('lField').value.trim(),
+    grade:   document.getElementById('lGrade').value.trim(),
+    joinDate:document.getElementById('lJoinDate').value,
+    regDate: document.getElementById('lRegDate').value,
+    issueNo: document.getElementById('lIssueNo').value.trim(),
+    regYMD:  document.getElementById('lRegYMD').value,
+    expiry:  document.getElementById('lExpiry').value,
+    role:    document.getElementById('lRole').value,
+    note:    document.getElementById('lNote').value.trim(),
+  };
+  if(editingLicId){
+    const idx=LICENSES.findIndex(l=>l.id===editingLicId);
+    if(idx>=0)LICENSES[idx]={...LICENSES[idx],...obj};
+  } else {
+    LICENSES.push({id:uid(),...obj});
+  }
+  saveLic(); closeLicModal(); renderLicense();
+}
+function deleteLic(id){
+  if(!confirm('삭제할까요?'))return;
+  LICENSES=LICENSES.filter(l=>l.id!==id);
+  saveLic(); renderLicense();
+}
+
+/* ── 연간 현황 ──────────────────────────────────────────────────────────── */
+function renderAnnual(){
+  const sorted=[...SCHEDULES].filter(s=>s.amount>0).sort((a,b)=>a.date>b.date?1:-1);
+  const byAssoc={};
+  sorted.forEach(s=>{
+    if(!byAssoc[s.assoc])byAssoc[s.assoc]=[];
+    byAssoc[s.assoc].push(s);
+  });
+  document.getElementById('annualBody').innerHTML=Object.entries(byAssoc).map(([assoc,items])=>{
+    const total=items.reduce((a,s)=>a+s.amount,0);
+    return items.map((s,i)=>`<tr>
+      ${i===0?`<td rowspan="${items.length}" style="font-weight:700;vertical-align:top;padding-top:12px;border-right:2px solid var(--line)">${assoc}<br><small style="color:var(--blue);font-weight:800">${total.toLocaleString()}원</small></td>`:''}
+      <td style="color:var(--t2)">${s.detail}</td>
+      <td><span class="tag tag-gray">${s.date?s.date.slice(0,4)+'년':'-'}</span></td>
+      <td style="text-align:right;font-family:monospace;font-weight:600">${s.amount.toLocaleString()}원</td>
+      <td style="font-size:12px;color:var(--t3)">${s.date||'-'}</td>
+      <td style="font-size:11px;color:var(--t3)">${s.note||''}</td>
+    </tr>`).join('');
+  }).join('');
+}
+
+function renderAll(){ renderSchedule(); renderLicense(); renderAnnual(); }
+
+/* ── Supabase 초기화 ────────────────────────────────────────────────────── */
+async function sbInit(){
+  setSyncStatus('loading');
+  // 납부 일정
+  const rSch=await sbGet(STORE_SCH);
+  if(rSch!==undefined&&rSch!==null&&Array.isArray(rSch)){
+    SCHEDULES=rSch;
+    localStorage.setItem(STORE_SCH,JSON.stringify(SCHEDULES));
+  } else {
+    const local=loadLocal();
+    SCHEDULES=local?local.sch:SEED_SCH;
+  }
+  // 면허 인력
+  const rLic=await sbGet(STORE_LIC);
+  if(rLic!==undefined&&rLic!==null&&Array.isArray(rLic)){
+    LICENSES=rLic;
+    localStorage.setItem(STORE_LIC,JSON.stringify(LICENSES));
+  } else {
+    LICENSES=loadLocalLic()||SEED_LIC;
+  }
+  // 완료 상태
+  const rDone=await sbGet('assoc_done');
+  if(rDone!==undefined&&rDone!==null){
+    try{ doneSet=new Set(Array.isArray(rDone)?rDone:JSON.parse(rDone)); }catch(e){}
+  } else {
+    doneSet=loadDone();
+  }
+  setSyncStatus(rSch!==undefined?'online':'offline');
+  renderAll();
+}
+
+// 오늘 날짜
+const _d=new Date();
+document.getElementById('todayStr').textContent=
+  `${_d.getFullYear()}.${String(_d.getMonth()+1).padStart(2,'0')}.${String(_d.getDate()).padStart(2,'0')}`;
+
+// ESC로 모달 닫기
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){closeModal();closeLicModal();} });
+
+sbInit();
+</script>
+</body>
+</html>

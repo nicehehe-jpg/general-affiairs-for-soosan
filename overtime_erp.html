@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시간외근무 ERP 입력 보조</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F7F8FA;--card:#FFF;--line:#E2E5EA;--line2:#F0F2F5;
+  --blue:#3182F6;--blue-bg:#EBF3FE;--green:#00C471;--green-bg:#E8FAF2;
+  --orange:#FF9500;--orange-bg:#FFF5E6;--red:#F04452;--red-bg:#FEF0F1;
+  --t1:#191F28;--t2:#4E5968;--t3:#8B95A1;--t4:#B0B8C1;
+}
+body{background:var(--bg);font-family:'Pretendard',-apple-system,sans-serif;color:var(--t1)}
+.header{background:var(--card);border-bottom:1px solid var(--line);padding:0 24px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;background:var(--blue);border-radius:50%}
+.hr{display:flex;align-items:center;gap:10px}
+.mbtn{background:var(--blue-bg);color:var(--blue);border:1px solid #c5d8fc;border-radius:8px;
+  padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#mStatus{font-size:12px;color:var(--t3)}
+#mBadge{display:none;font-size:12px;padding:3px 10px;border-radius:20px;font-weight:600}
+.mok{background:var(--green-bg);color:var(--green)}
+.mwarn{background:var(--red-bg);color:var(--red)}
+.con{max-width:1200px;margin:0 auto;padding:20px 24px}
+
+/* 업로드 */
+.upsec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:16px}
+.uprow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.upsec-title{font-size:14px;font-weight:700;color:var(--t2);white-space:nowrap}
+/* 드롭존: 라벨 버튼 형태 */
+.dz{position:relative;cursor:pointer}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dz .dz-inner{display:flex;align-items:center;gap:7px;padding:7px 14px;border:1.5px dashed var(--line);border-radius:8px;font-size:13px;font-weight:600;color:var(--t2);background:var(--bg);transition:.2s;white-space:nowrap}
+.dz:hover .dz-inner,.dz.drag .dz-inner{border-color:var(--blue);background:var(--blue-bg);color:var(--blue)}
+.dz.ok .dz-inner{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.flist{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.fc{background:var(--line2);border-radius:8px;padding:7px 12px;font-size:12px;
+  display:flex;align-items:center;gap:8px}
+.fcn{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fclb{color:var(--blue);font-weight:700;background:var(--blue-bg);padding:2px 8px;
+  border-radius:12px;font-size:11px;white-space:nowrap}
+.fcd{color:var(--t3);cursor:pointer;font-size:15px;flex-shrink:0}
+.fcd:hover{color:var(--red)}
+.pbtn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:7px 16px;
+  font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.pbtn:disabled{background:var(--t4);cursor:not-allowed}
+.pbtn:not(:disabled):hover{background:#1a6ee6}
+.ldg{display:none;font-size:12px;color:var(--t3)}
+.ldg.on{display:block}
+
+/* 안내 */
+.guide{background:var(--blue-bg);border:1px solid #c5d8fc;border-radius:12px;
+  padding:12px 18px;margin-bottom:16px;font-size:13px;color:#1a4fa0;line-height:1.7}
+
+/* 통계 */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.slb{font-size:11px;color:var(--t3);font-weight:500;margin-bottom:4px}
+.sv{font-size:24px;font-weight:800}
+.cb{color:var(--blue)}.cg{color:var(--green)}.co{color:var(--orange)}.cr{color:var(--red)}
+
+/* 진행률 */
+.pc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 20px;margin-bottom:16px}
+.ph{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:8px}
+.pb{height:8px;background:var(--line2);border-radius:20px;overflow:hidden}
+.pf{height:100%;background:var(--blue);border-radius:20px;width:0%;transition:width .3s}
+
+/* 목록 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+.ct{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:8px}
+.fb{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+select,input[type=text]{padding:7px 10px;border-radius:8px;border:1px solid var(--line);
+  font-size:13px;font-family:inherit;color:var(--t1);background:var(--card);outline:none}
+select:focus,input[type=text]:focus{border-color:var(--blue)}
+input[type=text]{min-width:150px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--bg);padding:8px 10px;text-align:left;font-size:11px;font-weight:600;
+  color:var(--t2);border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tbody tr:hover td{background:#FAFBFC}
+tbody tr.dn td{color:var(--t4)}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;
+  font-size:11px;font-weight:600;white-space:nowrap}
+.tb{background:var(--blue-bg);color:var(--blue)}
+.to{background:var(--orange-bg);color:var(--orange)}
+.tr{background:var(--red-bg);color:var(--red)}
+.tg{background:var(--line2);color:var(--t3)}
+.tag-warn{background:var(--orange-bg);color:var(--orange);border:1px solid #FFD9A0}
+.ef{font-family:monospace;background:#F0F2F5;padding:2px 5px;border-radius:4px;font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:6px 11px;border-radius:8px;
+  font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+.bs{background:var(--line2);color:var(--t2)}
+.btn:hover{opacity:.85}
+input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--blue)}
+.emt{text-align:center;padding:40px;color:var(--t3)}
+.emi{font-size:32px;margin-bottom:8px}
+@media(max-width:768px){.stats{grid-template-columns:1fr 1fr}.con{padding:14px}}
+
+  /* ── 달력 ─────────────────────────────────────── */
+  .cal-wrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+  .cal-title{font-size:15px;font-weight:800;color:var(--t1)}
+  .cal-nav{display:flex;align-items:center;gap:6px}
+  .cal-nav button{background:none;border:1px solid var(--line);border-radius:8px;width:28px;height:28px;
+    cursor:pointer;font-size:14px;color:var(--t2);display:flex;align-items:center;justify-content:center;line-height:1}
+  .cal-nav button:hover{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+  .cal-nav .cal-t-btn{width:auto;padding:0 10px;font-size:12px;font-weight:600}
+  .cal-add-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:6px 14px;
+    font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .cal-add-btn:hover{background:#1a6ee6}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+  .cal-dow{text-align:center;font-size:11px;font-weight:700;padding:4px 0 8px;color:var(--t3)}
+  .cal-dow.sat{color:var(--blue)}.cal-dow.sun{color:var(--red)}
+  .cal-cell{min-height:62px;padding:5px 4px 4px;border-top:1px solid var(--line2);
+    position:relative;cursor:pointer;transition:.15s}
+  .cal-cell:hover{background:var(--bg)}
+  .cal-num{font-size:12px;font-weight:600;width:22px;height:22px;display:flex;align-items:center;
+    justify-content:center;border-radius:50%;margin-bottom:2px}
+  .cal-cell.today .cal-num{background:var(--blue);color:#fff}
+  .cal-cell.other-month .cal-num{color:var(--t4)}
+  .cal-cell.sat .cal-num{color:var(--blue)}
+  .cal-cell.sun .cal-num{color:var(--red)}
+  .cal-cell.is-hol .cal-num{color:var(--red)}
+  .cal-cell.is-hol.sat .cal-num{color:var(--blue)}
+  .cal-hol-name{font-size:9px;color:var(--red);font-weight:600;line-height:1.3;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cal-cell.sat .cal-hol-name{color:var(--blue)}
+  .cal-ev{font-size:10px;font-weight:600;padding:1px 4px;border-radius:4px;
+    margin-top:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;line-height:1.5}
+  .cal-ev.ev-holiday{background:var(--red-bg);color:var(--red)}
+  .cal-ev.ev-company{background:#EDE9FE;color:#7C3AED}
+  .cal-ev.ev-custom{background:var(--green-bg);color:var(--green)}
+  /* 달력 이벤트 모달 */
+  .cmo{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:2000;display:flex;align-items:center;justify-content:center}
+  .cmo-box{background:#fff;border-radius:16px;padding:24px;width:340px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,.2)}
+  .cmo-box h4{font-size:15px;font-weight:800;margin-bottom:14px}
+  .cmo-box label{font-size:12px;font-weight:600;color:var(--t2);display:block;margin-bottom:3px}
+  .cmo-box input,.cmo-box select{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);
+    font-size:13px;font-family:inherit;outline:none;margin-bottom:10px}
+  .cmo-box input:focus,.cmo-box select:focus{border-color:var(--blue)}
+  .cmo-btns{display:flex;gap:8px;margin-bottom:16px}
+  .cmo-btns button{flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  .cmo-save{background:var(--blue);color:#fff}.cmo-cancel{background:var(--line2);color:var(--t2)}
+  .cmo-list-title{font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px;padding-top:14px;border-top:1px solid var(--line)}
+  .cmo-ev-item{display:flex;align-items:center;justify-content:space-between;
+    padding:7px 10px;border-radius:8px;background:var(--bg);margin-bottom:5px;font-size:12px}
+  .cmo-ev-name{font-weight:600}.cmo-ev-date{color:var(--t3);font-size:11px;margin-left:6px}
+  .cmo-ev-del{color:var(--t3);cursor:pointer;font-size:14px}.cmo-ev-del:hover{color:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo"><div class="dot"></div>수산이앤에스 · 시간외근무 ERP 입력 보조</div>
+  <div class="hr">
+    <span id="mStatus">사원명부 미업로드</span>
+    <span id="mBadge"></span>
+    <label class="mbtn" style="cursor:pointer">📂 사원명부 업로드
+      <input type="file" id="mFile" accept=".xlsx,.xls" style="display:none" onchange="loadMaster(this)">
+    </label>
+  </div>
+</div>
+
+<div class="con">
+
+  <!-- 달력 -->
+  <div class="cal-wrap">
+    <div class="cal-header">
+      <div class="cal-title">📅 <span id="calMonthLabel"></span></div>
+      <div class="cal-nav">
+        <button onclick="calMove(-1)">‹</button>
+        <button class="cal-t-btn" onclick="calGoToday()">오늘</button>
+        <button onclick="calMove(1)">›</button>
+      </div>
+      <button class="cal-add-btn" onclick="openCMO()">+ 일정 추가</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <!-- 달력 모달 -->
+  <div class="cmo" id="cmo" style="display:none" onclick="if(event.target===this)closeCMO()">
+    <div class="cmo-box">
+      <h4>📅 일정 추가</h4>
+      <label>날짜</label>
+      <input type="date" id="cmoDate">
+      <label>유형</label>
+      <select id="cmoType">
+        <option value="company">🏢 창립기념일 / 회사행사</option>
+        <option value="holiday">🎌 추가 공휴일 (시간외근무 경고 연동)</option>
+        <option value="custom">📌 기타 일정</option>
+      </select>
+      <label>일정명</label>
+      <input type="text" id="cmoName" placeholder="예: 창립기념일, 임시공휴일">
+      <div class="cmo-btns">
+        <button class="cmo-cancel" onclick="closeCMO()">취소</button>
+        <button class="cmo-save" onclick="saveCMOEvent()">저장</button>
+      </div>
+      <div class="cmo-list-title">등록된 일정</div>
+      <div id="cmoList"></div>
+    </div>
+  </div>
+
+  <div class="upsec">
+    <div class="uprow">
+      <span class="upsec-title">📄 시간외근무일지 HWP</span>
+      <div class="dz" id="dz" ondragover="dg(event,1)" ondragleave="dg(event,0)" ondrop="dp(event)">
+        <input type="file" id="hwpIn" accept=".hwp" multiple onchange="addF(this.files)">
+        <div class="dz-inner">📂 <span id="dzLabel">파일 선택 (여러 개 가능)</span></div>
+      </div>
+      <button class="pbtn" id="pBtn" onclick="parseAll()" disabled>⚡ 파싱 시작</button>
+      <span class="ldg" id="ldg">⏳ 파싱 중…</span>
+    </div>
+    <div class="flist" id="flist"></div>
+  </div>
+
+  <div class="guide">
+    <strong>📋 ERP 입력 방법</strong><br>
+    목록 순서대로 ERP <strong>시간외근무신청(NEW)_ENS</strong> 화면에 입력 후 ✅ 체크하세요.<br>
+    <strong>근무유형</strong>: 일반시간외 / 휴일조기출근 (<strong>V 체크된 항목</strong>) &nbsp;|&nbsp; 사원명부 업로드 시 이름·부서 자동 매칭
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="slb">전체 건수</div><div class="sv cb" id="stT">0</div></div>
+    <div class="stat"><div class="slb">입력 완료</div><div class="sv cg" id="stD">0</div></div>
+    <div class="stat"><div class="slb">일반시간외</div><div class="sv co" id="stN">0</div></div>
+    <div class="stat"><div class="slb">휴일조기출근 (V)</div><div class="sv cr" id="stH">0</div></div>
+  </div>
+
+  <div class="pc">
+    <div class="ph"><span>전체 입력 진행률</span><span id="pPct">0%</span></div>
+    <div class="pb"><div class="pf" id="pBar"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="ct">
+      <span>📋 시간외근무 입력 목록 &nbsp;<span class="tag tb" id="lBadge">0건</span></span>
+      <div style="display:flex;gap:8px">
+        <button class="btn bs" onclick="resetAll()">전체 초기화</button>
+        <button class="btn bs" onclick="checkAll()">전체 완료</button>
+      </div>
+    </div>
+    <div class="fb">
+      <select id="fFile" onchange="render()"><option value="">전체 파일</option></select>
+      <select id="fType"  onchange="render()">
+        <option value="">전체 유형</option>
+        <option value="normal">일반시간외</option>
+        <option value="holiday">휴일조기출근</option>
+      </select>
+      <select id="fDone"  onchange="render()">
+        <option value="">전체</option>
+        <option value="todo">미입력</option>
+        <option value="done">입력완료</option>
+      </select>
+      <select id="fMatch" onchange="render()">
+        <option value="">전체 매칭</option>
+        <option value="matched">매칭됨</option>
+        <option value="unmatched">미조회</option>
+      </select>
+      <input type="text" id="fSch" placeholder="사번 또는 이름 검색" oninput="render()">
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th style="width:34px">완료</th>
+          <th style="width:28px">#</th>
+          <th>이름</th>
+          <th>부서</th>
+          <th>사번</th>
+          <th>근무일자</th>
+          <th>요일</th>
+          <th>시작</th>
+          <th>종료</th>
+          <th>시간수</th>
+          <th>근무유형</th>
+          <th>파일</th>
+        </tr></thead>
+        <tbody id="tBody">
+          <tr><td colspan="12"><div class="emt">
+            <div class="emi">📂</div>
+            <p>HWP 파일을 업로드하고 <strong>파싱 시작</strong>을 눌러주세요.</p>
+          </div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   OLE2 Compound File Parser (순수 JS, DataView 범위 오류 없음)
+   검증된 구조: sector size=512, Section0=normal stream (size>4096)
+══════════════════════════════════════════════════════════════════ */
+function parseOLE2(ab) {
+  const u8  = new Uint8Array(ab);
+  const dv  = new DataView(ab);
+  const len = u8.length;
+
+  const u16 = o => dv.getUint16(o, true);
+  const u32 = o => dv.getUint32(o, true);
+  const i32 = o => dv.getInt32(o, true);
+
+  const SS  = 1 << u16(0x1E);   // 512
+  const MSS = 1 << u16(0x20);   // 64
+  const NFAT    = u32(0x2C);
+  const MF_START= i32(0x3C);
+  const MINI_CUT= u32(0x38);    // 4096
+  const DIR_SEC = u32(0x30);
+
+  // ── FAT 구성 ──────────────────────────────────────────────────
+  const fat = new Int32Array(Math.ceil(len / SS));
+  for (let k = 0; k < NFAT && k < 109; k++) {
+    const s = u32(0x4C + k * 4);
+    if (s >= 0xFFFFFFFC) break;          // FREESECT / ENDOFCHAIN
+    const base = (s + 1) * SS;
+    if (base + SS > len) break;
+    for (let j = 0; j < SS / 4; j++) fat[k * (SS/4) + j] = i32(base + j * 4);
+  }
+
+  // ── 섹터 체인 읽기 (normal stream) ───────────────────────────
+  function readChain(startSec, size) {
+    const out = new Uint8Array(size);
+    let pos = 0, sec = startSec;
+    while (sec >= 0 && sec < 0xFFFFFFFE && pos < size) {
+      const base = (sec + 1) * SS;
+      if (base >= len) break;
+      const take = Math.min(SS, size - pos);
+      out.set(u8.subarray(base, base + take), pos);
+      pos += take;
+      sec = fat[sec] ?? -1;
+    }
+    return out;
+  }
+
+  // ── Mini FAT + Mini Stream ────────────────────────────────────
+  let miniFAT = null, miniStream = null;
+
+  function ensureMini(rootStart, rootSize) {
+    if (miniStream) return;
+    miniStream = readChain(rootStart, rootSize);
+    miniFAT = [];
+    let s = MF_START;
+    while (s >= 0 && s < 0xFFFFFFFE) {
+      const base = (s + 1) * SS;
+      if (base + SS > len) break;
+      for (let j = 0; j < SS / 4; j++) {
+        const v = i32(base + j * 4);
+        miniFAT.push(v);
+      }
+      s = fat[s] ?? -1;
+    }
+  }
+
+  function readMiniChain(start, size, rootStart, rootSize) {
+    ensureMini(rootStart, rootSize);
+    const out = new Uint8Array(size);
+    let pos = 0, sec = start;
+    while (sec >= 0 && sec < 0xFFFFFFFE && pos < size) {
+      const base = sec * MSS;
+      if (base >= miniStream.length) break;
+      const take = Math.min(MSS, size - pos);
+      out.set(miniStream.subarray(base, base + take), pos);
+      pos += take;
+      sec = miniFAT[sec] ?? -1;
+    }
+    return out;
+  }
+
+  // ── 디렉토리 엔트리 파싱 ─────────────────────────────────────
+  const entries = [];
+  let rootStart = -1, rootSize = 0;
+  const visited = new Set();
+  let sec = DIR_SEC;
+
+  while (sec >= 0 && sec < 0xFFFFFFFE && !visited.has(sec)) {
+    visited.add(sec);
+    const base = (sec + 1) * SS;
+    if (base + SS > len) break;
+    for (let k = 0; k < SS / 128; k++) {
+      const o = base + k * 128;
+      const nl = u16(o + 0x40);
+      if (!nl) { entries.push(null); continue; }
+      let name = '';
+      for (let j = 0; j < (nl - 2) / 2; j++) name += String.fromCharCode(u16(o + j * 2));
+      const type  = u8[o + 0x42];
+      const start = i32(o + 0x74);
+      const size  = u32(o + 0x78);
+      entries.push({ name, type, start, size });
+      if (type === 5) { rootStart = start; rootSize = size; } // Root Entry
+    }
+    sec = fat[sec] ?? -1;
+  }
+
+  // ── 스트림 반환 ───────────────────────────────────────────────
+  function getStream(name) {
+    const e = entries.find(d => d && d.type === 2 && d.name === name);
+    if (!e) return null;
+    if (e.size < MINI_CUT && rootStart >= 0) {
+      return readMiniChain(e.start, e.size, rootStart, rootSize);
+    }
+    return readChain(e.start, e.size);
+  }
+
+  return { getStream };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   zlib raw inflate → pako.inflateRaw (trailing junk 허용)
+══════════════════════════════════════════════════════════════════ */
+function inflateRaw(u8) {
+  // pako.inflateRaw: trailing junk 있어도 안전하게 처리
+  try {
+    return pako.inflateRaw(u8);
+  } catch(e) {
+    throw new Error('압축 해제 오류: ' + e.message);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HWP5 레코드 파싱 → TagID=67(PARA_TEXT) 텍스트 추출
+══════════════════════════════════════════════════════════════════ */
+function hwp5Texts(raw) {
+  const dv  = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+  const texts = [];
+  let i = 0;
+  while (i + 4 <= raw.length) {
+    const hdr   = dv.getUint32(i, true);
+    const tagId = hdr & 0x3FF;
+    let   size  = (hdr >>> 20) & 0xFFF;
+    i += 4;
+    if (size === 0xFFF) {
+      if (i + 4 > raw.length) break;
+      size = dv.getUint32(i, true); i += 4;
+    }
+    const end = i + size;
+    if (end > raw.length) break;
+
+    if (tagId === 67 && size >= 2) {   // HWPTAG_PARA_TEXT
+      const chars = [];
+      for (let j = i; j + 1 < end; j += 2) {
+        const cp = dv.getUint16(j, true);
+        if (cp === 0) break;
+        if (cp >= 0x20) chars.push(String.fromCharCode(cp));
+        else if (cp === 0x0B) chars.push('\t');
+      }
+      const t = chars.join('').trim();
+      if (t) texts.push(t);
+    }
+    i = end;
+  }
+  return texts;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   레코드 추출
+   순서: 순번 → 이름 → 사번(6자리) → 날짜 → 시작시간 → 종료시간 → 시간수
+   체크박스: 시간수 바로 다음에 'V' 있으면 → 휴일조기출근
+             없으면 → 일반시간외
+══════════════════════════════════════════════════════════════════ */
+function extractRecs(texts, label) {
+  const SEQ = /^\d{1,3}$/;
+  const EMP = /^\d{6}$/;
+  const DT  = /^\d{4}-\d{2}-\d{2}$/;
+  const TM  = /^\d{2}:\d{2}$/;
+  const HR  = /^\d+\.\d$/;
+  const recs = [];
+
+  for (let i = 0; i < texts.length - 6; i++) {
+    if (!SEQ.test(texts[i])) continue;
+    const seq   = parseInt(texts[i]);
+    if (seq < 1) continue;
+    const name  = texts[i+1];
+    const empno = texts[i+2];
+    const date  = texts[i+3];
+    const start = texts[i+4];
+    const end_t = texts[i+5];
+    const hours = texts[i+6];
+
+    if (!EMP.test(empno) || !DT.test(date) || !TM.test(start) || !TM.test(end_t) || !HR.test(hours)) continue;
+    if (!name || name.length < 2) continue;
+
+    // i+7 바로 다음 토큰이 'V'이면 휴일조기출근
+    const nextTok = texts[i+7] || '';
+    const holiday = (nextTok.trim() === 'V');
+
+    recs.push({ seq, name, empno, date, start, end: end_t,
+                hours: parseFloat(hours), holiday_early: holiday, file: label });
+    i += 6;
+  }
+  return recs;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HWP 파일 처리
+══════════════════════════════════════════════════════════════════ */
+async function parseHWP(ab, label) {
+  let ole;
+  try { ole = parseOLE2(ab); }
+  catch(e) { throw new Error('OLE2 파싱 오류: ' + e.message); }
+
+  const compressed = ole.getStream('Section0');
+  if (!compressed) throw new Error('Section0 스트림을 찾을 수 없습니다.');
+
+  let raw;
+  try { raw = inflateRaw(compressed); }
+  catch(e) { throw new Error('압축 해제 오류: ' + e.message); }
+
+  const texts = hwp5Texts(raw);
+  if (!texts.length) throw new Error('텍스트를 추출할 수 없습니다.');
+
+  const recs = extractRecs(texts, label);
+  if (!recs.length) throw new Error(`레코드를 파싱할 수 없습니다. (텍스트 ${texts.length}개 추출됨)`);
+  return recs;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   파일 UI
+══════════════════════════════════════════════════════════════════ */
+let hwpFiles = [], RECORDS = [];
+
+function dg(e, on) { e.preventDefault(); document.getElementById('dz').classList.toggle('drag', !!on); }
+function dp(e) { e.preventDefault(); dg(e,0); addF(e.dataTransfer.files); }
+
+function addF(list) {
+  for (const f of list) {
+    if (!f.name.toLowerCase().endsWith('.hwp')) continue;
+    if (hwpFiles.find(x => x.file.name === f.name)) continue;
+    // "시간외근무일지_" 이후 텍스트만 라벨로 사용
+    let label = f.name.replace(/\.hwp$/i, '');
+    const mLabel = f.name.match(/시간외근무일지_+(.+)\.hwp$/i);
+    if (mLabel) label = mLabel[1];
+    hwpFiles.push({ file: f, label });
+  }
+  renderFL();
+  document.getElementById('pBtn').disabled = !hwpFiles.length;
+}
+function removeF(i) { hwpFiles.splice(i,1); renderFL(); document.getElementById('pBtn').disabled = !hwpFiles.length; }
+function renderFL() {
+  document.getElementById('flist').innerHTML = hwpFiles.map((x,i) => `
+    <div class="fc">
+      <span class="fcn">📄 ${x.file.name}</span>
+      <span class="fclb">${x.label}</span>
+      <span class="fcd" onclick="removeF(${i})">✕</span>
+    </div>`).join('');
+  document.getElementById('dz').classList.toggle('ok', !!hwpFiles.length);
+  document.getElementById('dzLabel').textContent = hwpFiles.length
+    ? hwpFiles.length+'개 선택됨'
+    : '파일 선택 (여러 개 가능)';
+}
+
+async function parseAll() {
+  if (!hwpFiles.length) return;
+  document.getElementById('ldg').classList.add('on');
+  document.getElementById('pBtn').disabled = true;
+  RECORDS = []; doneSet.clear();
+
+  for (const {file, label} of hwpFiles) {
+    try {
+      const recs = await parseHWP(await file.arrayBuffer(), label);
+      RECORDS.push(...recs);
+    } catch(e) {
+      alert(`❌ ${file.name}\n${e.message}`);
+    }
+  }
+
+  // 파일 필터 옵션 갱신
+  const labels = [...new Set(RECORDS.map(r => r.file))];
+  document.getElementById('fFile').innerHTML =
+    '<option value="">전체 파일</option>' + labels.map(l=>`<option value="${l}">${l}</option>`).join('');
+
+  document.getElementById('ldg').classList.remove('on');
+  document.getElementById('pBtn').disabled = false;
+  if (masterLoaded) updateBadge();
+  render();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   사원명부
+══════════════════════════════════════════════════════════════════ */
+let masterMap = {}, masterLoaded = false;
+
+function loadMaster(input) {
+  const f = input.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+    masterMap = {};
+    for (const sn of wb.SheetNames) {
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:''});
+      let hr = -1;
+      for (let i = 0; i < Math.min(data.length,10); i++) {
+        const r = data[i].map(c=>String(c).trim());
+        if (r.some(c=>c==='사원'||c==='이름') || r.some(c=>c==='사번')) { hr=i; break; }
+      }
+      if (hr < 0) continue;
+      const hdr = data[hr].map(c=>String(c).trim());
+      const cm = {};
+      hdr.forEach((h,i) => {
+        if (h==='사원'||h==='이름') cm.name=i;
+        if (h==='사번') cm.empNo=i;
+        if (h==='부서') cm.dept=i;
+      });
+      if (cm.name===undefined) continue;
+      for (let i=hr+1; i<data.length; i++) {
+        const row=data[i];
+        const name=String(row[cm.name]??'').trim();
+        const raw2=String(row[cm.empNo]??'').trim();
+        const norm=raw2.replace(/^0+/,'');
+        const dept=cm.dept!==undefined?String(row[cm.dept]??'').trim():'';
+        if (!name||name==='선택') continue;
+        masterMap[raw2]=masterMap[norm]={name,dept};
+      }
+      break;
+    }
+    masterLoaded=true;
+    document.getElementById('mStatus').textContent=`📋 ${f.name.replace(/\.xlsx?$/i,'')}`;
+    updateBadge(); render();
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function updateBadge() {
+  const total=RECORDS.length, matched=RECORDS.filter(r=>getInfo(r.empno)).length;
+  const b=document.getElementById('mBadge');
+  b.style.display=total?'inline-flex':'none';
+  if (matched===total){b.className='mok';b.textContent=`✅ 전체 ${total}건 매칭`;}
+  else{b.className='mwarn';b.textContent=`⚠️ ${matched}/${total}건 매칭`;}
+}
+function getInfo(empno){ return masterMap[empno]||masterMap[empno.replace(/^0+/,'')]; }
+
+/* ══════════════════════════════════════════════════════════════════
+   완료 체크
+══════════════════════════════════════════════════════════════════ */
+let doneSet=new Set(JSON.parse(localStorage.getItem('erp5')||'[]'));
+const saveD=()=>localStorage.setItem('erp5',JSON.stringify([...doneSet]));
+function tog(i){doneSet.has(i)?doneSet.delete(i):doneSet.add(i);saveD();render();}
+function resetAll(){if(!confirm('완료 체크를 초기화할까요?'))return;doneSet.clear();saveD();render();}
+function checkAll(){getF().forEach(r=>doneSet.add(r._i));saveD();render();}
+
+/* ══════════════════════════════════════════════════════════════════
+   필터 / 렌더
+══════════════════════════════════════════════════════════════════ */
+function getF(){
+  const ff=document.getElementById('fFile').value,
+        ft=document.getElementById('fType').value,
+        fd=document.getElementById('fDone').value,
+        fm=document.getElementById('fMatch').value,
+        sq=document.getElementById('fSch').value.trim();
+  return RECORDS.map((r,i)=>({...r,_i:i})).filter(r=>{
+    const tp=r.holiday_early?'holiday':'normal';
+    if(ff&&r.file!==ff)return false;
+    if(ft&&tp!==ft)return false;
+    if(fd==='done'&&!doneSet.has(r._i))return false;
+    if(fd==='todo'&&doneSet.has(r._i))return false;
+    const info=getInfo(r.empno);
+    if(fm==='matched'&&!info)return false;
+    if(fm==='unmatched'&&info)return false;
+    if(sq&&!r.empno.includes(sq)&&!r.name.includes(sq)&&!(info&&info.name.includes(sq)))return false;
+    return true;
+  });
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   요일 / 공휴일 표시
+══════════════════════════════════════════════════════════════════ */
+const HOLIDAYS = {
+  // 2025
+  '2025-01-01':'신정','2025-01-28':'설날연휴','2025-01-29':'설날','2025-01-30':'설날연휴',
+  '2025-03-01':'삼일절','2025-05-05':'어린이날','2025-05-06':'대체공휴일',
+  '2025-06-06':'현충일','2025-08-15':'광복절',
+  '2025-10-03':'개천절','2025-10-05':'추석연휴','2025-10-06':'추석','2025-10-07':'추석연휴',
+  '2025-10-09':'한글날','2025-12-25':'크리스마스',
+  // 2026
+  '2026-01-01':'신정','2026-01-28':'설날연휴','2026-01-29':'설날','2026-01-30':'설날연휴',
+  '2026-03-01':'삼일절','2026-05-05':'어린이날',
+  '2026-05-24':'부처님오신날','2026-05-25':'대체공휴일',
+  '2026-06-06':'현충일','2026-08-15':'광복절',
+  '2026-09-24':'추석연휴','2026-09-25':'추석','2026-09-26':'추석연휴',
+  '2026-10-03':'개천절','2026-10-09':'한글날','2026-12-25':'크리스마스',
+};
+const DAY_KR = ['일','월','화','수','목','금','토'];
+
+// index.html 달력과 공유 (localStorage: soosan_cal_events_v1)
+function getCustomHolidays() {
+  const map = {};
+  // calEvs는 달력과 공유 (메모리)
+  (typeof calEvs !== 'undefined' ? calEvs : JSON.parse(localStorage.getItem('soosan_cal_events_v1')||'[]'))
+    .filter(e=>e.type==='holiday'||e.type==='company').forEach(e=>{ map[e.date]=e.name; });
+  return map;
+}
+
+function dayCell(dateStr) {
+  if (!dateStr || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return '<span style="color:var(--t4)">-</span>';
+  const dt   = new Date(dateStr + 'T00:00:00');
+  const dow  = dt.getDay();   // 0=일, 6=토
+  const dayKr = DAY_KR[dow];
+  const customHols = getCustomHolidays();
+  const hName = HOLIDAYS[dateStr] || customHols[dateStr];
+  const isSat = dow === 6;
+  const isSunOrHol = dow === 0 || hName;
+
+  // 색상
+  const color = isSat
+    ? 'var(--blue)'                  // 토: 토스 파란색
+    : isSunOrHol
+      ? 'var(--red)'                 // 일/공휴일: 빨간색
+      : 'var(--t2)';                 // 평일: 기본
+
+  const fw = (isSat || isSunOrHol) ? '700' : '500';
+
+  if (hName) {
+    // 공휴일: 요일 + 아래줄에 공휴일명
+    return `<span style="color:${color};font-weight:${fw};font-size:13px;line-height:1.3;display:inline-block;text-align:center">${dayKr}<br><span style="font-size:10px">${hName}</span></span>`;
+  }
+  return `<span style="color:${color};font-weight:${fw};font-size:13px">${dayKr}</span>`;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   달력 (overtime_erp.html 전용 + index.html 공유)
+══════════════════════════════════════════════════════ */
+const CAL_EV_KEY = 'soosan_cal_events_v1';
+let calEvs = JSON.parse(localStorage.getItem(CAL_EV_KEY) || '[]');
+function saveCalEvs() { localStorage.setItem(CAL_EV_KEY, JSON.stringify(calEvs)); }
+
+const todayR = new Date();
+let calY = todayR.getFullYear(), calM = todayR.getMonth();
+
+function calMove(d) { calM+=d; if(calM>11){calM=0;calY++;} if(calM<0){calM=11;calY--;} renderCal(); }
+function calGoToday() { calY=todayR.getFullYear(); calM=todayR.getMonth(); renderCal(); }
+function toYMD(y,m,d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+function renderCal() {
+  document.getElementById('calMonthLabel').textContent = `${calY}년 ${calM+1}월`;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const DOW = ['일','월','화','수','목','금','토'];
+  DOW.forEach((d,i) => {
+    const el = document.createElement('div');
+    el.className = 'cal-dow' + (i===0?' sun':i===6?' sat':'');
+    el.textContent = d; grid.appendChild(el);
+  });
+  const first  = new Date(calY, calM, 1).getDay();
+  const last   = new Date(calY, calM+1, 0).getDate();
+  const pLast  = new Date(calY, calM, 0).getDate();
+  const todYMD = toYMD(todayR.getFullYear(), todayR.getMonth(), todayR.getDate());
+
+  // 이전달
+  for (let i=first-1; i>=0; i--) {
+    const pm = calM-1<0?11:calM-1, py = calM-1<0?calY-1:calY;
+    grid.appendChild(makeCalCell(py,pm,pLast-i,toYMD(py,pm,pLast-i),true,todYMD));
+  }
+  // 이번달
+  for (let d=1; d<=last; d++) grid.appendChild(makeCalCell(calY,calM,d,toYMD(calY,calM,d),false,todYMD));
+  // 다음달
+  const remain = (7-(first+last)%7)%7;
+  for (let d=1; d<=remain; d++) {
+    const nm = calM+1>11?0:calM+1, ny = calM+1>11?calY+1:calY;
+    grid.appendChild(makeCalCell(ny,nm,d,toYMD(ny,nm,d),true,todYMD));
+  }
+}
+
+function makeCalCell(y,m,d,ymd,other,todYMD) {
+  const dt  = new Date(ymd+'T00:00:00'), dow = dt.getDay();
+  const hName  = HOLIDAYS[ymd];
+  const cHols  = calEvs.filter(e=>e.date===ymd);
+  const userHol= cHols.some(e=>e.type==='holiday');
+  const isHol  = !!hName || userHol;
+
+  const cell = document.createElement('div');
+  let cls = 'cal-cell';
+  if (other) cls += ' other-month';
+  if (dow===6) cls += ' sat';
+  if (dow===0) cls += ' sun';
+  if (isHol && dow!==6 && dow!==0) cls += ' is-hol';
+  if (ymd===todYMD) cls += ' today';
+  cell.className = cls;
+  cell.onclick = () => openCMO(ymd);
+
+  const num = document.createElement('div');
+  num.className = 'cal-num'; num.textContent = d;
+  cell.appendChild(num);
+
+  if (hName) {
+    const hn = document.createElement('span');
+    hn.className = 'cal-hol-name'; hn.textContent = hName;
+    cell.appendChild(hn);
+  }
+  cHols.forEach(ev => {
+    const tag = document.createElement('div');
+    tag.className = `cal-ev ev-${ev.type}`; tag.textContent = ev.name;
+    cell.appendChild(tag);
+  });
+  return cell;
+}
+
+function openCMO(date='') {
+  document.getElementById('cmoDate').value = date || toYMD(calY,calM,1);
+  document.getElementById('cmoName').value = '';
+  document.getElementById('cmoType').value = 'company';
+  renderCMOList();
+  document.getElementById('cmo').style.display = 'flex';
+}
+function closeCMO() { document.getElementById('cmo').style.display = 'none'; }
+
+function saveCMOEvent() {
+  const date = document.getElementById('cmoDate').value;
+  const type = document.getElementById('cmoType').value;
+  const name = document.getElementById('cmoName').value.trim();
+  if (!date || !name) { alert('날짜와 일정명을 입력해주세요.'); return; }
+  calEvs.push({id:'ce'+Date.now(), date, type, name});
+  saveCalEvs(); renderCMOList(); renderCal(); render();
+  document.getElementById('cmoName').value = '';
+}
+
+function delCMOEvent(id) {
+  calEvs = calEvs.filter(e=>e.id!==id);
+  saveCalEvs(); renderCMOList(); renderCal(); render();
+}
+
+function renderCMOList() {
+  const wrap = document.getElementById('cmoList');
+  if (!calEvs.length) {
+    wrap.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:8px 0">등록된 일정이 없습니다.</div>';
+    return;
+  }
+  const TL = {company:'🏢',holiday:'🎌',custom:'📌'};
+  wrap.innerHTML = [...calEvs].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>`
+    <div class="cmo-ev-item">
+      <div><span class="cmo-ev-name">${TL[e.type]||'📌'} ${e.name}</span>
+      <span class="cmo-ev-date">${e.date}</span></div>
+      <span class="cmo-ev-del" onclick="delCMOEvent('${e.id}')">✕</span>
+    </div>`).join('');
+}
+
+renderCal();
+
+function render(){
+  const fl=getF(),total=RECORDS.length;
+  const done=[...doneSet].filter(i=>i<total).length;
+  const holiday=RECORDS.filter(r=>r.holiday_early).length;
+  const normal=total-holiday;
+  const pct=total?Math.round(done/total*100):0;
+  document.getElementById('stT').textContent=total;
+  document.getElementById('stD').textContent=done;
+  document.getElementById('stN').textContent=normal;
+  document.getElementById('stH').textContent=holiday;
+  document.getElementById('pPct').textContent=pct+'%';
+  document.getElementById('pBar').style.width=pct+'%';
+  document.getElementById('lBadge').textContent=fl.length+'건';
+
+  if(!RECORDS.length){
+    document.getElementById('tBody').innerHTML=`<tr><td colspan="12"><div class="emt">
+      <div class="emi">📂</div><p>HWP 파일을 업로드하고 <strong>파싱 시작</strong>을 눌러주세요.</p>
+    </div></td></tr>`;return;
+  }
+
+  document.getElementById('tBody').innerHTML=fl.map((r,i)=>{
+    const dn=doneSet.has(r._i), hol=r.holiday_early;
+    // 토/일/공휴일 여부 판단
+    const isWeekend = r.date && (()=>{
+      const dt = new Date(r.date + 'T00:00:00');
+      const dow = dt.getDay();
+      const ch = getCustomHolidays(); return dow === 0 || dow === 6 || !!HOLIDAYS[r.date] || !!ch[r.date];
+    })();
+    // 토/일/공휴일인데 일반시간외 → 확인 필요
+    const needCheck = isWeekend && !hol;
+    // 이름 셀
+    // 부서: 사원명부 업로드 시 매칭, 없으면 '-'
+    const info=getInfo(r.empno);
+    let dept = '-';
+    if (masterLoaded && info) {
+      dept = info.dept || '-';
+      // 이름 불일치 경고
+      if (info.name !== r.name) dept = `${dept}<br><span style="font-size:10px;color:var(--orange)">명부: ${info.name}</span>`;
+    } else if (masterLoaded && !info) {
+      dept = '<span style="font-size:11px;color:var(--red);font-weight:600">⚠️ 미조회</span>';
+    }
+    return`<tr class="${dn?'dn':''}">
+      <td><input type="checkbox" ${dn?'checked':''} onchange="tog(${r._i})"></td>
+      <td style="color:var(--t3);font-size:12px">${i+1}</td>
+      <td style="font-weight:600">${r.name}</td>
+      <td style="font-size:12px;color:var(--t2)">${dept}</td>
+      <td style="font-weight:700;font-family:monospace">${r.empno}</td>
+      <td><span class="ef">${r.date}</span></td>
+      <td style="text-align:center">${dayCell(r.date)}</td>
+      <td><span class="ef">${r.start}</span></td>
+      <td><span class="ef">${r.end}</span></td>
+      <td style="font-weight:700;text-align:center">${r.hours}</td>
+      <td><span class="tag ${hol?'tr':needCheck?'tag-warn':'tg'}">${hol?'휴일조기출근':'일반시간외'}${needCheck?' ⚠️':''}</span></td>
+      <td style="font-size:12px;color:var(--t2)">${r.file}</td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--t3)">해당 항목 없음</td></tr>`;
+}
+render();
+</script>
+</body>
+</html>

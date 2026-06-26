@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>법인카드 정산 | 수산이앤에스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+:root{
+  --bg:#F2F4F6; --card:#fff; --t1:#191F28; --t2:#4E5968; --t3:#8B95A1;
+  --blue:#3182F6; --blue-bg:#EBF2FF; --green:#1DB67F; --green-bg:#E6F9F0;
+  --orange:#FF9800; --orange-bg:#FFF4E5; --red:#F04452; --red-bg:#FDEAEC;
+  --purple:#6C5CE7; --purple-bg:#F0EEFF; --line:#E5E8EB;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{background:var(--bg); color:var(--t1); font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; min-height:100vh;}
+
+/* 레이아웃 */
+.layout{display:flex; min-height:100vh;}
+.sidebar{width:220px; background:#fff; border-right:1px solid var(--line); padding:20px 0; flex-shrink:0; position:sticky; top:0; height:100vh; overflow-y:auto;}
+.main{flex:1; padding:28px 32px 80px; max-width:1100px;}
+
+/* 사이드바 */
+.sb-logo{padding:0 18px 18px; border-bottom:1px solid var(--line); margin-bottom:12px;}
+.sb-logo .back{font-size:12px; color:var(--t3); text-decoration:none; font-weight:600; display:block; margin-bottom:8px;}
+.sb-logo .back:hover{color:var(--blue);}
+.sb-logo h2{font-size:14px; font-weight:800; color:var(--t1);}
+.sb-logo p{font-size:11px; color:var(--t3); margin-top:2px;}
+.sb-section{padding:0 10px; margin-bottom:6px;}
+.sb-label{font-size:10.5px; font-weight:700; color:var(--t3); padding:0 8px; margin-bottom:4px; letter-spacing:.5px;}
+.sb-card{display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; color:var(--t2); transition:all .15s;}
+.sb-card:hover{background:var(--bg); color:var(--t1);}
+.sb-card.active{background:var(--blue-bg); color:var(--blue);}
+.sb-card .cnt{font-size:11px; font-weight:700; background:var(--line); color:var(--t3); border-radius:10px; padding:1px 7px; min-width:22px; text-align:center;}
+.sb-card.active .cnt{background:var(--blue); color:#fff;}
+.sb-add{display:flex; align-items:center; gap:6px; padding:9px 10px; border-radius:10px; cursor:pointer; font-size:12.5px; font-weight:700; color:var(--blue); transition:all .15s; border:1.5px dashed var(--blue-bg);}
+.sb-add:hover{background:var(--blue-bg);}
+
+/* 헤더 */
+.page-head{display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px;}
+.page-head h1{font-size:22px; font-weight:800;}
+.page-head .sub{font-size:13px; color:var(--t3); margin-top:3px;}
+.head-actions{display:flex; gap:8px; flex-wrap:wrap;}
+
+/* 버튼 */
+.btn{border:none; border-radius:11px; padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit; transition:all .15s; display:inline-flex; align-items:center; gap:6px;}
+.btn-blue{background:var(--blue); color:#fff;} .btn-blue:hover{background:#1B6FE0;}
+.btn-green{background:var(--green); color:#fff;} .btn-green:hover{background:#17a070;}
+.btn-line{background:#fff; color:var(--t2); border:1px solid var(--line);} .btn-line:hover{background:var(--bg); color:var(--t1);}
+.btn-red{background:var(--red-bg); color:var(--red); border:none;} .btn-red:hover{background:#f8d0d3;}
+.btn-sm{padding:7px 12px; font-size:12px; border-radius:9px;}
+.btn:disabled{opacity:.4; cursor:not-allowed;}
+
+/* 업로드 영역 */
+.upload-zone{border:2px dashed var(--line); border-radius:18px; padding:32px; text-align:center; background:#fff; transition:all .2s; cursor:pointer; margin-bottom:20px;}
+.upload-zone:hover, .upload-zone.drag{border-color:var(--blue); background:var(--blue-bg);}
+.upload-zone .ic{font-size:36px; margin-bottom:10px;}
+.upload-zone h3{font-size:15px; font-weight:800; margin-bottom:4px;}
+.upload-zone p{font-size:12.5px; color:var(--t3);}
+.upload-zone .tip{font-size:11.5px; color:var(--blue); margin-top:8px; font-weight:700;}
+
+/* 카드 선택 */
+.card-select-bar{background:#fff; border-radius:14px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+.card-select-bar label{font-size:13px; font-weight:700; color:var(--t2); white-space:nowrap;}
+.card-select{padding:8px 12px; border:1.5px solid var(--line); border-radius:9px; font-size:13px; font-family:inherit; color:var(--t1); background:#fff; cursor:pointer;}
+.card-select:focus{outline:none; border-color:var(--blue);}
+
+/* OCR 진행 */
+.ocr-progress{background:#fff; border-radius:14px; padding:18px; margin-bottom:16px; display:none;}
+.ocr-progress.show{display:block;}
+.ocr-item{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px;}
+.ocr-item:last-child{border-bottom:none;}
+.ocr-item .name{flex:1; color:var(--t2); font-weight:600;}
+.ocr-item .status{font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px;}
+.status-wait{background:var(--bg); color:var(--t3);}
+.status-ing{background:var(--orange-bg); color:var(--orange);}
+.status-done{background:var(--green-bg); color:var(--green);}
+.status-err{background:var(--red-bg); color:var(--red);}
+.spin{display:inline-block; animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* 전표 테이블 */
+.voucher-wrap{background:#fff; border-radius:18px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.voucher-head{display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line);}
+.voucher-head h3{font-size:15px; font-weight:800;}
+.voucher-head .meta{font-size:12px; color:var(--t3); font-weight:600;}
+.tbl-scroll{overflow-x:auto;}
+table{width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap;}
+th{background:#F7F9FB; color:var(--t2); font-weight:700; padding:10px 12px; text-align:left; border-bottom:1px solid var(--line); position:sticky; top:0;}
+td{padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#FAFBFC;}
+.edit-input{width:100%; padding:5px 8px; border:1.5px solid var(--blue); border-radius:7px; font-size:12px; font-family:inherit; background:var(--blue-bg);}
+.edit-input:focus{outline:none; background:#fff;}
+.edit-select{padding:5px 8px; border:1.5px solid var(--blue); border-radius:7px; font-size:12px; font-family:inherit; background:var(--blue-bg); cursor:pointer;}
+.edit-select:focus{outline:none;}
+.amt{text-align:right; font-variant-numeric:tabular-nums; font-weight:700;}
+.acct-tag{font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background:var(--purple-bg); color:var(--purple); white-space:nowrap;}
+.del-btn{background:none; border:none; color:var(--t3); cursor:pointer; font-size:14px; padding:4px 6px; border-radius:6px;}
+.del-btn:hover{background:var(--red-bg); color:var(--red);}
+
+/* 합계 바 */
+.sum-bar{display:flex; gap:14px; padding:14px 20px; background:#F7F9FB; border-top:1px solid var(--line); flex-wrap:wrap;}
+.sum-item{display:flex; align-items:center; gap:6px;}
+.sum-item .l{font-size:11.5px; color:var(--t3); font-weight:600;}
+.sum-item .v{font-size:14px; font-weight:800; font-variant-numeric:tabular-nums;}
+.sum-item .v.blue{color:var(--blue);}
+
+/* 빈 상태 */
+.empty{padding:48px; text-align:center; color:var(--t3);}
+.empty .ic{font-size:40px; margin-bottom:10px;}
+.empty p{font-size:13.5px; font-weight:600;}
+.empty .sub{font-size:12px; margin-top:4px;}
+
+/* 모달 */
+.modal-bg{position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:500; display:flex; align-items:center; justify-content:center; padding:20px;}
+.modal-bg.hide{display:none;}
+.modal{background:#fff; border-radius:20px; padding:28px; width:420px; max-width:100%; max-height:90vh; overflow-y:auto;}
+.modal h3{font-size:17px; font-weight:800; margin-bottom:16px;}
+.field{margin-bottom:14px;}
+.field label{font-size:12.5px; font-weight:700; color:var(--t2); display:block; margin-bottom:5px;}
+.field input, .field select{width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; font-size:13.5px; font-family:inherit; color:var(--t1);}
+.field input:focus, .field select:focus{outline:none; border-color:var(--blue);}
+.modal-btns{display:flex; gap:8px; margin-top:20px; justify-content:flex-end;}
+.color-dot{width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px;}
+.sb-edit-btn{background:none;border:none;cursor:pointer;font-size:13px;padding:5px 6px;border-radius:7px;color:var(--t3);flex-shrink:0;line-height:1;transition:all .15s;}
+.sb-edit-btn:hover{background:var(--blue-bg);color:var(--blue);}
+
+/* 통계 카드 */
+.stats{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px;}
+.stat-card{background:#fff; border-radius:14px; padding:16px 18px;}
+.stat-card .n{font-size:22px; font-weight:800; margin-bottom:4px;}
+.stat-card .l{font-size:12px; color:var(--t3); font-weight:600;}
+.stat-card.blue .n{color:var(--blue);}
+.stat-card.green .n{color:var(--green);}
+.stat-card.orange .n{color:var(--orange);}
+.stat-card.purple .n{color:var(--purple);}
+
+@media(max-width:800px){
+  .layout{flex-direction:column;}
+  .sidebar{width:100%; height:auto; position:static; display:flex; flex-wrap:wrap; gap:6px; padding:12px;}
+  .sb-logo{border-bottom:none; padding-bottom:0; margin-bottom:0;}
+  .stats{grid-template-columns:1fr 1fr;}
+  .main{padding:16px 14px 60px;}
+}
+</style>
+</head>
+<body>
+
+<!-- 비밀번호 잠금 -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력"
+      style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;"
+      onkeydown="if(event.key==='Enter')gateCheck()"
+      onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">들어가기</button>
+  </div>
+</div>
+<script>
+  const GATE_PW_HASH = '942b9f04dfaa9d87f4ef9d76fdb40cfd30b843cf8121fc19274bd285bd0c999a';
+(function(){ if(sessionStorage.getItem('gm_auth')==='ok'){ document.getElementById('gate').style.display='none'; } else { setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100); } })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  } else { const err=document.getElementById('gateErr'); err.textContent='비밀번호가 올바르지 않습니다'; document.getElementById('gatePw').value=''; document.getElementById('gatePw').focus(); setTimeout(()=>{ err.textContent=''; },2500); } }
+</script>
+
+<div class="layout">
+<!-- 사이드바 -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <a class="back" href="index.html">‹ 대시보드</a>
+    <h2>💳 법인카드 정산</h2>
+    <p>수산이앤에스 총무팀</p>
+    <div id="syncBadge" style="font-size:11px;font-weight:700;margin-top:6px;color:var(--t3);">⏳ 불러오는 중…</div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-label">카드 목록</div>
+    <div id="cardList"></div>
+    <div class="sb-add" onclick="openAddCard()">＋ 카드 추가</div>
+  </div>
+  <div class="sb-section" style="margin-top:auto; padding-top:12px; border-top:1px solid var(--line);">
+    <div class="sb-card" onclick="openApiKeyModal()" id="apiKeyStatus">
+      <span>🔑 API 키 설정</span>
+      <span class="cnt" id="apiKeyCnt" style="background:var(--red-bg);color:var(--red);">미설정</span>
+    </div>
+  </div>
+</aside>
+
+<!-- 메인 -->
+<main class="main">
+  <div class="page-head">
+    <div>
+      <h1 id="pageTitle">법인카드 전표 정산</h1>
+      <div class="sub" id="pageSub">카드를 선택하거나 영수증을 올려 전표를 만드세요</div>
+    </div>
+    <div class="head-actions">
+      <button class="btn btn-line btn-sm" onclick="exportExcel()">📊 엑셀 내보내기</button>
+      <button class="btn btn-blue btn-sm" onclick="showUpload()">＋ 영수증 추가</button>
+    </div>
+  </div>
+
+  <!-- 통계 -->
+  <div class="stats">
+    <div class="stat-card blue"><div class="n" id="st-total">0</div><div class="l">전체 전표 건수</div></div>
+    <div class="stat-card green"><div class="n" id="st-amt">0</div><div class="l">이번 달 총 금액 (원)</div></div>
+    <div class="stat-card orange"><div class="n" id="st-vat">0</div><div class="l">부가세 합계 (원)</div></div>
+    <div class="stat-card purple"><div class="n" id="st-cards">0</div><div class="l">등록된 카드 수</div></div>
+  </div>
+
+  <!-- 업로드 영역 -->
+  <div class="upload-zone" id="uploadZone" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)" onclick="document.getElementById('fileInput').click()">
+    <div class="ic">🧾</div>
+    <h3>영수증 사진 또는 PDF를 여기에 드래그하거나 클릭해서 올려주세요</h3>
+    <p>JPG · PNG · PDF 지원 · 여러 장 동시 업로드 가능</p>
+    <div class="tip">AI가 자동으로 날짜·금액·사용처·계정과목을 읽어냅니다</div>
+    <input type="file" id="fileInput" multiple accept="image/*,.pdf" style="display:none" onchange="handleFiles(this.files)">
+  </div>
+
+  <!-- 카드 선택 -->
+  <div class="card-select-bar" id="cardSelectBar" style="display:none;">
+    <label>📋 전표를 등록할 카드:</label>
+    <select class="card-select" id="targetCard"></select>
+    <button class="btn btn-blue btn-sm" id="startOcrBtn" onclick="startOCR()">AI로 읽기 시작</button>
+    <button class="btn btn-line btn-sm" onclick="cancelUpload()">취소</button>
+  </div>
+
+  <!-- OCR 진행 -->
+  <div class="ocr-progress" id="ocrProgress">
+    <div style="font-size:13.5px; font-weight:800; margin-bottom:10px;">📡 AI가 영수증을 읽는 중...</div>
+    <div id="ocrList"></div>
+  </div>
+
+  <!-- 전표 목록 -->
+  <div class="voucher-wrap" id="voucherWrap">
+    <div class="voucher-head">
+      <h3 id="voucherTitle">전체 전표</h3>
+      <span class="meta" id="voucherMeta"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table id="voucherTable">
+        <thead>
+          <tr>
+            <th style="width:32px;">#</th>
+            <th style="width:100px;">날짜</th>
+            <th style="width:110px;">카드명</th>
+            <th style="min-width:140px;">사용처</th>
+            <th style="width:110px;" class="amt">금액 (원)</th>
+            <th style="width:90px;" class="amt">부가세</th>
+            <th style="width:130px;">계정과목</th>
+            <th style="width:120px;">코스트센터</th>
+            <th style="min-width:130px;">적요</th>
+            <th style="width:50px;"></th>
+          </tr>
+        </thead>
+        <tbody id="voucherBody"></tbody>
+      </table>
+    </div>
+    <div class="sum-bar" id="sumBar"></div>
+  </div>
+</main>
+</div>
+
+<!-- API 키 설정 모달 -->
+<div class="modal-bg hide" id="apiKeyModal">
+  <div class="modal">
+    <h3>🔑 Claude API 키 설정</h3>
+    <p style="font-size:12.5px; color:var(--t2); margin-bottom:16px; line-height:1.7;">
+      영수증 OCR 기능을 사용하려면 Anthropic API 키가 필요합니다.<br>
+      키는 <b>이 PC 브라우저에만 저장</b>되며 외부로 전송되지 않습니다.<br>
+      발급: <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--blue);">console.anthropic.com</a>
+    </p>
+    <div class="field">
+      <label>API 키 (sk-ant-... 로 시작)</label>
+      <input id="ak-input" type="password" placeholder="sk-ant-api03-..."
+        style="font-family:monospace; font-size:12px; letter-spacing:.5px;">
+    </div>
+    <div id="ak-status" style="font-size:12px; height:18px; margin-bottom:4px;"></div>
+    <div class="modal-btns">
+      <button class="btn btn-line" onclick="closeModal('apiKeyModal')">닫기</button>
+      <button class="btn btn-blue" onclick="confirmApiKey()">저장</button>
+    </div>
+    <div style="font-size:11px; color:var(--t3); margin-top:14px; text-align:center;">
+      💡 영수증 1장당 약 1~3원 수준의 API 비용이 발생합니다
+    </div>
+  </div>
+</div>
+
+<!-- 카드 추가/수정 모달 -->
+<div class="modal-bg hide" id="addCardModal">
+  <div class="modal">
+    <h3 id="mc-title">💳 카드 추가</h3>
+    <div class="field"><label>카드명 *</label><input id="mc-name" placeholder="예: 신한 법인카드 1번"></div>
+    <div class="field"><label>카드번호 (선택, 뒷 4자리)</label><input id="mc-no" placeholder="예: 1234" maxlength="4"></div>
+    <div class="field"><label>담당자</label><input id="mc-owner" placeholder="예: 홍길동"></div>
+    <div class="field">
+      <label>색상</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;" id="mc-color-btns">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="mc-color" value="#3182F6" checked> <span style="width:16px;height:16px;border-radius:50%;background:#3182F6;display:inline-block;"></span> 파랑</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="mc-color" value="#1DB67F"> <span style="width:16px;height:16px;border-radius:50%;background:#1DB67F;display:inline-block;"></span> 초록</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="mc-color" value="#FF9800"> <span style="width:16px;height:16px;border-radius:50%;background:#FF9800;display:inline-block;"></span> 주황</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="mc-color" value="#6C5CE7"> <span style="width:16px;height:16px;border-radius:50%;background:#6C5CE7;display:inline-block;"></span> 보라</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="mc-color" value="#F04452"> <span style="width:16px;height:16px;border-radius:50%;background:#F04452;display:inline-block;"></span> 빨강</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="radio" name="mc-color" value="#4E5968"> <span style="width:16px;height:16px;border-radius:50%;background:#4E5968;display:inline-block;"></span> 회색</label>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-red btn-sm" id="mc-del-btn" onclick="deleteCard()" style="margin-right:auto;display:none;">🗑 카드 삭제</button>
+      <button class="btn btn-line" onclick="closeModal('addCardModal')">취소</button>
+      <button class="btn btn-blue" onclick="saveCard()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 계정과목 편집 모달 -->
+<div class="modal-bg hide" id="editAcctModal">
+  <div class="modal">
+    <h3>✏️ 전표 수정</h3>
+    <div class="field"><label>날짜</label><input type="date" id="ea-date"></div>
+    <div class="field"><label>사용처</label><input id="ea-merchant"></div>
+    <div class="field"><label>금액 (공급가액, 원)</label><input type="number" id="ea-amt"></div>
+    <div class="field"><label>부가세 (원)</label><input type="number" id="ea-vat"></div>
+    <div class="field">
+      <label>계정과목</label>
+      <select id="ea-acct"></select>
+    </div>
+    <div class="field"><label>코스트센터</label><input id="ea-cc" placeholder="예: 경영지원팀"></div>
+    <div class="field"><label>적요</label><input id="ea-note"></div>
+    <div class="modal-btns">
+      <button class="btn btn-line" onclick="closeModal('editAcctModal')">취소</button>
+      <button class="btn btn-blue" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ======== 데이터 ======== */
+const SB_URL='https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ2MDEzNzEsImV4cCI6MjA2MDE3NzM3MX0.wrLKPRBpJfhgcXNy7PcPuWiF-eaZIkrSpLKc';
+const SB_REST=SB_URL+'/rest/v1/app_store';
+
+async function sbGet(key){ try{ const r=await fetch(`${SB_REST}?key=eq.${key}&select=value`,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}}); const d=await r.json(); return d&&d[0]?d[0].value:null; }catch(e){ return null; } }
+async function sbSet(key,val){ try{ await fetch(SB_REST,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key,value:val,updated_at:new Date().toISOString()})}); }catch(e){} }
+
+/* ======== 상태 ======== */
+let CARDS = [];     // [{id,name,no,owner,color}]
+let VOUCHERS = [];  // [{id,cardId,date,merchant,amount,vat,acct,cc,note}]
+let activeCardId = 'all';
+let pendingFiles = [];
+let editingId = null;
+
+/* API 키 — localStorage에만 저장, 외부 전송 없음 */
+let ANTHROPIC_KEY = localStorage.getItem('gm_anthropic_key') || '';
+function saveApiKey(k){ ANTHROPIC_KEY=k.trim(); localStorage.setItem('gm_anthropic_key', ANTHROPIC_KEY); }
+function hasApiKey(){ return ANTHROPIC_KEY.startsWith('sk-ant'); }
+
+const PUSH_KEY_CARDS    = 'card_cards_v1';
+const PUSH_KEY_VOUCHERS = 'card_vouchers_v1';
+const LS_CARDS    = 'gm_card_cards';
+const LS_VOUCHERS = 'gm_card_vouchers';
+
+/* ── 저장: localStorage(즉시) + Supabase(800ms 디바운스) ── */
+let pushTimer = null;
+function saveLocal(){
+  try{
+    localStorage.setItem(LS_CARDS,    JSON.stringify(CARDS));
+    localStorage.setItem(LS_VOUCHERS, JSON.stringify(VOUCHERS));
+  }catch(e){}
+}
+function schedulePush(){
+  saveLocal();                                   // ① 즉시 로컬 저장
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushAll, 800);          // ② 클라우드는 디바운스
+}
+async function pushAll(){
+  try{ await sbSet(PUSH_KEY_CARDS,    CARDS);    } catch(e){}
+  try{ await sbSet(PUSH_KEY_VOUCHERS, VOUCHERS); } catch(e){}
+  setSyncBadge('saved');
+}
+
+/* ── 동기화 배지 ── */
+function setSyncBadge(state){
+  const el=document.getElementById('syncBadge'); if(!el) return;
+  const map={ saved:['☁️ 저장됨','var(--green)'], saving:['⏳ 저장 중','var(--orange)'], offline:['📴 오프라인','var(--t3)'] };
+  const [txt,col]=map[state]||map.saved;
+  el.textContent=txt; el.style.color=col;
+}
+
+/* ======== 계정과목 자동분류 ======== */
+const ACCT_LIST = [
+  '복리후생비','차량유지비','접대비','소모품비','통신비','운반비',
+  '수수료','교육훈련비','광고선전비','도서인쇄비','기타 본사관리비'
+];
+const ACCT_RULES = [
+  { keys:['식당','밥','한식','중식','일식','분식','치킨','피자','커피','카페','베이커리','편의점','마트','음식','뷔페','레스토랑','스타벅스','투썸','이디야','맥도날드','버거'], acct:'복리후생비' },
+  { keys:['주유','기름','gs칼텍스','sk에너지','현대오일','s-oil','오일','셀프주유','세차','하이패스','톨게이트','주차'], acct:'차량유지비' },
+  { keys:['호텔','숙박','리조트','펜션','에어비앤비','모텔','여관'], acct:'접대비' },
+  { keys:['골프','접대','술','회식','바','클럽','노래'], acct:'접대비' },
+  { keys:['문구','사무용품','소모품','프린터','잉크','토너','복사'], acct:'소모품비' },
+  { keys:['통신','kt','sk텔레콤','lg유플','인터넷','전화'], acct:'통신비' },
+  { keys:['택배','퀵','화물','운송'], acct:'운반비' },
+  { keys:['수수료','수납','이용료'], acct:'수수료' },
+  { keys:['교육','학원','연수','세미나','강의'], acct:'교육훈련비' },
+  { keys:['책','도서','신문','잡지','인쇄','복사'], acct:'도서인쇄비' },
+];
+function guessAcct(merchant, note){ 
+  const target = (merchant+' '+note).toLowerCase();
+  for(const rule of ACCT_RULES){ if(rule.keys.some(k=>target.includes(k))) return rule.acct; }
+  return '기타 본사관리비';
+}
+
+/* ======== 유틸 ======== */
+const esc = s=>(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function fmtAmt(n){ return Number(n||0).toLocaleString('ko-KR'); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function today(){ return new Date().toISOString().slice(0,10); }
+function ym(){ return new Date().toISOString().slice(0,7); }
+
+/* ======== 초기화 ======== */
+async function init(){
+  // ① localStorage에서 즉시 불러오기 (새로고침해도 바로 표시)
+  try{
+    const lsCards    = localStorage.getItem(LS_CARDS);
+    const lsVouchers = localStorage.getItem(LS_VOUCHERS);
+    if(lsCards)    CARDS    = JSON.parse(lsCards);
+    if(lsVouchers) VOUCHERS = JSON.parse(lsVouchers);
+  }catch(e){}
+
+  // 초기 카드 없으면 기본값
+  if(!CARDS.length){
+    CARDS = [
+      {id:uid(), name:'신한 법인카드 1', no:'', owner:'', color:'#3182F6'},
+      {id:uid(), name:'신한 법인카드 2', no:'', owner:'', color:'#1DB67F'},
+    ];
+    saveLocal();
+  }
+
+  // 계정과목 select 채우기
+  const sel=document.getElementById('ea-acct');
+  ACCT_LIST.forEach(a=>{ const o=document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o); });
+  updateApiKeyStatus();
+  renderAll();   // ← 로컬 데이터로 바로 화면 표시
+
+  // ② 백그라운드에서 Supabase와 동기화 (더 최신 데이터가 있으면 덮어씀)
+  setSyncBadge('saving');
+  try{
+    const [sbCards, sbVouchers] = await Promise.all([
+      sbGet(PUSH_KEY_CARDS), sbGet(PUSH_KEY_VOUCHERS)
+    ]);
+    let updated = false;
+    if(sbCards && Array.isArray(sbCards) && sbCards.length >= CARDS.length){
+      CARDS = sbCards; updated = true;
+    }
+    if(sbVouchers && Array.isArray(sbVouchers) && sbVouchers.length >= VOUCHERS.length){
+      VOUCHERS = sbVouchers; updated = true;
+    }
+    if(updated){ saveLocal(); renderAll(); }
+    setSyncBadge('saved');
+  }catch(e){ setSyncBadge('offline'); }
+
+  // API 키 미설정 시 안내
+  if(!hasApiKey()){
+    setTimeout(()=>{ if(confirm('Claude API 키가 설정되지 않았습니다.\nOCR 기능을 사용하려면 API 키가 필요합니다.\n지금 설정하시겠어요?')){ openApiKeyModal(); } }, 1000);
+  }
+}
+
+function renderAll(){
+  renderSidebar();
+  renderStats();
+  renderVouchers();
+}
+
+/* ======== 사이드바 ======== */
+function renderSidebar(){
+  const all = VOUCHERS.filter(v=> v.date && v.date.startsWith(ym())).length;
+  let html = `<div class="sb-card ${activeCardId==='all'?'active':''}" onclick="setActive('all')">
+    <span>📋 전체 보기</span><span class="cnt">${all}</span></div>`;
+  CARDS.forEach(c=>{
+    const cnt = VOUCHERS.filter(v=>v.cardId===c.id && v.date && v.date.startsWith(ym())).length;
+    html+=`<div class="sb-card-wrap" style="display:flex;align-items:center;gap:4px;position:relative;">
+      <div class="sb-card ${activeCardId===c.id?'active':''}" style="flex:1;min-width:0;" onclick="setActive('${c.id}')">
+        <span style="display:flex;align-items:center;gap:5px;overflow:hidden;"><span class="color-dot" style="background:${c.color};flex-shrink:0;"></span><span style="overflow:hidden;text-overflow:ellipsis;">${esc(c.name)}</span></span>
+        <span class="cnt">${cnt}</span>
+      </div>
+      <button class="sb-edit-btn" onclick="openEditCard('${c.id}')" title="카드 수정">✏️</button>
+    </div>`;
+  });
+  document.getElementById('cardList').innerHTML=html;
+  // targetCard 옵션
+  const sel=document.getElementById('targetCard');
+  sel.innerHTML=CARDS.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+}
+
+function setActive(id){
+  activeCardId=id;
+  renderAll();
+}
+
+/* ======== 통계 ======== */
+function renderStats(){
+  const thisMonth = VOUCHERS.filter(v=>v.date&&v.date.startsWith(ym()));
+  const total = thisMonth.reduce((s,v)=>s+Number(v.amount||0),0);
+  const vat   = thisMonth.reduce((s,v)=>s+Number(v.vat||0),0);
+  document.getElementById('st-total').textContent = VOUCHERS.length;
+  document.getElementById('st-amt').textContent   = fmtAmt(total);
+  document.getElementById('st-vat').textContent   = fmtAmt(vat);
+  document.getElementById('st-cards').textContent = CARDS.length;
+}
+
+/* ======== 전표 테이블 ======== */
+function getVisible(){
+  if(activeCardId==='all') return VOUCHERS;
+  return VOUCHERS.filter(v=>v.cardId===activeCardId);
+}
+function renderVouchers(){
+  const list = getVisible();
+  const card = CARDS.find(c=>c.id===activeCardId);
+  document.getElementById('voucherTitle').textContent = card ? card.name+' 전표' : '전체 전표';
+  const thisM = list.filter(v=>v.date&&v.date.startsWith(ym()));
+  document.getElementById('voucherMeta').textContent = `이번 달 ${thisM.length}건`;
+  const tbody = document.getElementById('voucherBody');
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="ic">🧾</div><p>등록된 전표가 없습니다</p><div class="sub">영수증을 올리면 AI가 자동으로 전표를 만들어 드립니다</div></div></td></tr>`;
+    document.getElementById('sumBar').innerHTML='';
+    return;
+  }
+  const sorted=[...list].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  tbody.innerHTML = sorted.map((v,i)=>{
+    const c=CARDS.find(x=>x.id===v.cardId);
+    return `<tr>
+      <td style="color:var(--t3); font-size:11px;">${i+1}</td>
+      <td>${esc(v.date)}</td>
+      <td><span class="color-dot" style="background:${c?c.color:'#ccc'};"></span>${esc(c?c.name:'')}</td>
+      <td>${esc(v.merchant)}</td>
+      <td class="amt">${fmtAmt(v.amount)}</td>
+      <td class="amt" style="color:var(--t3);">${fmtAmt(v.vat)}</td>
+      <td><span class="acct-tag">${esc(v.acct)}</span></td>
+      <td style="color:var(--t2);">${esc(v.cc)}</td>
+      <td style="color:var(--t2); max-width:160px; overflow:hidden; text-overflow:ellipsis;">${esc(v.note)}</td>
+      <td style="display:flex; gap:4px;">
+        <button class="del-btn" onclick="openEdit('${v.id}')" title="수정">✏️</button>
+        <button class="del-btn" onclick="deleteVoucher('${v.id}')" title="삭제">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+  // 합계
+  const sumAmt = list.reduce((s,v)=>s+Number(v.amount||0),0);
+  const sumVat = list.reduce((s,v)=>s+Number(v.vat||0),0);
+  document.getElementById('sumBar').innerHTML=`
+    <div class="sum-item"><span class="l">건수</span><span class="v blue">${list.length}건</span></div>
+    <div class="sum-item"><span class="l">공급가액 합계</span><span class="v blue">${fmtAmt(sumAmt)}원</span></div>
+    <div class="sum-item"><span class="l">부가세 합계</span><span class="v">${fmtAmt(sumVat)}원</span></div>
+    <div class="sum-item"><span class="l">총액 (공급가+부가세)</span><span class="v blue">${fmtAmt(sumAmt+sumVat)}원</span></div>`;
+}
+
+/* ======== 업로드 ======== */
+function showUpload(){
+  document.getElementById('uploadZone').style.display='block';
+  document.getElementById('cardSelectBar').style.display='none';
+  document.getElementById('ocrProgress').classList.remove('show');
+  pendingFiles=[];
+}
+function onDrag(e,over){ e.preventDefault(); document.getElementById('uploadZone').classList.toggle('drag',over); }
+function onDrop(e){ e.preventDefault(); document.getElementById('uploadZone').classList.remove('drag'); handleFiles(e.dataTransfer.files); }
+function handleFiles(files){
+  if(!files||!files.length) return;
+  pendingFiles=[...files];
+  document.getElementById('cardSelectBar').style.display='flex';
+  document.getElementById('uploadZone').style.display='none';
+}
+function cancelUpload(){
+  pendingFiles=[]; document.getElementById('cardSelectBar').style.display='none'; document.getElementById('uploadZone').style.display='block';
+  document.getElementById('ocrProgress').classList.remove('show');
+}
+
+/* ======== OCR (Claude API) ======== */
+async function fileToBase64(file){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
+}
+async function ocrOneFile(file){
+  const isPDF = file.type==='application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  const b64 = await fileToBase64(file);
+  const mediaType = isPDF ? 'application/pdf' : (file.type||'image/jpeg');
+  const docBlock = isPDF
+    ? {type:'document', source:{type:'base64', media_type:'application/pdf', data:b64}}
+    : {type:'image',    source:{type:'base64', media_type:mediaType,         data:b64}};
+
+  const prompt = `이 영수증(또는 카드전표)에서 다음 정보를 추출해서 JSON으로만 답해주세요. 다른 말은 하지 마세요.
+{
+  "date": "YYYY-MM-DD",
+  "merchant": "사용처(상호명)",
+  "amount": 숫자(공급가액, 부가세 제외),
+  "vat": 숫자(부가세, 없으면 금액의 1/11 반올림),
+  "note": "적요(업종 또는 품목 간단히)"
+}
+부가세가 명시돼 있으면 그 값을 쓰고, 없으면 총액의 1/11을 계산해서 넣어주세요.
+금액은 부가세를 뺀 공급가액으로 넣어주세요. 날짜가 없으면 오늘 날짜(${today()})를 넣어주세요.`;
+
+  if(!hasApiKey()) throw new Error('API_KEY_MISSING');
+  const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body: JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:500,
+      messages:[{ role:'user', content:[ docBlock, {type:'text', text:prompt} ] }]
+    })
+  });
+  if(!resp.ok){ const e=await resp.json().catch(()=>{}); throw new Error((e&&e.error&&e.error.message)||'API 오류 '+resp.status); }
+  const data = await resp.json();
+  const text = (data.content||[]).map(c=>c.text||'').join('').trim();
+  const clean = text.replace(/```json|```/g,'').trim();
+  return JSON.parse(clean);
+}
+
+async function startOCR(){
+  if(!pendingFiles.length) return;
+  if(!hasApiKey()){ openApiKeyModal(); return; }
+  const cardId = document.getElementById('targetCard').value;
+  document.getElementById('cardSelectBar').style.display='none';
+  const prog = document.getElementById('ocrProgress');
+  prog.classList.add('show');
+  const listEl = document.getElementById('ocrList');
+
+  // 파일별 상태 초기화
+  const items = pendingFiles.map((f,i)=>({file:f, id:'ocr'+i, status:'wait'}));
+  listEl.innerHTML = items.map(it=>`<div class="ocr-item" id="${it.id}">
+    <span class="name">${esc(it.file.name)}</span>
+    <span class="status status-wait" id="${it.id}-s">대기</span></div>`).join('');
+
+  for(const it of items){
+    document.getElementById(it.id+'-s').className='status status-ing';
+    document.getElementById(it.id+'-s').innerHTML='<span class="spin">⏳</span> 읽는 중…';
+    try{
+      const result = await ocrOneFile(it.file);
+      const card = CARDS.find(c=>c.id===cardId);
+      const v = {
+        id:uid(), cardId,
+        date: result.date||today(),
+        merchant: result.merchant||'',
+        amount: Math.round(Number(result.amount)||0),
+        vat:    Math.round(Number(result.vat)||0),
+        acct:   guessAcct(result.merchant||'', result.note||''),
+        cc:     card?card.owner:'',
+        note:   result.note||''
+      };
+      VOUCHERS.push(v);
+      document.getElementById(it.id+'-s').className='status status-done';
+      document.getElementById(it.id+'-s').textContent='✓ 완료';
+    }catch(e){
+      document.getElementById(it.id+'-s').className='status status-err';
+      if(e&&e.message==='API_KEY_MISSING'){
+        document.getElementById(it.id+'-s').textContent='🔑 API 키 필요';
+        openApiKeyModal(); break;
+      } else {
+        document.getElementById(it.id+'-s').textContent='⚠ 실패: '+(e&&e.message||e);
+      }
+      console.error(e);
+    }
+  }
+  pendingFiles=[];
+  schedulePush();
+  renderAll();
+  setTimeout(()=>{ prog.classList.remove('show'); },2500);
+}
+
+/* ======== 수정 / 삭제 ======== */
+function openEdit(id){
+  const v=VOUCHERS.find(x=>x.id===id); if(!v) return;
+  editingId=id;
+  document.getElementById('ea-date').value=v.date||'';
+  document.getElementById('ea-merchant').value=v.merchant||'';
+  document.getElementById('ea-amt').value=v.amount||'';
+  document.getElementById('ea-vat').value=v.vat||'';
+  document.getElementById('ea-acct').value=v.acct||'기타 본사관리비';
+  document.getElementById('ea-cc').value=v.cc||'';
+  document.getElementById('ea-note').value=v.note||'';
+  document.getElementById('editAcctModal').classList.remove('hide');
+}
+function saveEdit(){
+  const v=VOUCHERS.find(x=>x.id===editingId); if(!v) return;
+  v.date=document.getElementById('ea-date').value;
+  v.merchant=document.getElementById('ea-merchant').value;
+  v.amount=Math.round(Number(document.getElementById('ea-amt').value)||0);
+  v.vat=Math.round(Number(document.getElementById('ea-vat').value)||0);
+  v.acct=document.getElementById('ea-acct').value;
+  v.cc=document.getElementById('ea-cc').value;
+  v.note=document.getElementById('ea-note').value;
+  closeModal('editAcctModal');
+  schedulePush(); renderAll();
+}
+function deleteVoucher(id){
+  if(!confirm('이 전표를 삭제할까요?')) return;
+  VOUCHERS=VOUCHERS.filter(v=>v.id!==id);
+  schedulePush(); renderAll();
+}
+
+/* ======== 카드 관리 ======== */
+let editingCardId = null;
+
+function getSelectedColor(){
+  const checked = document.querySelector('input[name="mc-color"]:checked');
+  return checked ? checked.value : '#3182F6';
+}
+function setSelectedColor(val){
+  const radio = document.querySelector(`input[name="mc-color"][value="${val}"]`);
+  if(radio) radio.checked = true;
+  else document.querySelector('input[name="mc-color"]').checked = true;
+}
+
+/* 카드 추가 */
+function openAddCard(){
+  editingCardId = null;
+  document.getElementById('mc-title').textContent = '💳 카드 추가';
+  document.getElementById('mc-name').value = '';
+  document.getElementById('mc-no').value = '';
+  document.getElementById('mc-owner').value = '';
+  setSelectedColor('#3182F6');
+  document.getElementById('mc-del-btn').style.display = 'none';
+  document.getElementById('addCardModal').classList.remove('hide');
+  setTimeout(()=>document.getElementById('mc-name').focus(), 100);
+}
+
+/* 카드 수정 */
+function openEditCard(id){
+  const c = CARDS.find(x=>x.id===id); if(!c) return;
+  editingCardId = id;
+  document.getElementById('mc-title').textContent = '✏️ 카드 수정';
+  document.getElementById('mc-name').value = c.name;
+  document.getElementById('mc-no').value = c.no||'';
+  document.getElementById('mc-owner').value = c.owner||'';
+  setSelectedColor(c.color||'#3182F6');
+  document.getElementById('mc-del-btn').style.display = 'flex';
+  document.getElementById('addCardModal').classList.remove('hide');
+  setTimeout(()=>document.getElementById('mc-name').focus(), 100);
+}
+
+/* 카드 저장 (추가 or 수정) */
+function saveCard(){
+  const name = document.getElementById('mc-name').value.trim();
+  if(!name){ alert('카드명을 입력해 주세요.'); return; }
+  const color = getSelectedColor();
+  const no    = document.getElementById('mc-no').value.trim();
+  const owner = document.getElementById('mc-owner').value.trim();
+  if(editingCardId){
+    const c = CARDS.find(x=>x.id===editingCardId);
+    if(c){ c.name=name; c.no=no; c.owner=owner; c.color=color; }
+  } else {
+    CARDS.push({ id:uid(), name, no, owner, color });
+  }
+  closeModal('addCardModal'); schedulePush(); renderAll();
+}
+
+/* 카드 삭제 */
+function deleteCard(){
+  if(!editingCardId) return;
+  const c = CARDS.find(x=>x.id===editingCardId);
+  if(!c) return;
+  const cnt = VOUCHERS.filter(v=>v.cardId===editingCardId).length;
+  if(cnt>0){
+    if(!confirm(`"${c.name}"에 등록된 전표가 ${cnt}건 있습니다.\n카드를 삭제하면 해당 전표도 모두 삭제됩니다.\n정말 삭제할까요?`)) return;
+    VOUCHERS = VOUCHERS.filter(v=>v.cardId!==editingCardId);
+  } else {
+    if(!confirm(`"${c.name}" 카드를 삭제할까요?`)) return;
+  }
+  CARDS = CARDS.filter(x=>x.id!==editingCardId);
+  if(activeCardId===editingCardId) activeCardId='all';
+  editingCardId=null;
+  closeModal('addCardModal'); schedulePush(); renderAll();
+}
+
+/* ======== 엑셀 내보내기 ======== */
+const XF='맑은 고딕';
+const BDR={top:{style:'thin',color:{rgb:'E5E8EB'}},bottom:{style:'thin',color:{rgb:'E5E8EB'}},left:{style:'thin',color:{rgb:'E5E8EB'}},right:{style:'thin',color:{rgb:'E5E8EB'}}};
+function hStyle(){ return {font:{name:XF,sz:10,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'3182F6'}},alignment:{horizontal:'center',vertical:'center'},border:BDR}; }
+function cStyle(alt,isRight){ return {font:{name:XF,sz:9.5,color:{rgb:'191F28'}},fill:{fgColor:{rgb:alt?'FAFBFC':'FFFFFF'}},alignment:{horizontal:isRight?'right':'left',vertical:'center'},border:BDR}; }
+function numStyle(alt){ const s=cStyle(alt,true); s.numFmt='#,##0'; return s; }
+
+function exportExcel(){
+  if(!VOUCHERS.length){ alert('내보낼 전표가 없습니다.'); return; }
+  const wb=XLSX.utils.book_new();
+  const COLS=['날짜','카드명','사용처','금액(공급가액)','부가세','계정과목','코스트센터','적요'];
+  const WIDTHS=[12,18,20,16,12,14,16,24];
+
+  // 카드별 시트
+  CARDS.forEach(card=>{
+    const rows=VOUCHERS.filter(v=>v.cardId===card.id).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    if(!rows.length) return;
+    const aoa=[];
+    // 타이틀
+    aoa.push([{v:`${card.name} 법인카드 전표`,s:{font:{name:XF,sz:14,bold:true},alignment:{horizontal:'left',vertical:'center'}}},...Array(COLS.length-1).fill({v:'',s:{}})]);
+    // 헤더
+    aoa.push(COLS.map(h=>({v:h,s:hStyle()})));
+    // 데이터
+    rows.forEach((v,i)=>{
+      const alt=i%2===1;
+      aoa.push([
+        {v:v.date,s:cStyle(alt,false)},
+        {v:card.name,s:cStyle(alt,false)},
+        {v:v.merchant,s:cStyle(alt,false)},
+        {v:Number(v.amount||0),s:numStyle(alt)},
+        {v:Number(v.vat||0),s:numStyle(alt)},
+        {v:v.acct,s:cStyle(alt,false)},
+        {v:v.cc,s:cStyle(alt,false)},
+        {v:v.note,s:cStyle(alt,false)},
+      ]);
+    });
+    // 합계
+    const sumAmt=rows.reduce((s,v)=>s+Number(v.amount||0),0);
+    const sumVat=rows.reduce((s,v)=>s+Number(v.vat||0),0);
+    const sRow=Array(COLS.length).fill({v:'',s:{}});
+    const sBase={font:{name:XF,sz:10,bold:true},fill:{fgColor:{rgb:'EBF2FF'}},alignment:{horizontal:'right',vertical:'center'},border:BDR,numFmt:'#,##0'};
+    aoa.push([
+      {v:'합계',s:{...sBase,alignment:{horizontal:'left',vertical:'center'}}},
+      {v:'',s:sBase},{v:'',s:sBase},
+      {v:sumAmt,s:sBase},{v:sumVat,s:sBase},
+      {v:'',s:sBase},{v:'',s:sBase},{v:'',s:sBase},
+    ]);
+
+    const ws=XLSX.utils.aoa_to_sheet(aoa.map(r=>r.map(c=>c.v)));
+    aoa.forEach((r,ri)=>r.forEach((c,ci)=>{ const ref=XLSX.utils.encode_cell({r:ri,c:ci}); if(!ws[ref]) ws[ref]={v:c.v}; ws[ref].s=c.s; ws[ref].t=typeof c.v==='number'?'n':'s'; }));
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:COLS.length-1}}];
+    ws['!cols']=WIDTHS.map(w=>({wch:w}));
+    ws['!rows']=[{hpt:24},{hpt:20}];
+    const sheetName=card.name.slice(0,31);
+    XLSX.utils.book_append_sheet(wb,ws,sheetName);
+  });
+
+  // 전체 합산 시트
+  const allRows=VOUCHERS.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if(allRows.length){
+    const aoa=[];
+    aoa.push([{v:'법인카드 전표 전체 합산',s:{font:{name:XF,sz:14,bold:true},alignment:{horizontal:'left',vertical:'center'}}},...Array(COLS.length-1).fill({v:'',s:{}})]);
+    aoa.push(COLS.map(h=>({v:h,s:hStyle()})));
+    allRows.forEach((v,i)=>{
+      const alt=i%2===1; const c=CARDS.find(x=>x.id===v.cardId);
+      aoa.push([
+        {v:v.date,s:cStyle(alt,false)},{v:c?c.name:'',s:cStyle(alt,false)},{v:v.merchant,s:cStyle(alt,false)},
+        {v:Number(v.amount||0),s:numStyle(alt)},{v:Number(v.vat||0),s:numStyle(alt)},
+        {v:v.acct,s:cStyle(alt,false)},{v:v.cc,s:cStyle(alt,false)},{v:v.note,s:cStyle(alt,false)},
+      ]);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(aoa.map(r=>r.map(c=>c.v)));
+    aoa.forEach((r,ri)=>r.forEach((c,ci)=>{ const ref=XLSX.utils.encode_cell({r:ri,c:ci}); if(!ws[ref]) ws[ref]={v:c.v}; ws[ref].s=c.s; ws[ref].t=typeof c.v==='number'?'n':'s'; }));
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:COLS.length-1}}];
+    ws['!cols']=WIDTHS.map(w=>({wch:w}));
+    ws['!rows']=[{hpt:24},{hpt:20}];
+    XLSX.utils.book_append_sheet(wb,ws,'전체합산');
+  }
+  const mon=ym().replace('-','');
+  XLSX.writeFile(wb,`법인카드전표_${mon}.xlsx`);
+}
+
+/* ======== API 키 모달 ======== */
+function openApiKeyModal(){
+  document.getElementById('ak-input').value = ANTHROPIC_KEY ? '••••••••••••••••' : '';
+  document.getElementById('ak-status').textContent = '';
+  document.getElementById('apiKeyModal').classList.remove('hide');
+  setTimeout(()=>{ const el=document.getElementById('ak-input'); if(el){ el.value=''; el.focus(); } },100);
+}
+function confirmApiKey(){
+  const v=document.getElementById('ak-input').value.trim();
+  if(!v){ document.getElementById('ak-status').style.color='var(--red)'; document.getElementById('ak-status').textContent='키를 입력해 주세요'; return; }
+  if(!v.startsWith('sk-ant')){ document.getElementById('ak-status').style.color='var(--red)'; document.getElementById('ak-status').textContent='올바른 API 키 형식이 아닙니다 (sk-ant 로 시작)'; return; }
+  saveApiKey(v);
+  updateApiKeyStatus();
+  document.getElementById('ak-status').style.color='var(--green)';
+  document.getElementById('ak-status').textContent='✓ 저장 완료!';
+  setTimeout(()=>closeModal('apiKeyModal'),800);
+}
+function updateApiKeyStatus(){
+  const el=document.getElementById('apiKeyCnt');
+  if(!el) return;
+  if(hasApiKey()){ el.textContent='설정됨'; el.style.background='var(--green-bg)'; el.style.color='var(--green)'; }
+  else { el.textContent='미설정'; el.style.background='var(--red-bg)'; el.style.color='var(--red)'; }
+}
+
+/* ======== 모달 ======== */
+function closeModal(id){ document.getElementById(id).classList.add('hide'); editingId=null; }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal-bg:not(.hide)').forEach(m=>m.classList.add('hide')); } });
+
+/* ======== 시작 ======== */
+init();
+</script>
+</body>
+</html>

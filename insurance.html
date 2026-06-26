@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>단체상해보험 명단 관리 | 수산이앤에스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  :root{
+    --bg:#F2F4F6; --card:#fff; --t1:#191F28; --t2:#4E5968; --t3:#8B95A1;
+    --blue:#3182F6; --blue-bg:#EBF2FF; --green:#1DB67F; --green-bg:#E6F9F0;
+    --orange:#FF9800; --orange-bg:#FFF4E5; --red:#F04452; --red-bg:#FDEAEC;
+    --purple:#6C5CE7; --purple-bg:#F0EEFF; --line:#E5E8EB;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0 auto; max-width:1180px; background:var(--bg); color:var(--t1);
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; padding:28px 32px 80px;}
+  .back-link{display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--t3); text-decoration:none; font-weight:600; margin-bottom:14px;}
+  .back-link:hover{color:var(--blue);}
+  h1{font-size:24px; font-weight:800; margin:0 0 4px;}
+  .page-sub{font-size:13.5px; color:var(--t2); margin:0 0 18px;}
+
+  .privacy{display:flex; gap:12px; align-items:flex-start; background:var(--red-bg); border:1px solid #F8C6CC; border-radius:14px; padding:14px 16px; margin-bottom:22px;}
+  .privacy .ic{font-size:20px;}
+  .privacy .txt{font-size:12.5px; color:#B4232E; line-height:1.6; font-weight:600;}
+  .privacy .txt b{font-weight:800;}
+
+  .btn{background:var(--blue); color:#fff; border:none; border-radius:11px; padding:11px 18px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit;}
+  .btn:hover{background:#1B6FE0;}
+  .btn.green{background:var(--green);} .btn.green:hover{background:#17a070;}
+  .btn.purple{background:var(--purple);} .btn.purple:hover{background:#5b4bd6;}
+  .btn.line{background:var(--card); color:var(--t2); border:1px solid var(--line);}
+  .btn.line:hover{background:#F7F9FB; color:var(--t1);}
+  .btn.sm{padding:8px 14px; font-size:12.5px; border-radius:9px;}
+  .btn:disabled{opacity:.45; cursor:not-allowed;}
+
+  .step{background:var(--card); border-radius:20px; padding:20px 22px; box-shadow:0 1px 2px rgba(0,0,0,.03); margin-bottom:16px;}
+  .step-head{display:flex; align-items:center; gap:11px; margin-bottom:4px;}
+  .step-no{width:26px; height:26px; border-radius:50%; background:var(--blue-bg); color:var(--blue); font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .step-no.done{background:var(--green-bg); color:var(--green);}
+  .step-title{font-size:15px; font-weight:800;}
+  .step-desc{font-size:12.5px; color:var(--t3); margin:2px 0 14px 37px;}
+  .step-body{margin-left:37px;}
+  .file-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  .file-stat{font-size:13px; font-weight:700;}
+  .file-stat.ok{color:var(--green);} .file-stat.none{color:var(--t3);}
+
+  .summary{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:0 0 4px;}
+  .sum-card{background:var(--bg); border-radius:14px; padding:14px 16px;}
+  .sum-card .n{font-size:22px; font-weight:800; line-height:1;}
+  .sum-card .l{font-size:12px; color:var(--t3); margin-top:5px; font-weight:600;}
+  .sum-card.add .n{color:var(--blue);} .sum-card.out .n{color:var(--red);} .sum-card.keep .n{color:var(--t2);} .sum-card.total .n{color:var(--green);}
+
+  .sec-label{font-size:13.5px; font-weight:800; margin:22px 0 10px; display:flex; align-items:center; gap:8px;}
+  .sec-label .cnt{font-size:12px; font-weight:700; color:#fff; background:var(--blue); border-radius:20px; padding:2px 10px;}
+  .sec-label .cnt.red{background:var(--red);}
+
+  .tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:14px;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; white-space:nowrap;}
+  th{background:#F7F9FB; color:var(--t2); font-weight:700; padding:10px 11px; text-align:left; border-bottom:1px solid var(--line); position:sticky; top:0;}
+  td{padding:9px 11px; border-bottom:1px solid var(--line); color:var(--t1);}
+  tr:last-child td{border-bottom:none;}
+  .rrn-input{width:150px; padding:7px 9px; border:1.5px solid var(--blue); border-radius:8px; font-size:12.5px; font-family:inherit; background:var(--blue-bg);}
+  .rrn-input:focus{outline:none; background:#fff;}
+  .rrn-input.ok{border-color:var(--green); background:var(--green-bg);}
+  .grade-tag{font-size:11px; font-weight:700; padding:3px 9px; border-radius:7px; background:var(--purple-bg); color:var(--purple);}
+  .badge-new{font-size:11px; font-weight:700; padding:3px 9px; border-radius:7px; background:var(--blue-bg); color:var(--blue);}
+  .badge-out{font-size:11px; font-weight:700; padding:3px 9px; border-radius:7px; background:var(--red-bg); color:var(--red);}
+  .mask{font-variant-numeric:tabular-nums; letter-spacing:.3px;}
+  .chk{width:17px; height:17px; cursor:pointer;}
+  .empty-msg{padding:22px; text-align:center; color:var(--t3); font-size:13px; background:var(--bg); border-radius:12px;}
+
+  .export-bar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px;}
+  .warn-inline{font-size:12px; color:var(--orange); font-weight:700;}
+  @media(max-width:720px){ .summary{grid-template-columns:1fr 1fr;} body{padding:20px 16px 60px;} }
+</style>
+</head>
+<body>
+
+<!-- ===== 비밀번호 잠금 ===== -->
+<!-- 비밀번호를 바꾸려면 아래 GATE_PW 의 따옴표 안 값만 수정하세요 -->
+<div id="gate" style="position:fixed; inset:0; z-index:9999; background:#F2F4F6;
+     display:flex; align-items:center; justify-content:center; font-family:'Pretendard',sans-serif;">
+  <div style="background:#fff; border-radius:22px; padding:36px 32px; width:340px; max-width:90vw;
+       box-shadow:0 8px 30px rgba(0,0,0,.08); text-align:center;">
+    <div style="font-size:34px; margin-bottom:10px;">🔐</div>
+    <div style="font-size:18px; font-weight:800; color:#191F28; margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px; color:#8B95A1; margin-bottom:20px;">접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호"
+       style="width:100%; padding:13px 14px; border:1.5px solid #E5E8EB; border-radius:12px;
+       font-size:15px; font-family:inherit; text-align:center; margin-bottom:10px; box-sizing:border-box;"
+       onkeydown="if(event.key==='Enter')gateCheck()">
+    <div id="gateErr" style="font-size:12px; color:#F04452; font-weight:600; height:16px; margin-bottom:8px;"></div>
+    <button onclick="gateCheck()"
+       style="width:100%; padding:13px; background:#3182F6; color:#fff; border:none; border-radius:12px;
+       font-size:15px; font-weight:700; cursor:pointer; font-family:inherit;">들어가기</button>
+  </div>
+</div>
+<script>
+  /* ▼▼▼ 이 한 줄의 비밀번호만 원하는 값으로 바꾸세요 ▼▼▼ */
+    const GATE_PW_HASH = '942b9f04dfaa9d87f4ef9d76fdb40cfd30b843cf8121fc19274bd285bd0c999a';
+  /* ▲▲▲ 모든 페이지(index, purchase 등)에 같은 비밀번호를 넣으면 한 번만 입력하면 됩니다 ▲▲▲ */
+  if(sessionStorage.getItem('gm_auth')==='ok'){ document.getElementById('gate').style.display='none'; }
+  else { setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); }, 100); }
+    async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  } else {
+      document.getElementById('gateErr').textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+    }
+  }
+</script>
+
+<a class="back-link" href="index.html">‹ 총무 관리 대시보드</a>
+<h1>🛡️ 단체상해보험 명단 관리</h1>
+<p class="page-sub">매월 ERP 입·퇴사자를 반영해 보험 명단을 갱신하고, 보험사 전달용 엑셀을 만듭니다 · 수산이앤에스</p>
+
+<div class="privacy">
+  <div class="ic">🔒</div>
+  <div class="txt">
+    이 도구는 <b>외부(인터넷·클라우드)로 어떤 정보도 전송하지 않습니다.</b> 모든 처리는 이 PC의 브라우저 안에서만 이뤄지며, 브라우저를 닫으면 메모리에서 사라집니다.
+    주민등록번호는 화면에서 <b>뒷자리를 가려</b> 표시하고, 원본은 보험사 전달용 엑셀 파일에만 저장됩니다. 자료는 안전한 사내 위치(D드라이브 등)에만 보관하세요.
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<div class="step">
+  <div class="step-head"><div class="step-no" id="s1no">1</div><div class="step-title">현재 보험 명단 불러오기</div></div>
+  <div class="step-desc">지난달까지 갱신해 둔 단체상해보험 가입자 명단 엑셀을 선택하세요. (주민등록번호 원본이 포함된 파일)</div>
+  <div class="step-body">
+    <div class="file-row">
+      <button class="btn sm" onclick="document.getElementById('masterFile').click()">📂 명단 파일 선택</button>
+      <input type="file" id="masterFile" accept=".xlsx,.xls" style="display:none" onchange="loadMaster(this)">
+      <span class="file-stat none" id="masterStat">선택된 파일 없음</span>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step">
+  <div class="step-head"><div class="step-no" id="s2no">2</div><div class="step-title">ERP 입·퇴사자 자료 불러오기</div></div>
+  <div class="step-desc">ERP에서 받은 '입사자퇴사자조회' 엑셀을 선택하면, 사번을 대조해 신규 입사자와 퇴사자를 자동으로 찾아냅니다.</div>
+  <div class="step-body">
+    <div class="file-row">
+      <button class="btn sm" id="erpBtn" onclick="document.getElementById('erpFile').click()" disabled>📂 ERP 파일 선택</button>
+      <input type="file" id="erpFile" accept=".xlsx,.xls" style="display:none" onchange="loadERP(this)">
+      <span class="file-stat none" id="erpStat">먼저 1단계 명단을 불러오세요</span>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3 결과 -->
+<div class="step" id="resultStep" style="display:none;">
+  <div class="step-head"><div class="step-no" id="s3no">3</div><div class="step-title">변동 내역 확인 및 입력</div></div>
+  <div class="step-desc">신규 입사자의 <b>주민등록번호 뒷자리</b>와 배우자 정보는 직접 입력하세요. 나이·성별·상해등급은 자동 계산됩니다.</div>
+  <div class="step-body">
+    <div class="summary">
+      <div class="sum-card add"><div class="n" id="cntAdd">0</div><div class="l">신규 입사자</div></div>
+      <div class="sum-card out"><div class="n" id="cntOut">0</div><div class="l">퇴사자</div></div>
+      <div class="sum-card keep"><div class="n" id="cntKeep">0</div><div class="l">기존 유지</div></div>
+      <div class="sum-card total"><div class="n" id="cntTotal">0</div><div class="l">갱신 후 총원</div></div>
+    </div>
+
+    <div class="sec-label">🆕 신규 입사자 <span class="cnt" id="addCnt">0</span></div>
+    <div id="newHires"></div>
+
+    <div class="sec-label">🚪 퇴사자 <span class="cnt red" id="outCnt">0</span></div>
+    <div id="retirees"></div>
+  </div>
+</div>
+
+<!-- STEP 4 내보내기 -->
+<div class="step" id="exportStep" style="display:none;">
+  <div class="step-head"><div class="step-no" id="s4no">4</div><div class="step-title">갱신된 명단 내보내기</div></div>
+  <div class="step-desc">보험 담당자에게 전달할 엑셀을 만듭니다. 기존 양식(부서·사원·사번·주민번호·상해등급·배우자 등)과 동일합니다.</div>
+  <div class="step-body">
+    <div class="export-bar">
+      <button class="btn green" onclick="exportFull()">📊 갱신된 전체 명단 내보내기</button>
+      <button class="btn purple sm" onclick="exportChanges()">📋 이번 달 변동분만 내보내기</button>
+      <span class="warn-inline" id="rrnWarn"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== 이 도구는 클라우드를 사용하지 않습니다. 모든 데이터는 메모리에서만 처리됩니다. ===== */
+const TODAY = new Date('2026-06-18');
+const THISMONTH = '2026-06';
+
+/* 명단 엑셀 열(0-index): 0선택 1부서 2사원 3사번 4그룹입사일 5퇴직일 6사원구분 7주민 8성별 9나이 10직위 11직종 12상해등급 13실손 14입원일당 15배우자 16배우자주민 17비고 */
+/* ERP 엑셀 열(0-index): 0급여그룹 1부서 2사원 3사번 4직위 5직급 6직종 7사원구분 8주민(마스킹) 9입사일 10퇴사일 11재직퇴직 12성별 13급여형태 */
+
+let MASTER = [];      // 현재 명단 (원본 주민번호 포함)
+let NEWHIRES = [];    // 신규 입사자
+let RETIREES = [];    // 퇴사자 (master 항목 참조)
+let UNMATCHED = [];   // ERP 퇴사자지만 보험 명단에 없던 사람
+
+const esc = s => (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function normEmpNo(v){ let s=String(v==null?'':v).trim(); if(/^\d+$/.test(s) && s.length<6) s=s.padStart(6,'0'); return s; }
+function cellStr(v){ if(v==null) return ''; if(v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`; return String(v).trim(); }
+function maskRRN(rrn){
+  const s=String(rrn||'').replace(/\s/g,'');
+  const m=s.match(/^(\d{6})[-\s]?(\d)/);
+  if(m) return `${m[1]}-${m[2]}******`;
+  return s||'-';
+}
+/* 마스킹 앞부분(생년월일+성별1자리)으로 나이 계산 */
+function ageFromFront(masked){
+  const d=String(masked||'').replace(/[^0-9]/g,'');
+  if(d.length<7) return '';
+  const yy=+d.slice(0,2), mm=+d.slice(2,4), dd=+d.slice(4,6), g=+d[6];
+  if(!mm||!dd) return '';
+  let year = (g===1||g===2||g===5||g===6)?1900+yy : (g===3||g===4||g===7||g===8)?2000+yy : 1900+yy;
+  let age = TODAY.getFullYear()-year - (((TODAY.getMonth()+1)<mm || ((TODAY.getMonth()+1)===mm && TODAY.getDate()<dd))?1:0);
+  return (age>=0&&age<120)?age:'';
+}
+/* 상해등급 자동: 여자는 무조건 상해1급, 남자는 직종 기준 */
+function autoGrade(gender, jobType){
+  if(String(gender).includes('여')) return '상해1급';
+  const j=String(jobType||'');
+  if(j.includes('사무')) return '상해1급';
+  if(j.includes('연구')) return '상해2급';
+  if(j.includes('기술')) return '상해3급';
+  return '상해3급';
+}
+
+/* ===== 엑셀 안전 읽기: 서식(styles.xml)이 깨진 ERP 파일도 보정 후 읽음 ===== */
+function rowsFromBuffer(buf){
+  const wb=XLSX.read(buf,{type:'array',cellDates:true});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false});
+}
+async function readFirstSheetRows(arrayBuffer){
+  const u8=new Uint8Array(arrayBuffer);
+  try{
+    return rowsFromBuffer(u8);
+  }catch(err){
+    // 일부 ERP 엑셀은 서식 정보에 빈 <xf> 태그가 있어 라이브러리가 멈춤 → 그 부분만 보정 후 재시도
+    if(typeof JSZip==='undefined') throw err;
+    const zip=await JSZip.loadAsync(arrayBuffer);
+    const sf=zip.file('xl/styles.xml');
+    if(!sf) throw err;
+    let styles=await sf.async('string');
+    styles=styles.replace(/<((?:\w+:)?xf)>/g, '<$1 >');
+    zip.file('xl/styles.xml', styles);
+    const patched=await zip.generateAsync({type:'uint8array'});
+    return rowsFromBuffer(patched);
+  }
+}
+
+/* ===== 1단계: 명단 불러오기 ===== */
+function loadMaster(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=async (e)=>{
+    try{
+      const rows=await readFirstSheetRows(e.target.result);
+      const list=[];
+      for(let i=0;i<rows.length;i++){
+        const r=rows[i];
+        const name=cellStr(r[2]); const empNo=normEmpNo(r[3]);
+        if(!name || name==='사원' || !empNo || empNo==='사번') continue;
+        list.push({
+          dept:cellStr(r[1]), name, empNo,
+          joinDate:cellStr(r[4]), retireDate:cellStr(r[5]), empType:cellStr(r[6]),
+          rrn:cellStr(r[7]), gender:cellStr(r[8]), age:cellStr(r[9]),
+          position:cellStr(r[10]), jobType:cellStr(r[11]), grade:cellStr(r[12]),
+          medical:cellStr(r[13]), hospital:cellStr(r[14]),
+          spouse:cellStr(r[15]), spouseRrn:cellStr(r[16]), note:cellStr(r[17]),
+          _src:'기존',
+        });
+      }
+      MASTER=list;
+      document.getElementById('masterStat').className='file-stat ok';
+      document.getElementById('masterStat').textContent=`✓ ${file.name} — ${MASTER.length}명 불러옴`;
+      document.getElementById('s1no').classList.add('done'); document.getElementById('s1no').textContent='✓';
+      document.getElementById('erpBtn').disabled=false;
+      document.getElementById('erpStat').className='file-stat none';
+      document.getElementById('erpStat').textContent='ERP 입·퇴사자 파일을 선택하세요';
+      // 이미 ERP가 있었다면 재대조
+      if(NEWHIRES.length||RETIREES.length) reconcileNote();
+    }catch(err){ console.error(err); alert('명단 불러오기 실패: 파일을 확인해 주세요.\n'+(err&&err.message||err)); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ===== 2단계: ERP 불러와 대조 ===== */
+function loadERP(input){
+  const file=input.files[0]; if(!file) return;
+  if(!MASTER.length){ alert('먼저 1단계에서 현재 명단을 불러오세요.'); input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=async (e)=>{
+    try{
+      const rows=await readFirstSheetRows(e.target.result);
+      const masterNos=new Set(MASTER.map(p=>p.empNo));
+      NEWHIRES=[]; RETIREES=[]; UNMATCHED=[];
+      for(let i=0;i<rows.length;i++){
+        const r=rows[i];
+        const name=cellStr(r[2]); const empNo=normEmpNo(r[3]);
+        if(!name || name==='사원' || !empNo || empNo==='사번') continue;
+        const stat=cellStr(r[11]);
+        const masked=cellStr(r[8]);
+        const gender=cellStr(r[12]);
+        const jobType=cellStr(r[6]);
+        if(stat.includes('퇴직')){
+          const m=MASTER.find(p=>p.empNo===empNo);
+          if(m){ m._retireDateNew=cellStr(r[10]); RETIREES.push({ ref:m, retireDate:cellStr(r[10]), exclude:true }); }
+          else { UNMATCHED.push({ dept:cellStr(r[1]), name, empNo, retireDate:cellStr(r[10]) }); }
+        } else { // 재직자 = 입사자 후보
+          if(masterNos.has(empNo)) continue; // 이미 명단에 있음
+          NEWHIRES.push({
+            dept:cellStr(r[1]), name, empNo,
+            joinDate:cellStr(r[9]), retireDate:'', empType:cellStr(r[7]),
+            maskedFront:masked, rrn:'', gender,
+            age:ageFromFront(masked), position:cellStr(r[4]), jobType,
+            grade:autoGrade(gender, jobType), medical:'', hospital:'○',
+            spouse:'', spouseRrn:'', note:`${THISMONTH} 신규`,
+          });
+        }
+      }
+      document.getElementById('erpStat').className='file-stat ok';
+      document.getElementById('erpStat').textContent=`✓ ${file.name} — 신규 ${NEWHIRES.length}명 / 퇴사 ${RETIREES.length}명`;
+      document.getElementById('s2no').classList.add('done'); document.getElementById('s2no').textContent='✓';
+      renderResults();
+    }catch(err){ console.error(err); alert('ERP 불러오기 실패: 파일을 확인해 주세요.\n'+(err&&err.message||err)); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function reconcileNote(){ alert('명단이 새로 불러와졌습니다. ERP 파일을 다시 선택해 대조해 주세요.'); NEWHIRES=[]; RETIREES=[]; document.getElementById('resultStep').style.display='none'; document.getElementById('exportStep').style.display='none'; }
+
+/* ===== 3단계: 결과 렌더 ===== */
+function renderResults(){
+  document.getElementById('resultStep').style.display='';
+  document.getElementById('exportStep').style.display='';
+  document.getElementById('s3no').classList.add('done'); document.getElementById('s3no').textContent='✓';
+  const keep = MASTER.filter(p=>!p.retireDate && !p._retireDateNew).length;
+  const total = keep + NEWHIRES.length;
+  document.getElementById('cntAdd').textContent=NEWHIRES.length;
+  document.getElementById('cntOut').textContent=RETIREES.length;
+  document.getElementById('cntKeep').textContent=keep;
+  document.getElementById('cntTotal').textContent=total;
+  document.getElementById('addCnt').textContent=NEWHIRES.length;
+  document.getElementById('outCnt').textContent=RETIREES.length;
+
+  // 신규 입사자 표 (주민번호 입력)
+  const nh=document.getElementById('newHires');
+  if(!NEWHIRES.length){ nh.innerHTML='<div class="empty-msg">이번 달 신규 입사자가 없습니다.</div>'; }
+  else{
+    nh.innerHTML=`<div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>부서</th><th>이름</th><th>사번</th><th>입사일</th><th>구분</th><th>직위</th><th>직종</th>
+        <th>성별</th><th>나이</th><th>상해등급</th><th>주민등록번호 입력</th>
+      </tr></thead><tbody>
+      ${NEWHIRES.map((p,i)=>`<tr>
+        <td>${esc(p.dept)}</td><td><b>${esc(p.name)}</b> <span class="badge-new">신규</span></td>
+        <td>${esc(p.empNo)}</td><td>${esc(p.joinDate)}</td><td>${esc(p.empType)}</td>
+        <td>${esc(p.position)}</td><td>${esc(p.jobType)}</td><td>${esc(p.gender)}</td>
+        <td>${esc(p.age)}</td><td><span class="grade-tag">${esc(p.grade)}</span></td>
+        <td><input class="rrn-input" id="rrn${i}" value="${esc((p.maskedFront||'').replace(/\*+/g,'').replace(/-$/,''))}" placeholder="앞6자리-뒷7자리"
+            oninput="onRrnInput(${i})" maxlength="14"></td>
+      </tr>`).join('')}
+      </tbody></table></div>
+      <div style="font-size:11.5px; color:var(--t3); margin-top:8px;">※ 주민번호 앞 7자리는 ERP 마스킹 값으로 미리 채워져 있습니다. 뒤 6자리만 이어서 입력하면 자동으로 형식이 맞춰집니다. 여자는 상해1급으로 자동 설정됩니다.</div>`;
+  }
+
+  // 퇴사자 표
+  const rt=document.getElementById('retirees');
+  if(!RETIREES.length){ rt.innerHTML='<div class="empty-msg">이번 달 퇴사자가 없습니다.</div>'; }
+  else{
+    rt.innerHTML=`<div class="tbl-wrap"><table>
+      <thead><tr><th>명단 제외</th><th>부서</th><th>이름</th><th>사번</th><th>입사일</th><th>퇴사일</th><th>비고</th></tr></thead><tbody>
+      ${RETIREES.map((x,i)=>`<tr>
+        <td style="text-align:center;"><input type="checkbox" class="chk" id="out${i}" ${x.exclude?'checked':''} onchange="RETIREES[${i}].exclude=this.checked; updateExportWarn();"></td>
+        <td>${esc(x.ref.dept)}</td><td><b>${esc(x.ref.name)}</b> <span class="badge-out">퇴사</span></td>
+        <td>${esc(x.ref.empNo)}</td><td>${esc(x.ref.joinDate)}</td><td>${esc(x.retireDate)}</td>
+        <td style="color:var(--t3);">체크 시 갱신 명단에서 제외</td>
+      </tr>`).join('')}
+      </tbody></table></div>`;
+  }
+  updateExportWarn();
+  const rtHost=document.getElementById('retirees');
+  if(UNMATCHED.length){
+    rtHost.innerHTML += `<div style="font-size:11.5px; color:var(--orange); margin-top:10px; background:var(--orange-bg); padding:10px 12px; border-radius:10px;">
+      ℹ ERP 퇴사자 중 ${UNMATCHED.length}명은 보험 명단에 없어 제외 대상이 아닙니다 (${UNMATCHED.map(u=>esc(u.name)+'·'+esc(u.empNo)).join(', ')}). 원래 미가입자인지 확인해 두세요.</div>`;
+  }
+}
+
+function onRrnInput(i){
+  const el=document.getElementById('rrn'+i);
+  let v=el.value.replace(/[^0-9]/g,'').slice(0,13);
+  if(v.length>6) v=v.slice(0,6)+'-'+v.slice(6);
+  el.value=v;
+  NEWHIRES[i].rrn = v;
+  const full = v.replace('-','').length===13;
+  el.classList.toggle('ok', full);
+  if(full){ // 주민번호로 나이·성별 보정
+    const g=+v.replace('-','')[6];
+    NEWHIRES[i].gender = (g%2===1)?'남자':'여자';
+    NEWHIRES[i].age = ageFromFront(v);
+    NEWHIRES[i].grade = autoGrade(NEWHIRES[i].gender, NEWHIRES[i].jobType);
+  }
+  updateExportWarn();
+}
+function updateExportWarn(){
+  const missing = NEWHIRES.filter(p=> (p.rrn||'').replace('-','').length!==13).length;
+  const w=document.getElementById('rrnWarn');
+  w.textContent = missing ? `⚠ 주민번호 미입력 ${missing}명 — 입력 후 내보내면 정확합니다` : (NEWHIRES.length?'✓ 신규 주민번호 입력 완료':'');
+  w.style.color = missing ? 'var(--orange)' : 'var(--green)';
+}
+
+/* ===== 갱신 명단 구성 ===== */
+function buildUpdatedList(){
+  const excludeNos = new Set(RETIREES.filter(x=>x.exclude).map(x=>x.ref.empNo));
+  const kept = MASTER.filter(p=> !excludeNos.has(p.empNo));
+  // 퇴직일 갱신(제외 안 한 퇴사자는 퇴직일 기재)
+  RETIREES.forEach(x=>{ if(!x.exclude && x.retireDate){ const m=kept.find(p=>p.empNo===x.ref.empNo); if(m) m.retireDate=x.retireDate; } });
+  return kept.concat(NEWHIRES);
+}
+
+/* ===== 엑셀 내보내기 (토스 스타일) ===== */
+const XF='맑은 고딕';
+const XB={top:{style:'thin',color:{rgb:'E5E8EB'}},bottom:{style:'thin',color:{rgb:'E5E8EB'}},left:{style:'thin',color:{rgb:'E5E8EB'}},right:{style:'thin',color:{rgb:'E5E8EB'}}};
+const HEADERS=['선택','부서','사원','사번','그룹입사일','퇴직일','사원구분','주민등록번호','성별','나이','직위','직종','상해등급','실손의료비','입원일당','배우자','배우자 주민등록번호','비고'];
+function styT(){return{font:{name:XF,sz:15,bold:true,color:{rgb:'191F28'}},alignment:{horizontal:'left',vertical:'center'}};}
+function styH(){return{font:{name:XF,sz:10,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'3182F6'}},alignment:{horizontal:'center',vertical:'center'},border:XB};}
+function styC(alt,newRow){return{font:{name:XF,sz:9.5,color:{rgb:newRow?'1B6FE0':'191F28'},bold:!!newRow},alignment:{horizontal:'center',vertical:'center'},fill:{fgColor:{rgb:newRow?'EBF2FF':(alt?'FAFBFC':'FFFFFF')}},border:XB};}
+function styL(alt,newRow){const s=styC(alt,newRow); s.alignment={horizontal:'left',vertical:'center'}; return s;}
+function rowToArr(p){ return ['', p.dept,p.name,p.empNo,p.joinDate,p.retireDate,p.empType,p.rrn,p.gender,p.age,p.position,p.jobType,p.grade,p.medical,p.hospital,p.spouse,p.spouseRrn,p.note]; }
+function writeSheet(list, fname, title){
+  const m=[];
+  m.push([{v:title,s:styT()}].concat(Array(HEADERS.length-1).fill({v:'',s:styT()})));
+  m.push(HEADERS.map(h=>({v:h,s:styH()})));
+  list.forEach((p,idx)=>{
+    const isNew=p._src!=='기존';
+    const arr=rowToArr(p); arr[0]=idx+1;
+    m.push(arr.map((v,ci)=> ({v:v==null?'':v, s: ci===1||ci===2? styL(idx%2===1,isNew): styC(idx%2===1,isNew)})));
+  });
+  const aoa=m.map(r=>r.map(c=>c.v));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  m.forEach((r,ri)=>r.forEach((c,ci)=>{ const ref=XLSX.utils.encode_cell({r:ri,c:ci}); if(!ws[ref])ws[ref]={v:c.v}; ws[ref].s=c.s; ws[ref].t='s'; }));
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:HEADERS.length-1}}];
+  ws['!cols']=[{wch:5},{wch:20},{wch:9},{wch:9},{wch:12},{wch:12},{wch:9},{wch:16},{wch:6},{wch:5},{wch:9},{wch:8},{wch:9},{wch:9},{wch:9},{wch:9},{wch:16},{wch:14}];
+  ws['!rows']=[{hpt:26},{hpt:20}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'명단');
+  XLSX.writeFile(wb,fname);
+}
+function checkRrnBeforeExport(){
+  const missing=NEWHIRES.filter(p=>(p.rrn||'').replace('-','').length!==13);
+  if(missing.length){ return confirm(`주민등록번호가 입력되지 않은 신규 입사자가 ${missing.length}명 있습니다.\n(${missing.map(p=>p.name).join(', ')})\n\n그대로 내보낼까요? (빈칸으로 출력됩니다)`); }
+  return true;
+}
+function exportFull(){
+  if(!MASTER.length){ alert('명단을 먼저 불러오세요.'); return; }
+  if(!checkRrnBeforeExport()) return;
+  const list=buildUpdatedList();
+  writeSheet(list, `단체상해보험_명단_${THISMONTH.replace('-','')}_갱신.xlsx`, '2026년 단체상해보험 가입자 명단');
+}
+function exportChanges(){
+  if(!checkRrnBeforeExport()) return;
+  const list=NEWHIRES.slice();
+  RETIREES.forEach(x=>{ const c={...x.ref, retireDate:x.retireDate, note:(x.ref.note?x.ref.note+' / ':'')+THISMONTH+' 퇴사', _src:'기존'}; list.push(c); });
+  if(!list.length){ alert('이번 달 변동분이 없습니다.'); return; }
+  writeSheet(list, `단체상해보험_변동분_${THISMONTH.replace('-','')}.xlsx`, `${THISMONTH} 단체상해보험 변동 내역 (신규/퇴사)`);
+}
+</script>
+</body>
+</html>

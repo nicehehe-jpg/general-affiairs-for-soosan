@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>휴양시설 신청·선정 관리 | 수산이앤에스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  :root{
+    --bg:#F2F4F6; --card:#fff; --t1:#191F28; --t2:#4E5968; --t3:#8B95A1;
+    --blue:#3182F6; --blue-bg:#EBF2FF; --green:#1DB67F; --green-bg:#E6F9F0;
+    --orange:#FF9800; --orange-bg:#FFF4E5; --red:#F04452; --red-bg:#FDEAEC;
+    --purple:#6C5CE7; --purple-bg:#F0EEFF; --line:#E5E8EB;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0 auto; max-width:1180px; background:var(--bg); color:var(--t1);
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; padding:28px 32px 80px;}
+  .back-link{display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--t3); text-decoration:none; font-weight:600; margin-bottom:14px;}
+  .back-link:hover{color:var(--blue);}
+  .page-head{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:22px;}
+  h1{font-size:24px; font-weight:800; margin:0 0 4px;}
+  .page-sub{font-size:13.5px; color:var(--t2); margin:0;}
+  .head-btns{display:flex; gap:8px; flex-wrap:wrap;}
+  .btn{background:var(--blue); color:#fff; border:none; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit;}
+  .btn:hover{background:#1B6FE0;}
+  .btn.line{background:var(--card); color:var(--t2); border:1px solid var(--line);}
+  .btn.line:hover{background:#F7F9FB; color:var(--t1);}
+  .btn.green{background:var(--green);} .btn.green:hover{background:#17a070;}
+  .btn.purple{background:var(--purple);} .btn.purple:hover{background:#5b4bd6;}
+  .btn.sm{padding:6px 12px; font-size:12px; border-radius:8px;}
+  .sync-badge{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; margin-left:6px; vertical-align:middle;}
+  .sync-badge.online{background:var(--green-bg); color:var(--green);}
+  .sync-badge.saving{background:var(--blue-bg); color:var(--blue);}
+  .sync-badge.loading{background:var(--bg); color:var(--t3);}
+  .sync-badge.offline{background:var(--orange-bg); color:var(--orange);}
+
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px;}
+  .stat-card{background:var(--card); border-radius:20px; padding:20px; box-shadow:0 1px 2px rgba(0,0,0,.03); transition:.15s;}
+  .stat-card:hover{box-shadow:0 8px 20px rgba(25,31,40,.08); transform:translateY(-2px);}
+  .stat-card .icon-circle{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:14px;}
+  .stat-card .num{font-size:24px; font-weight:800; line-height:1;}
+  .stat-card .num small{font-size:14px; font-weight:700; color:var(--t3); margin-left:2px;}
+  .stat-card .lbl{font-size:12.5px; color:var(--t3); margin-top:5px; font-weight:500;}
+
+  .controls{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:8px;}
+  .month-nav{display:flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:5px 8px;}
+  .month-nav button.arr{background:none; border:none; font-size:17px; color:var(--t2); cursor:pointer; padding:2px 8px; border-radius:8px; font-weight:700;}
+  .month-nav button.arr:hover{background:var(--bg);}
+  .month-nav input{border:none; background:none; font-size:14px; font-weight:700; font-family:inherit; color:var(--t1); cursor:pointer;}
+  .tabs{display:flex; gap:8px; flex-wrap:wrap;}
+  .tab{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:8px 16px; font-size:13px; font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit;}
+  .tab:hover{background:#F7F9FB;}
+  .tab.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .legend{font-size:11.5px; color:var(--t3); margin:6px 0 18px; line-height:1.6;}
+  .legend b{color:var(--t2);}
+
+  .fac-section{margin-bottom:26px;}
+  .fac-head{display:flex; align-items:center; gap:10px; margin:0 0 12px;}
+  .fac-icon{width:36px; height:36px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:17px;}
+  .fac-title{font-size:16px; font-weight:800;}
+  .fac-sub{font-size:12px; color:var(--t3); font-weight:600;}
+
+  .app-card{background:var(--card); border-radius:18px; padding:16px 18px; box-shadow:0 1px 2px rgba(0,0,0,.03); margin-bottom:12px; display:flex; gap:14px; align-items:flex-start;}
+  .app-card.sel{border:1.5px solid #A8E6CD;}
+  .rank{width:30px; height:30px; border-radius:9px; background:var(--bg); color:var(--t2); font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;}
+  .app-card.sel .rank{background:var(--green-bg); color:var(--green);}
+  .app-body{flex:1; min-width:0;}
+  .app-line1{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px;}
+  .app-name{font-size:15px; font-weight:800;}
+  .app-who{font-size:12.5px; color:var(--t2);}
+  .badge{font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px;}
+  .b-sel{background:var(--green-bg); color:var(--green);}
+  .b-rej{background:var(--bg); color:var(--t3);}
+  .app-meta{font-size:12.5px; color:var(--t2); margin-top:3px;}
+  .app-meta .k{color:var(--t3);}
+  .reasons{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .rchip{font-size:11px; font-weight:700; padding:4px 9px; border-radius:8px; background:var(--bg); color:var(--t2);}
+  .rchip.new{background:var(--purple-bg); color:var(--purple);}
+  .app-acts{display:flex; gap:4px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;}
+  .icon-btn{background:none; border:none; cursor:pointer; color:var(--t3); font-size:13px; padding:6px 8px; border-radius:8px;}
+  .icon-btn:hover{background:var(--bg); color:var(--t1);}
+  .mini{font-size:11px; font-weight:700; padding:5px 9px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--t2); cursor:pointer; font-family:inherit;}
+  .mini:hover{background:#F7F9FB;}
+  .mini.on{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .empty{background:var(--card); border-radius:16px; padding:26px; text-align:center; color:var(--t3); font-size:13px;}
+
+  /* 모달 */
+  .modal-overlay{position:fixed; inset:0; background:rgba(25,31,40,.45); z-index:100; display:none; align-items:center; justify-content:center; padding:20px;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--card); border-radius:24px; padding:26px; width:100%; max-width:620px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.22);}
+  .modal h3{font-size:18px; font-weight:800; margin:0 0 4px;}
+  .modal .modal-sub{font-size:12.5px; color:var(--t3); margin:0 0 22px; font-weight:500;}
+  .pm-field{margin-bottom:14px;}
+  .pm-field label{display:block; font-size:12.5px; font-weight:700; color:var(--t2); margin-bottom:7px;}
+  .pm-field input, .pm-field select{width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:12px; font-size:14px; font-family:inherit; background:var(--bg); color:var(--t1);}
+  .pm-field input:focus, .pm-field select:focus{outline:none; border-color:var(--blue); background:#fff;}
+  .pm-grid{display:grid; gap:12px;} .pm-grid.c2{grid-template-columns:1fr 1fr;} .pm-grid.c3{grid-template-columns:1fr 1fr 1fr;}
+  .pm-grid .pm-field{margin-bottom:0;}
+  .modal-actions{display:flex; gap:10px; margin-top:24px;}
+  .modal-actions .btn{flex:1; padding:13px; font-size:14px; border-radius:13px;}
+  .hist-row{display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .hist-row .grow{flex:1;}
+  @media(max-width:720px){ .stat-grid{grid-template-columns:repeat(2,1fr);} .pm-grid.c3{grid-template-columns:1fr;} body{padding:20px 16px 60px;} }
+</style>
+</head>
+<body>
+<!-- ===== 비밀번호 잠금 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;" onkeydown="if(event.key==='Enter')gateCheck()" onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1B6FE0'" onmouseout="this.style.background='#3182F6'">들어가기</button>
+  </div>
+</div>
+<script>
+  const GATE_PW_HASH = '942b9f04dfaa9d87f4ef9d76fdb40cfd30b843cf8121fc19274bd285bd0c999a';
+  (function(){
+    if(sessionStorage.getItem('gm_auth')==='ok'){
+      document.getElementById('gate').style.display='none';
+    } else {
+      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
+    }
+  })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  }
+</script>
+
+<a class="back-link" href="index.html">‹ 총무 관리 대시보드</a>
+
+<div class="page-head">
+  <div>
+    <h1>🏝️ 휴양시설 신청·선정 관리</h1>
+    <p class="page-sub">익월 이용 신청을 우선순위에 따라 자동 선정합니다 · 매월 10일 신청 마감 · 수산이앤에스 <span id="syncBadge" class="sync-badge loading">☁ 연결 중…</span></p>
+  </div>
+  <div class="head-btns">
+    <button class="btn" onclick="openAppModal()">+ 신청 추가</button>
+    <button class="btn purple sm" onclick="openHistModal()">📅 이용 이력</button>
+    <button class="btn green sm" onclick="exportResult()">📊 선정결과 엑셀</button>
+    <button class="btn line sm" onclick="backupJSON()">💾 백업</button>
+    <button class="btn line sm" onclick="document.getElementById('restoreFile').click()">📂 복원</button>
+    <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="restoreJSON(this)">
+    <button class="btn line sm" onclick="resetData()">↺ 초기화</button>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card"><div class="icon-circle" style="background:var(--blue-bg); color:var(--blue);">📝</div><div class="num" id="statApps">0<small>건</small></div><div class="lbl">이번 신청월 신청</div></div>
+  <div class="stat-card"><div class="icon-circle" style="background:var(--green-bg); color:var(--green);">✅</div><div class="num" id="statSel">0<small>건</small></div><div class="lbl">선정</div></div>
+  <div class="stat-card"><div class="icon-circle" style="background:var(--orange-bg); color:var(--orange);">⏳</div><div class="num" id="statRej">0<small>건</small></div><div class="lbl">미선정(대기)</div></div>
+  <div class="stat-card"><div class="icon-circle" style="background:var(--purple-bg); color:var(--purple);">👥</div><div class="num" id="statEmp">0<small>명</small></div><div class="lbl">이용이력 등록 직원</div></div>
+</div>
+
+<div class="controls">
+  <div class="month-nav">
+    <button class="arr" onclick="shiftMonth(-1)">‹</button>
+    <input type="month" id="monthPick" onchange="onMonthPick()">
+    <button class="arr" onclick="shiftMonth(1)">›</button>
+  </div>
+  <div class="tabs" id="facTabs"></div>
+</div>
+<div class="legend">
+  <b>이용월</b> 기준으로 신청을 모아 자동 선정합니다. 우선순위: ① 한 번도 이용 안 한 직원 → ② 입사가 빠른 직원 → ③ 최근 이용이 오래된 직원.
+  같은 시설·겹치는 기간은 상위 순위자만 선정되고 나머지는 미선정으로 표시됩니다. 필요하면 각 신청의 <b>선정/제외</b>를 수동으로 바꿀 수 있습니다.
+</div>
+
+<div id="facContainer"></div>
+
+<!-- 신청 추가/수정 모달 -->
+<div class="modal-overlay" id="appModal" onclick="if(event.target===this) closeAppModal()">
+  <div class="modal">
+    <h3 id="amTitle">신청 추가</h3>
+    <p class="modal-sub">신청자 정보와 희망 이용 기간을 입력하세요. 입사일·이용이력으로 우선순위가 자동 계산됩니다.</p>
+    <div class="pm-grid c2" style="margin-bottom:14px;">
+      <div class="pm-field"><label>휴양시설</label><select id="amFacility"></select></div>
+      <div class="pm-field"><label>이용월</label><input type="month" id="amUseMonth"></div>
+    </div>
+    <div class="pm-grid c2" style="margin-bottom:14px;">
+      <div class="pm-field"><label>이름</label><input type="text" id="amName" placeholder="예: 홍길동"></div>
+      <div class="pm-field"><label>사번 <span style="color:var(--t3); font-weight:500;">(선택)</span></label><input type="text" id="amEmpNo" placeholder="동명이인 구분용"></div>
+    </div>
+    <div class="pm-grid c3" style="margin-bottom:14px;">
+      <div class="pm-field"><label>직책</label><input type="text" id="amPosition" placeholder="예: 대리"></div>
+      <div class="pm-field"><label>부서</label><input type="text" id="amDept" placeholder="예: 사업본부"></div>
+      <div class="pm-field"><label>연락처</label><input type="text" id="amContact" placeholder="예: 010-0000-0000"></div>
+    </div>
+    <div class="pm-grid c3" style="margin-bottom:14px;">
+      <div class="pm-field"><label>입사일</label><input type="date" id="amHireDate"></div>
+      <div class="pm-field"><label>체크인(시작일)</label><input type="date" id="amCheckIn"></div>
+      <div class="pm-field"><label>박수</label><select id="amNights"><option value="1">1박</option><option value="2" selected>2박</option></select></div>
+    </div>
+    <div class="pm-field"><label>비고</label><input type="text" id="amNote" placeholder="추가 메모"></div>
+    <div class="modal-actions">
+      <button class="btn line" onclick="closeAppModal()">취소</button>
+      <button class="btn" onclick="saveAppModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이용 이력 모달 -->
+<div class="modal-overlay" id="histModal" onclick="if(event.target===this) closeHistModal()">
+  <div class="modal">
+    <h3>이용 이력 관리</h3>
+    <p class="modal-sub">과거 휴양시설 이용 기록입니다. 우선순위 ①(신규 여부)·③(최근 이용)에 사용됩니다.</p>
+    <div style="background:var(--bg); border-radius:14px; padding:14px; margin-bottom:16px;">
+      <div style="font-size:12.5px; font-weight:800; color:var(--t1); margin-bottom:10px;">+ 이력 직접 추가</div>
+      <div class="pm-grid c3" style="margin-bottom:10px;">
+        <div class="pm-field" style="margin:0;"><label>이름</label><input type="text" id="hName" placeholder="이름"></div>
+        <div class="pm-field" style="margin:0;"><label>사번(선택)</label><input type="text" id="hEmpNo"></div>
+        <div class="pm-field" style="margin:0;"><label>휴양시설</label><select id="hFacility"></select></div>
+      </div>
+      <div class="pm-grid c3" style="align-items:end;">
+        <div class="pm-field" style="margin:0;"><label>이용 시작일</label><input type="date" id="hCheckIn"></div>
+        <div class="pm-field" style="margin:0;"><label>박수</label><select id="hNights"><option value="1">1박</option><option value="2" selected>2박</option></select></div>
+        <button class="btn sm" onclick="addHistory()">+ 추가</button>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+      <button class="btn purple sm" onclick="document.getElementById('histImportFile').click()">📥 이력 엑셀 가져오기</button>
+      <input type="file" id="histImportFile" accept=".xlsx,.xls" style="display:none" onchange="importHistExcel(this)">
+      <button class="btn green sm" onclick="confirmMonthToHistory()">📌 이번 이용월 '선정'분을 이력으로 반영</button>
+    </div>
+    <div id="histList"></div>
+    <div class="modal-actions">
+      <button class="btn line" onclick="closeHistModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============== Supabase 동기화 ============== */
+const SB_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+const SB_REST = SB_URL + '/rest/v1/app_store';
+const SB_HEADERS = { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json' };
+function setSyncStatus(state){
+  const b=document.getElementById('syncBadge'); if(!b) return;
+  const map={online:['online','☁ 연결됨'],saving:['saving','💾 저장 중…'],loading:['loading','☁ 연결 중…'],offline:['offline','⚠ 오프라인(로컬)']};
+  const [cls,txt]=map[state]||map.loading; b.className='sync-badge '+cls; b.textContent=txt;
+}
+async function sbGet(key){
+  try{ const r=await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`,{headers:SB_HEADERS});
+    if(!r.ok) throw 0; const rows=await r.json(); return rows.length?rows[0].value:null; }catch(e){ return undefined; }
+}
+async function sbSet(key,value){
+  try{ const r=await fetch(`${SB_REST}?on_conflict=key`,{method:'POST',headers:{...SB_HEADERS,Prefer:'resolution=merge-duplicates'},
+    body:JSON.stringify({key,value,updated_at:new Date().toISOString()})}); if(!r.ok) throw 0; return true; }catch(e){ return false; }
+}
+const _pt={};
+function sbPush(key,value){
+  setSyncStatus('saving'); clearTimeout(_pt[key]);
+  _pt[key]=setTimeout(async()=>{ const ok=await sbSet(key,value); setSyncStatus(ok?'online':'offline'); },600);
+}
+
+/* ============== 정의 ============== */
+const FACILITIES = {
+  birch:  { name:'용평 버치힐',       icon:'⛷️', color:'var(--blue)',  bg:'var(--blue-bg)' },
+  kimila: { name:'태안 키밀라하우스', icon:'🏖️', color:'var(--green)', bg:'var(--green-bg)' },
+};
+const APP_KEY = 'resort_apps_v1';
+const HIST_KEY = 'resort_history_v1';
+
+function currentYM(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function nextYM(){ const d=new Date(); d.setMonth(d.getMonth()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+
+const SEED_HIST = [
+  { id:'h0', name:'김영희', empNo:'', facility:'birch',  checkIn:'2025-08-10', nights:2, useMonth:'2025-08' },
+  { id:'h1', name:'박철수', empNo:'', facility:'kimila', checkIn:'2024-05-03', nights:2, useMonth:'2024-05' },
+];
+const SEED_APPS = [
+  { id:'a0', useMonth:nextYM(), facility:'birch',  name:'이민호', empNo:'', position:'과장', dept:'엔지니어링본부', contact:'010-1111-2222', hireDate:'2015-03-02', checkIn:nextYM()+'-17', nights:2, note:'', manual:null },
+  { id:'a1', useMonth:nextYM(), facility:'birch',  name:'김영희', empNo:'', position:'차장', dept:'경영지원팀',     contact:'010-3333-4444', hireDate:'2012-09-01', checkIn:nextYM()+'-17', nights:2, note:'작년 8월 이용', manual:null },
+  { id:'a2', useMonth:nextYM(), facility:'birch',  name:'정수진', empNo:'', position:'대리', dept:'품질안전본부',   contact:'010-5555-6666', hireDate:'2019-01-07', checkIn:nextYM()+'-24', nights:1, note:'', manual:null },
+  { id:'a3', useMonth:nextYM(), facility:'kimila', name:'최지우', empNo:'', position:'사원', dept:'IT팀',           contact:'010-7777-8888', hireDate:'2021-06-15', checkIn:nextYM()+'-10', nights:2, note:'', manual:null },
+  { id:'a4', useMonth:nextYM(), facility:'kimila', name:'박철수', empNo:'', position:'부장', dept:'사업본부',       contact:'010-9999-0000', hireDate:'2010-04-01', checkIn:nextYM()+'-10', nights:2, note:'24년 5월 이용', manual:null },
+];
+
+function loadApps(){ try{ const r=localStorage.getItem(APP_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){} return SEED_APPS.map(x=>({...x})); }
+function loadHist(){ try{ const r=localStorage.getItem(HIST_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){} return SEED_HIST.map(x=>({...x})); }
+function saveApps(){ try{ localStorage.setItem(APP_KEY, JSON.stringify(APPS)); }catch(e){} sbPush(APP_KEY, APPS); }
+function saveHist(){ try{ localStorage.setItem(HIST_KEY, JSON.stringify(HIST)); }catch(e){} sbPush(HIST_KEY, HIST); }
+
+let APPS = loadApps();
+let HIST = loadHist();
+let selMonth = nextYM();
+let activeFac = 'all';
+let editingId = null;
+
+const esc = s => (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const idOf = a => (a.empNo && a.empNo.trim()) ? a.empNo.trim() : a.name;
+const hireYear = a => (a.hireDate||'').slice(0,4) || '9999';
+function checkoutOf(a){ const d=new Date(a.checkIn); d.setDate(d.getDate()+(parseInt(a.nights,10)||1)); return d; }
+function fmtMD(s){ return (s||'').slice(5).replace('-','.'); }
+
+/* 이용 이력 조회 (해당 이용월 이전 기록까지만 반영) */
+function histFor(idKey, beforeMonth){
+  const list = HIST.filter(h => (h.empNo&&h.empNo.trim()? h.empNo.trim():h.name)===idKey && (!beforeMonth || (h.useMonth||h.checkIn.slice(0,7)) < beforeMonth));
+  const count = list.length;
+  let lastDate = ''; list.forEach(h=>{ if(h.checkIn>lastDate) lastDate=h.checkIn; });
+  return { count, lastDate };
+}
+
+/* 우선순위 정렬 + 날짜겹침 선정 (한 시설/한 이용월 단위) */
+function rankAndSelect(facility, month){
+  let list = APPS.filter(a=> a.facility===facility && a.useMonth===month).map((a,i)=>({...a, _seq:i}));
+  list.forEach(a=>{ a._hist = histFor(idOf(a), month); });
+  list.sort((x,y)=>{
+    const nx = x._hist.count===0?0:1, ny = y._hist.count===0?0:1;
+    if(nx!==ny) return nx-ny;                       // ① 신규 우선
+    if(hireYear(x)!==hireYear(y)) return hireYear(x)<hireYear(y)?-1:1;  // ② 입사 빠른 순
+    const lx=x._hist.lastDate||'', ly=y._hist.lastDate||'';
+    if(lx!==ly) return lx<ly?-1:1;                  // ③ 최근이용 오래된 순
+    return x._seq-y._seq;
+  });
+  const confirmed=[];
+  list.forEach(a=>{
+    if(a.manual==='reject'){ a._sel=false; return; }
+    const inT=new Date(a.checkIn).getTime(), outT=checkoutOf(a).getTime();
+    const conflict = confirmed.some(r=> inT<r.out && r.in<outT);
+    if(a.manual==='select' || !conflict){ a._sel=true; confirmed.push({in:inT,out:outT}); }
+    else a._sel=false;
+  });
+  return list;
+}
+
+/* ============== 렌더 ============== */
+function renderStats(){
+  let sel=0, rej=0, total=0;
+  Object.keys(FACILITIES).forEach(f=>{
+    rankAndSelect(f, selMonth).forEach(a=>{ total++; a._sel?sel++:rej++; });
+  });
+  const emp = new Set(HIST.map(h=> (h.empNo&&h.empNo.trim())?h.empNo.trim():h.name)).size;
+  document.getElementById('statApps').innerHTML=total+'<small>건</small>';
+  document.getElementById('statSel').innerHTML=sel+'<small>건</small>';
+  document.getElementById('statRej').innerHTML=rej+'<small>건</small>';
+  document.getElementById('statEmp').innerHTML=emp+'<small>명</small>';
+}
+function renderTabs(){
+  const wrap=document.getElementById('facTabs');
+  const tabs=[['all','전체']].concat(Object.entries(FACILITIES).map(([k,f])=>[k,f.icon+' '+f.name]));
+  wrap.innerHTML='';
+  tabs.forEach(([key,label])=>{
+    const b=document.createElement('button'); b.className='tab'+(activeFac===key?' active':''); b.textContent=label;
+    b.onclick=()=>{ activeFac=key; renderTabs(); renderFacilities(); }; wrap.appendChild(b);
+  });
+}
+function reasonChips(a){
+  const h=a._hist;
+  const c1 = h.count===0 ? `<span class="rchip new">⭐ 신규 (이용 0회)</span>` : `<span class="rchip">이용 ${h.count}회</span>`;
+  const c2 = `<span class="rchip">입사 ${hireYear(a)}</span>`;
+  const c3 = h.lastDate ? `<span class="rchip">최근이용 ${h.lastDate}</span>` : `<span class="rchip">최근이용 없음</span>`;
+  return c1+c2+c3;
+}
+function renderFacilities(){
+  const cont=document.getElementById('facContainer');
+  const facs = activeFac==='all' ? Object.keys(FACILITIES) : [activeFac];
+  cont.innerHTML = facs.map(f=>{
+    const fac=FACILITIES[f];
+    const list=rankAndSelect(f, selMonth);
+    const selN=list.filter(a=>a._sel).length;
+    let inner;
+    if(!list.length){ inner=`<div class="empty">이번 이용월에 ${fac.name} 신청이 없습니다.</div>`; }
+    else inner = list.map((a,idx)=>`
+      <div class="app-card ${a._sel?'sel':''}">
+        <div class="rank">${idx+1}</div>
+        <div class="app-body">
+          <div class="app-line1">
+            <span class="app-name">${esc(a.name)}</span>
+            <span class="app-who">${esc(a.position||'')} · ${esc(a.dept||'')}</span>
+            <span class="badge ${a._sel?'b-sel':'b-rej'}">${a._sel?'✅ 선정':'⏳ 미선정'}</span>
+            ${a.manual? `<span class="badge" style="background:var(--orange-bg); color:var(--orange);">수동</span>`:''}
+          </div>
+          <div class="app-meta"><span class="k">📞</span> ${esc(a.contact||'-')} &nbsp;·&nbsp; <span class="k">📅</span> ${a.checkIn} ~ ${a.checkIn.slice(0,8)}${String(checkoutOf(a).getDate()).padStart(2,'0')} <b>(${a.nights}박)</b></div>
+          <div class="reasons">${reasonChips(a)}</div>
+        </div>
+        <div class="app-acts">
+          <button class="mini ${a.manual==='select'?'on':''}" onclick="setManual('${a.id}','select')">선정</button>
+          <button class="mini ${a.manual==='reject'?'on':''}" onclick="setManual('${a.id}','reject')">제외</button>
+          ${a.manual?`<button class="mini" onclick="setManual('${a.id}',null)">자동</button>`:''}
+          <button class="icon-btn" onclick="openAppModal('${a.id}')" title="수정">✏️</button>
+          <button class="icon-btn" onclick="deleteApp('${a.id}')" title="삭제">🗑</button>
+        </div>
+      </div>`).join('');
+    return `<div class="fac-section">
+      <div class="fac-head">
+        <div class="fac-icon" style="background:${fac.bg}; color:${fac.color};">${fac.icon}</div>
+        <div><div class="fac-title">${fac.name}</div><div class="fac-sub">신청 ${list.length}건 · 선정 ${selN}건</div></div>
+      </div>${inner}</div>`;
+  }).join('');
+}
+function renderAll(){ renderStats(); renderTabs(); renderFacilities(); }
+
+/* ============== 동작 ============== */
+function setManual(id, mode){
+  const a=APPS.find(x=>x.id===id); if(!a) return;
+  a.manual = (a.manual===mode)? null : mode;
+  saveApps(); renderAll();
+}
+function shiftMonth(d){
+  const [y,m]=selMonth.split('-').map(Number); const dt=new Date(y,m-1+d,1);
+  selMonth=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('monthPick').value=selMonth; renderAll();
+}
+function onMonthPick(){ selMonth=document.getElementById('monthPick').value||nextYM(); renderAll(); }
+
+function fillFacilitySelect(sel){ sel.innerHTML=Object.entries(FACILITIES).map(([k,f])=>`<option value="${k}">${f.name}</option>`).join(''); }
+function openAppModal(id){
+  editingId=id||null;
+  const a=id?APPS.find(x=>x.id===id):null;
+  document.getElementById('amTitle').textContent=a?'신청 수정':'신청 추가';
+  fillFacilitySelect(document.getElementById('amFacility'));
+  document.getElementById('amFacility').value = a?a.facility:(activeFac!=='all'?activeFac:'birch');
+  document.getElementById('amUseMonth').value = a?a.useMonth:selMonth;
+  document.getElementById('amName').value=a?a.name:'';
+  document.getElementById('amEmpNo').value=a?(a.empNo||''):'';
+  document.getElementById('amPosition').value=a?(a.position||''):'';
+  document.getElementById('amDept').value=a?(a.dept||''):'';
+  document.getElementById('amContact').value=a?(a.contact||''):'';
+  document.getElementById('amHireDate').value=a?(a.hireDate||''):'';
+  document.getElementById('amCheckIn').value=a?a.checkIn:(selMonth+'-01');
+  document.getElementById('amNights').value=a?String(a.nights):'2';
+  document.getElementById('amNote').value=a?(a.note||''):'';
+  document.getElementById('appModal').classList.add('show');
+  setTimeout(()=>document.getElementById('amName').focus(),50);
+}
+function closeAppModal(){ document.getElementById('appModal').classList.remove('show'); editingId=null; }
+function saveAppModal(){
+  const name=document.getElementById('amName').value.trim();
+  const checkIn=document.getElementById('amCheckIn').value;
+  if(!name){ alert('이름을 입력하세요.'); return; }
+  if(!checkIn){ alert('체크인 날짜를 입력하세요.'); return; }
+  const data={
+    facility:document.getElementById('amFacility').value,
+    useMonth:document.getElementById('amUseMonth').value||selMonth,
+    name, empNo:document.getElementById('amEmpNo').value.trim(),
+    position:document.getElementById('amPosition').value.trim(),
+    dept:document.getElementById('amDept').value.trim(),
+    contact:document.getElementById('amContact').value.trim(),
+    hireDate:document.getElementById('amHireDate').value,
+    checkIn, nights:parseInt(document.getElementById('amNights').value,10)||1,
+    note:document.getElementById('amNote').value.trim(),
+  };
+  // 월 1회·한 곳 규칙 안내(차단은 아님)
+  const dup = APPS.find(x=> x.id!==editingId && x.useMonth===data.useMonth && idOf(x)===(data.empNo.trim()||data.name));
+  if(dup && !confirm('이 직원은 해당 이용월에 이미 신청이 있습니다.\n(원칙상 월 1회·한 곳) 그래도 추가할까요?')) return;
+  if(editingId){ Object.assign(APPS.find(x=>x.id===editingId), data); }
+  else { APPS.push({ id:'a'+Date.now(), ...data, manual:null }); selMonth=data.useMonth; document.getElementById('monthPick').value=selMonth; }
+  saveApps(); closeAppModal(); renderAll();
+}
+function deleteApp(id){
+  const a=APPS.find(x=>x.id===id);
+  if(!confirm(`'${a?a.name:''}' 신청을 삭제할까요?`)) return;
+  APPS=APPS.filter(x=>x.id!==id); saveApps(); renderAll();
+}
+
+/* 이용 이력 모달 */
+function openHistModal(){
+  fillFacilitySelect(document.getElementById('hFacility'));
+  renderHistList(); document.getElementById('histModal').classList.add('show');
+}
+function closeHistModal(){ document.getElementById('histModal').classList.remove('show'); }
+function renderHistList(){
+  const sorted=HIST.slice().sort((a,b)=>(b.checkIn||'').localeCompare(a.checkIn||''));
+  const el=document.getElementById('histList');
+  if(!sorted.length){ el.innerHTML='<div class="empty">등록된 이용 이력이 없습니다.</div>'; return; }
+  el.innerHTML = sorted.map(h=>`
+    <div class="hist-row">
+      <div class="grow"><b>${esc(h.name)}</b>${h.empNo?` <span style="color:var(--t3)">(${esc(h.empNo)})</span>`:''} · ${FACILITIES[h.facility]?FACILITIES[h.facility].name:h.facility}</div>
+      <div style="color:var(--t2)">${h.checkIn} (${h.nights}박)</div>
+      <button class="icon-btn" onclick="delHistory('${h.id}')">🗑</button>
+    </div>`).join('');
+}
+function addHistory(){
+  const name=document.getElementById('hName').value.trim();
+  const checkIn=document.getElementById('hCheckIn').value;
+  if(!name||!checkIn){ alert('이름과 이용 시작일을 입력하세요.'); return; }
+  HIST.push({ id:'h'+Date.now(), name, empNo:document.getElementById('hEmpNo').value.trim(),
+    facility:document.getElementById('hFacility').value, checkIn, nights:parseInt(document.getElementById('hNights').value,10)||1, useMonth:checkIn.slice(0,7) });
+  document.getElementById('hName').value=''; document.getElementById('hEmpNo').value=''; document.getElementById('hCheckIn').value='';
+  saveHist(); renderHistList(); renderAll();
+}
+function delHistory(id){ if(!confirm('이 이력을 삭제할까요?')) return; HIST=HIST.filter(x=>x.id!==id); saveHist(); renderHistList(); renderAll(); }
+
+/* ===== 이력 엑셀 가져오기 (확정 'O'만 = 실제 이용) ===== */
+function _hxdate(v){
+  if(v==null||v==='') return '';
+  if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+  if(typeof v==='number' && XLSX.SSF){ const dc=XLSX.SSF.parse_date_code(v); if(dc&&dc.y) return `${dc.y}-${String(dc.m).padStart(2,'0')}-${String(dc.d).padStart(2,'0')}`; }
+  const m=String(v).match(/(\d{4})[-./년\s]+(\d{1,2})[-./월\s]+(\d{1,2})/);
+  return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:'';
+}
+function _mapFac(raw){
+  const s=String(raw||'').replace(/\s/g,'');
+  if(s.includes('용평')||s.includes('버치')) return 'birch';
+  if(s.includes('태안')||s.includes('카밀')||s.includes('키밀')) return 'kimila';
+  return String(raw||'').trim();
+}
+function importHistExcel(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false});
+      // 열: 0순번 1소속 2성명 3직급 4시설 5체크인 6체크아웃 7일수 8연락처 9확정여부
+      const parsed=[]; let notConfirmed=0, noDate=0;
+      for(let i=0;i<rows.length;i++){
+        const r=rows[i];
+        const name=String(r[2]==null?'':r[2]).trim();
+        if(!name || name==='성명') continue;
+        const conf=String(r[9]==null?'':r[9]).trim().toUpperCase();
+        if(conf!=='O'){ notConfirmed++; continue; }
+        const checkIn=_hxdate(r[5]);
+        if(!checkIn){ noDate++; continue; }
+        let nights=parseInt(r[7],10);
+        if(!nights){ const co=_hxdate(r[6]); if(co){ nights=Math.max(1,Math.round((new Date(co)-new Date(checkIn))/86400000)); } else nights=1; }
+        parsed.push({ id:'h'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),
+          name, empNo:'', facility:_mapFac(r[4]), checkIn, nights, useMonth:checkIn.slice(0,7),
+          dept:String(r[1]||'').trim(), position:String(r[3]||'').trim() });
+      }
+      if(!parsed.length){ alert('가져올 실제 이용(확정 O) 이력이 없습니다.'); input.value=''; return; }
+      const replace=confirm(`실제 이용(확정 'O') ${parsed.length}건을 찾았습니다.\n(미확정·취소 등 ${notConfirmed}건은 제외${noDate?`, 날짜없음 ${noDate}건 제외`:''})\n\n[확인] 기존 이력을 모두 지우고 교체\n[취소] 기존 이력에 추가`);
+      HIST = replace ? parsed : HIST.concat(parsed);
+      saveHist(); renderHistList(); renderAll();
+      alert(`이용 이력 ${parsed.length}건을 가져왔습니다.`);
+    }catch(err){ console.error(err); alert('가져오기 실패: 파일 형식을 확인해 주세요.\n'+(err&&err.message||err)); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function confirmMonthToHistory(){
+  let added=0;
+  Object.keys(FACILITIES).forEach(f=>{
+    rankAndSelect(f, selMonth).filter(a=>a._sel).forEach(a=>{
+      const exists = HIST.some(h=> (h.empNo&&h.empNo.trim()?h.empNo.trim():h.name)===idOf(a) && h.checkIn===a.checkIn);
+      if(!exists){ HIST.push({ id:'h'+Date.now()+Math.random().toString(36).slice(2,6), name:a.name, empNo:a.empNo||'', facility:a.facility, checkIn:a.checkIn, nights:a.nights, useMonth:a.useMonth }); added++; }
+    });
+  });
+  saveHist(); renderHistList(); renderAll();
+  alert(`${selMonth} 선정분 ${added}건을 이용 이력에 반영했습니다.`);
+}
+
+/* ============== 백업/복원/초기화 ============== */
+function backupJSON(){
+  const data={ _type:'soosan-resort-backup', _at:new Date().toISOString(), apps:APPS, history:HIST };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`휴양시설_백업_${selMonth.replace('-','')}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+function restoreJSON(input){
+  const file=input.files[0]; if(!file) return; const reader=new FileReader();
+  reader.onload=()=>{ try{ const d=JSON.parse(reader.result); if(!Array.isArray(d.apps)||!Array.isArray(d.history)) throw 0;
+    if(!confirm('백업 파일로 덮어쓸까요?\n현재 데이터(클라우드 포함)가 교체됩니다.')) return;
+    APPS=d.apps; HIST=d.history; saveApps(); saveHist(); renderAll(); alert('복원이 완료되었습니다.');
+  }catch(e){ alert('복원 실패: 올바른 백업 파일이 아닙니다.'); } input.value=''; };
+  reader.readAsText(file);
+}
+function resetData(){
+  if(!confirm('모든 신청과 이용 이력을 초기 상태로 되돌릴까요?\n(클라우드 데이터도 초기화됩니다.)')) return;
+  localStorage.removeItem(APP_KEY); localStorage.removeItem(HIST_KEY);
+  APPS=loadApps(); HIST=loadHist(); saveApps(); saveHist(); renderAll();
+}
+
+/* ============== 엑셀 (토스 스타일) ============== */
+const XF='맑은 고딕';
+const XB={top:{style:'thin',color:{rgb:'E5E8EB'}},bottom:{style:'thin',color:{rgb:'E5E8EB'}},left:{style:'thin',color:{rgb:'E5E8EB'}},right:{style:'thin',color:{rgb:'E5E8EB'}}};
+const ST={
+  title:{font:{name:XF,sz:16,bold:true,color:{rgb:'191F28'}},alignment:{horizontal:'left',vertical:'center'}},
+  sub:{font:{name:XF,sz:10,color:{rgb:'8B95A1'}},alignment:{horizontal:'left',vertical:'center'}},
+  header:{font:{name:XF,sz:10.5,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'3182F6'}},alignment:{horizontal:'center',vertical:'center'},border:XB},
+  cell:{font:{name:XF,sz:10,color:{rgb:'191F28'}},alignment:{horizontal:'center',vertical:'center'},border:XB},
+  alt:{font:{name:XF,sz:10,color:{rgb:'191F28'}},alignment:{horizontal:'center',vertical:'center'},fill:{fgColor:{rgb:'FAFBFC'}},border:XB},
+};
+const L=s=>({...s,alignment:{horizontal:'left',vertical:'center'}});
+function selStyle(sel,alt){ const b=alt?ST.alt:ST.cell; return sel?{...b,font:{name:XF,sz:10,bold:true,color:{rgb:'1DB67F'}},fill:{fgColor:{rgb:'E6F9F0'}}}:{...b,font:{name:XF,sz:10,color:{rgb:'8B95A1'}}}; }
+function buildSheet(m){ const aoa=m.map(r=>r.map(c=>c.v)); const ws=XLSX.utils.aoa_to_sheet(aoa);
+  m.forEach((r,ri)=>r.forEach((c,ci)=>{ const ref=XLSX.utils.encode_cell({r:ri,c:ci}); if(!ws[ref])ws[ref]={v:c.v}; if(c.s)ws[ref].s=c.s; })); return ws; }
+function exportResult(){
+  const headers=['휴양시설','순위','선정여부','이름','직책','부서','연락처','이용기간','박수','신규여부','입사년도','최근이용일','비고'];
+  const NC=headers.length; const m=[];
+  m.push([{v:`휴양시설 선정 결과 (${selMonth.replace('-','년 ')}월 이용분)`,s:ST.title}].concat(Array(NC-1).fill({v:'',s:ST.title})));
+  m.push([{v:`수산이앤에스 · 매월 10일 신청 마감 · 우선순위: 신규 > 입사빠른순 > 최근이용 오래된순`,s:ST.sub}].concat(Array(NC-1).fill({v:'',s:ST.sub})));
+  m.push(headers.map(h=>({v:h,s:ST.header})));
+  let ri=0;
+  Object.keys(FACILITIES).forEach(f=>{
+    rankAndSelect(f, selMonth).forEach((a,idx)=>{
+      const alt=ri%2===1; const base=alt?ST.alt:ST.cell; ri++;
+      const out=checkoutOf(a); const outStr=`${out.getFullYear()}-${String(out.getMonth()+1).padStart(2,'0')}-${String(out.getDate()).padStart(2,'0')}`;
+      m.push([
+        {v:FACILITIES[f].name,s:base},
+        {v:idx+1,s:base},
+        {v:a._sel?'선정':'미선정',s:selStyle(a._sel,alt)},
+        {v:a.name,s:L(base)},
+        {v:a.position||'',s:base},
+        {v:a.dept||'',s:base},
+        {v:a.contact||'',s:base},
+        {v:`${a.checkIn} ~ ${outStr}`,s:base},
+        {v:a.nights+'박',s:base},
+        {v:a._hist.count===0?'신규':`${a._hist.count}회`,s:base},
+        {v:hireYear(a),s:base},
+        {v:a._hist.lastDate||'-',s:base},
+        {v:a.note||'',s:L(base)},
+      ]);
+    });
+  });
+  if(ri===0){ alert('이번 이용월에 신청이 없습니다.'); return; }
+  const ws=buildSheet(m);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:NC-1}},{s:{r:1,c:0},e:{r:1,c:NC-1}}];
+  ws['!cols']=[{wch:18},{wch:6},{wch:9},{wch:10},{wch:8},{wch:14},{wch:16},{wch:24},{wch:6},{wch:8},{wch:9},{wch:13},{wch:18}];
+  ws['!rows']=[{hpt:26},{hpt:18},{hpt:22}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'선정결과');
+  XLSX.writeFile(wb, `휴양시설_선정결과_${selMonth.replace('-','')}.xlsx`);
+}
+
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeAppModal(); closeHistModal(); } });
+
+/* ============== 클라우드 로드 ============== */
+async function sbInit(){
+  setSyncStatus('loading');
+  const [appsC, histC]=await Promise.all([sbGet(APP_KEY), sbGet(HIST_KEY)]);
+  if(appsC===undefined && histC===undefined){ setSyncStatus('offline'); return; }
+  let changed=false;
+  if(Array.isArray(appsC)){ APPS=appsC; try{localStorage.setItem(APP_KEY,JSON.stringify(APPS));}catch(e){} changed=true; } else if(appsC===null){ await sbSet(APP_KEY,APPS); }
+  if(Array.isArray(histC)){ HIST=histC; try{localStorage.setItem(HIST_KEY,JSON.stringify(HIST));}catch(e){} changed=true; } else if(histC===null){ await sbSet(HIST_KEY,HIST); }
+  setSyncStatus('online'); if(changed) renderAll();
+}
+(function init(){ document.getElementById('monthPick').value=selMonth; renderAll(); sbInit(); })();
+</script>
+</body>
+</html>

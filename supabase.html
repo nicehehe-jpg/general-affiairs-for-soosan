@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supabase 연결 관리</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+  :root{
+    --bg:#F7F8FA; --card:#fff; --t1:#191F28; --t2:#4E5968; --t3:#8B95A1;
+    --blue:#3182F6; --blue-bg:#EEF4FF;
+    --green:#00C851; --green-bg:#E8FFF0;
+    --red:#FF3B30; --red-bg:#FFF1F0;
+    --orange:#FF9500; --orange-bg:#FFF8EC;
+    --line:#E5E8EB;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Pretendard',sans-serif; background:var(--bg); color:var(--t1); min-height:100vh;}
+
+  .header{
+    background:var(--card); border-bottom:1px solid var(--line);
+    padding:0 40px; height:60px; display:flex; align-items:center; gap:16px;
+    position:sticky; top:0; z-index:100;
+  }
+  .header a{text-decoration:none; color:var(--t3); font-size:13px;}
+  .header a:hover{color:var(--blue);}
+  .header-title{font-size:16px; font-weight:800; color:var(--t1);}
+  .conn-badge{
+    margin-left:auto; display:flex; align-items:center; gap:6px;
+    font-size:12px; font-weight:600; padding:4px 12px; border-radius:20px;
+    background:var(--line); color:var(--t3);
+  }
+  .conn-badge.connected{background:var(--green-bg); color:#00A040;}
+  .conn-badge.error{background:var(--red-bg); color:var(--red);}
+  .conn-dot{width:7px; height:7px; border-radius:50%; background:currentColor;}
+
+  .main{max-width:860px; margin:0 auto; padding:32px 24px 80px;}
+  h2{font-size:18px; font-weight:800; margin-bottom:4px;}
+  .section-sub{font-size:13px; color:var(--t3); margin-bottom:20px;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; margin-bottom:20px;}
+  .card-title{font-size:14px; font-weight:800; margin-bottom:16px; display:flex; align-items:center; gap:8px;}
+  .card-title span{font-size:16px;}
+
+  label{display:block; font-size:12px; font-weight:700; color:var(--t3); margin-bottom:6px;}
+  input[type=text], input[type=password]{
+    width:100%; border:1.5px solid var(--line); border-radius:10px;
+    padding:10px 14px; font-size:14px; font-family:inherit; outline:none;
+    transition:border-color .15s; background:var(--bg);
+  }
+  input[type=text]:focus, input[type=password]:focus{border-color:var(--blue);}
+  .form-row{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+  @media(max-width:600px){.form-row{grid-template-columns:1fr;}}
+
+  .btn{
+    border:none; border-radius:10px; padding:10px 20px;
+    font-size:13.5px; font-weight:700; cursor:pointer;
+    font-family:inherit; transition:opacity .15s, transform .1s;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn:hover{opacity:.88; transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn-primary{background:var(--blue); color:#fff;}
+  .btn-outline{background:transparent; border:1.5px solid var(--line); color:var(--t2);}
+  .btn-outline:hover{border-color:var(--blue); color:var(--blue); opacity:1;}
+  .btn-green{background:var(--green); color:#fff;}
+  .btn-red{background:var(--red); color:#fff;}
+  .btn-sm{padding:6px 14px; font-size:12.5px; border-radius:8px;}
+  .btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;}
+
+  .status-box{
+    border-radius:10px; padding:12px 16px; font-size:13px; font-weight:600;
+    margin-top:12px; display:none;
+  }
+  .status-box.info{background:var(--blue-bg); color:var(--blue); display:block;}
+  .status-box.success{background:var(--green-bg); color:#00A040; display:block;}
+  .status-box.error{background:var(--red-bg); color:var(--red); display:block;}
+  .status-box.warn{background:var(--orange-bg); color:#B86800; display:block;}
+
+  .sync-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  @media(max-width:600px){.sync-grid{grid-template-columns:1fr;}}
+  .sync-item{
+    border:1.5px solid var(--line); border-radius:12px; padding:16px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .sync-item-title{font-size:13px; font-weight:800;}
+  .sync-item-count{font-size:22px; font-weight:900; color:var(--blue);}
+  .sync-item-lbl{font-size:11px; color:var(--t3); font-weight:600;}
+  .sync-item-btns{display:flex; gap:6px; margin-top:4px; flex-wrap:wrap;}
+
+  .sql-box{
+    background:#1E1E2E; color:#CDD6F4; border-radius:12px;
+    padding:16px 20px; font-family:'Courier New',monospace; font-size:12.5px;
+    line-height:1.7; overflow-x:auto; margin-top:12px; position:relative;
+  }
+  .sql-kw{color:#CBA6F7;}
+  .sql-str{color:#A6E3A1;}
+  .sql-copy{
+    position:absolute; top:10px; right:10px;
+    background:#313244; border:none; color:#CDD6F4; border-radius:6px;
+    padding:4px 10px; font-size:11px; cursor:pointer; font-family:inherit;
+  }
+  .sql-copy:hover{background:#45475A;}
+
+  .log-area{
+    background:#F0F4FF; border-radius:10px; padding:12px 16px;
+    font-size:12px; line-height:1.8; max-height:200px; overflow-y:auto;
+    margin-top:12px; font-family:monospace; display:none;
+  }
+  .log-area.show{display:block;}
+  .log-ok{color:#00A040;}
+  .log-err{color:var(--red);}
+  .log-info{color:var(--blue);}
+
+  .prog-bar{height:6px; background:var(--line); border-radius:10px; margin-top:8px; overflow:hidden; display:none;}
+  .prog-bar.show{display:block;}
+  .prog-fill{height:100%; background:var(--blue); border-radius:10px; width:0%; transition:width .3s;}
+
+  .tip{font-size:12px; color:var(--t3); margin-top:8px; line-height:1.6;}
+  .tip b{color:var(--t2);}
+
+  .divider{height:1px; background:var(--line); margin:20px 0;}
+</style>
+</head>
+<body>
+<!-- ===== 비밀번호 잠금 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;" onkeydown="if(event.key==='Enter')gateCheck()" onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;" onmouseover="this.style.background='#1B6FE0'" onmouseout="this.style.background='#3182F6'">들어가기</button>
+  </div>
+</div>
+<script>
+  const GATE_PW_HASH = 'fbdb32e45b2566ac0a1ead4d585162645698e431dfec179c69ccffb31d996a03';
+  (function(){
+    if(sessionStorage.getItem('gm_auth')==='ok'){
+      document.getElementById('gate').style.display='none';
+    } else {
+      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
+    }
+  })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      const err=document.getElementById('gateErr');
+      err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+      document.getElementById('gatePw').focus();
+      setTimeout(()=>{ err.textContent=''; },2500);
+    }
+  }
+</script>
+
+<div class="header">
+  <a href="index.html">← 메인</a>
+  <div class="header-title">🗄️ Supabase 연결 관리</div>
+  <div class="conn-badge" id="connBadge">
+    <div class="conn-dot"></div>
+    <span id="connText">미연결</span>
+  </div>
+</div>
+
+<div class="main">
+  <h2>Supabase 연결 설정</h2>
+  <p class="section-sub">데이터를 클라우드에 저장해 PC가 바뀌어도 그대로 사용할 수 있습니다.</p>
+
+  <!-- ① 연결 설정 -->
+  <div class="card">
+    <div class="card-title"><span>🔑</span> 프로젝트 연결 정보</div>
+    <div class="form-row">
+      <div>
+        <label>Supabase Project URL</label>
+        <input type="text" id="sbUrl" placeholder="https://xxxx.supabase.co">
+      </div>
+      <div>
+        <label>Anon (Public) Key</label>
+        <input type="password" id="sbKey" placeholder="eyJhbGc...">
+      </div>
+    </div>
+    <p class="tip">👉 <b>Supabase 대시보드</b> → 프로젝트 선택 → <b>Settings → API</b> 에서 확인할 수 있습니다.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveAndTest()">💾 저장 & 연결 테스트</button>
+      <button class="btn btn-outline" onclick="clearConfig()">🗑️ 설정 초기화</button>
+    </div>
+    <div class="status-box" id="connStatus"></div>
+  </div>
+
+  <!-- ② 테이블 생성 SQL -->
+  <div class="card">
+    <div class="card-title"><span>🛠️</span> 테이블 생성 (최초 1회)</div>
+    <p class="tip">Supabase 대시보드 → <b>SQL Editor</b> → New Query 에 아래 SQL을 붙여넣고 실행하세요.</p>
+    <div class="sql-box" id="createSql">
+      <button class="sql-copy" onclick="copySql()">복사</button>
+<span class="sql-kw">-- 1. 할 일(Todo) 테이블</span>
+<span class="sql-kw">create table if not exists</span> todos (
+  id          text <span class="sql-kw">primary key</span>,
+  title       text,
+  memo        text,
+  priority    text <span class="sql-kw">default</span> <span class="sql-str">'medium'</span>,
+  due_date    text,
+  is_completed boolean <span class="sql-kw">default false</span>,
+  completed_at timestamptz,
+  tags        jsonb <span class="sql-kw">default</span> <span class="sql-str">'[]'</span>,
+  sub_tasks   jsonb <span class="sql-kw">default</span> <span class="sql-str">'[]'</span>,
+  cat         text,
+  created_at  timestamptz <span class="sql-kw">default</span> now(),
+  updated_at  timestamptz <span class="sql-kw">default</span> now()
+);
+
+<span class="sql-kw">-- 2. 월간 업무 테이블</span>
+<span class="sql-kw">create table if not exists</span> gongmu_tasks (
+  id        text <span class="sql-kw">primary key</span>,
+  cat       text,
+  title     text,
+  priority  text,
+  status    text <span class="sql-kw">default</span> <span class="sql-str">'wait'</span>,
+  due       text,
+  created_at timestamptz <span class="sql-kw">default</span> now(),
+  updated_at timestamptz <span class="sql-kw">default</span> now()
+);
+
+<span class="sql-kw">-- 3. 주소록 테이블</span>
+<span class="sql-kw">create table if not exists</span> contacts (
+  id         bigserial <span class="sql-kw">primary key</span>,
+  name       text,
+  email      text,
+  company    text,
+  department text,
+  title      text,
+  phone      text,
+  mobile     text,
+  created_at timestamptz <span class="sql-kw">default</span> now()
+);
+
+<span class="sql-kw">-- RLS 비활성화 (내부 사용용)</span>
+<span class="sql-kw">alter table</span> todos <span class="sql-kw">disable row level security</span>;
+<span class="sql-kw">alter table</span> gongmu_tasks <span class="sql-kw">disable row level security</span>;
+<span class="sql-kw">alter table</span> contacts <span class="sql-kw">disable row level security</span>;
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline btn-sm" onclick="checkTables()">🔍 테이블 존재 확인</button>
+    </div>
+    <div class="status-box" id="tableStatus"></div>
+  </div>
+
+  <!-- ③ 데이터 동기화 -->
+  <div class="card">
+    <div class="card-title"><span>🔄</span> 데이터 동기화</div>
+    <div class="sync-grid">
+      <div class="sync-item">
+        <div class="sync-item-title">✅ 할 일</div>
+        <div><div class="sync-item-count" id="todoCnt">-</div><div class="sync-item-lbl">로컬 항목</div></div>
+        <div class="sync-item-btns">
+          <button class="btn btn-primary btn-sm" onclick="pushTodos()">↑ 업로드</button>
+          <button class="btn btn-outline btn-sm" onclick="pullTodos()">↓ 다운로드</button>
+        </div>
+      </div>
+      <div class="sync-item">
+        <div class="sync-item-title">📋 월간 업무</div>
+        <div><div class="sync-item-count" id="taskCnt">-</div><div class="sync-item-lbl">로컬 항목</div></div>
+        <div class="sync-item-btns">
+          <button class="btn btn-primary btn-sm" onclick="pushTasks()">↑ 업로드</button>
+          <button class="btn btn-outline btn-sm" onclick="pullTasks()">↓ 다운로드</button>
+        </div>
+      </div>
+      <div class="sync-item">
+        <div class="sync-item-title">📇 주소록</div>
+        <div><div class="sync-item-count" id="abCnt">-</div><div class="sync-item-lbl">로컬 항목</div></div>
+        <div class="sync-item-btns">
+          <button class="btn btn-green btn-sm" onclick="document.getElementById('abFileInput').click()">📂 파일 열기</button>
+          <input type="file" id="abFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="loadAbFile(this)">
+          <button class="btn btn-primary btn-sm" onclick="pushContacts()">↑ 업로드</button>
+          <button class="btn btn-outline btn-sm" onclick="pullContacts()">↓ 다운로드</button>
+        </div>
+        <div id="abFileStatus" style="font-size:11.5px;color:var(--t3);margin-top:4px;"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div style="font-size:13px; font-weight:800; margin-bottom:4px;">전체 동기화</div>
+        <div class="tip" style="margin:0;">로컬 ↔ Supabase 간 전체 데이터를 한 번에 처리합니다.</div>
+      </div>
+      <div class="btn-row" style="margin:0;">
+        <button class="btn btn-primary" onclick="pushAll()">↑ 전체 업로드 (로컬 → 클라우드)</button>
+        <button class="btn btn-outline" onclick="pullAll()">↓ 전체 다운로드 (클라우드 → 로컬)</button>
+      </div>
+    </div>
+
+    <div class="prog-bar" id="progBar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="log-area" id="syncLog"></div>
+  </div>
+
+  <!-- ④ 데이터 초기화 -->
+  <div class="card">
+    <div class="card-title"><span>⚠️</span> Supabase 데이터 초기화</div>
+    <p class="tip">클라우드에 저장된 데이터를 <b>테이블별로 전체 삭제</b>합니다. 로컬 데이터는 영향받지 않습니다.</p>
+    <div class="btn-row" style="margin-top:12px;">
+      <button class="btn btn-red btn-sm" onclick="clearTable('todos','할 일')">🗑️ 할 일 초기화</button>
+      <button class="btn btn-red btn-sm" onclick="clearTable('gongmu_tasks','월간 업무')">🗑️ 업무 초기화</button>
+      <button class="btn btn-red btn-sm" onclick="clearTable('contacts','주소록')">🗑️ 주소록 초기화</button>
+    </div>
+    <div class="status-box" id="clearStatus"></div>
+  </div>
+</div>
+
+<script>
+const { createClient } = supabase;
+let sb = null;
+
+// ─── 초기화 ───────────────────────────────────────────
+const DEFAULT_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
+const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+
+window.addEventListener('DOMContentLoaded', () => {
+  let cfg = loadConfig();
+  if (!cfg) {
+    cfg = { url: DEFAULT_URL, key: DEFAULT_KEY };
+    localStorage.setItem('sb_config', JSON.stringify(cfg));
+  }
+  document.getElementById('sbUrl').value = cfg.url;
+  document.getElementById('sbKey').value = cfg.key;
+  initClient(cfg.url, cfg.key, false);
+  // 자동 연결 테스트
+  saveAndTest();
+  refreshCounts();
+});
+
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem('sb_config') || 'null'); } catch { return null; }
+}
+
+function initClient(url, key, showStatus) {
+  try {
+    sb = createClient(url, key);
+    return true;
+  } catch(e) {
+    if (showStatus) showSt('connStatus', 'error', '클라이언트 초기화 실패: ' + e.message);
+    return false;
+  }
+}
+
+function refreshCounts() {
+  try {
+    const todos = JSON.parse(localStorage.getItem('todos_v2') || '[]');
+    const tasks = JSON.parse(localStorage.getItem('gongmu_tasks_v1') || '[]');
+    const ab    = JSON.parse(localStorage.getItem('ab_contacts') || '[]');
+    document.getElementById('todoCnt').textContent = todos.length;
+    document.getElementById('taskCnt').textContent = tasks.length;
+    document.getElementById('abCnt').textContent   = ab.length;
+  } catch(e) {}
+}
+
+// ─── 설정 저장 & 테스트 ──────────────────────────────
+async function saveAndTest() {
+  const url = document.getElementById('sbUrl').value.trim();
+  const key = document.getElementById('sbKey').value.trim();
+  if (!url || !key) { showSt('connStatus','warn','URL과 Key를 모두 입력해주세요.'); return; }
+
+  showSt('connStatus','info','연결 테스트 중...');
+  if (!initClient(url, key, true)) return;
+
+  try {
+    const { error } = await sb.from('todos').select('id').limit(1);
+    if (error && error.code !== 'PGRST116' && !error.message.includes('does not exist')) {
+      throw error;
+    }
+    localStorage.setItem('sb_config', JSON.stringify({ url, key }));
+    setBadge(true);
+    showSt('connStatus','success','✅ 연결 성공! 설정이 저장됐습니다.');
+  } catch(e) {
+    setBadge(false);
+    if (e.message && e.message.includes('does not exist')) {
+      localStorage.setItem('sb_config', JSON.stringify({ url, key }));
+      setBadge(true);
+      showSt('connStatus','success','✅ 연결 성공! (테이블은 아직 없음 — 아래에서 SQL 실행 후 생성하세요)');
+    } else {
+      showSt('connStatus','error','❌ 연결 실패: ' + (e.message || JSON.stringify(e)));
+    }
+  }
+}
+
+function clearConfig() {
+  if (!confirm('저장된 Supabase 설정을 삭제할까요?')) return;
+  localStorage.removeItem('sb_config');
+  document.getElementById('sbUrl').value = '';
+  document.getElementById('sbKey').value = '';
+  sb = null;
+  setBadge(null);
+  showSt('connStatus','info','설정이 초기화됐습니다.');
+}
+
+function setBadge(ok) {
+  const b = document.getElementById('connBadge');
+  const t = document.getElementById('connText');
+  b.className = 'conn-badge' + (ok === true ? ' connected' : ok === false ? ' error' : '');
+  t.textContent = ok === true ? '연결됨' : ok === false ? '연결 실패' : '미연결';
+}
+
+// ─── 테이블 확인 ─────────────────────────────────────
+async function checkTables() {
+  if (!requireConn('tableStatus')) return;
+  showSt('tableStatus','info','확인 중...');
+  const tables = ['todos','gongmu_tasks','contacts'];
+  const results = [];
+  for (const t of tables) {
+    const { error } = await sb.from(t).select('*').limit(1);
+    results.push(`${t}: ${error ? '❌ 없음' : '✅ 있음'}`);
+  }
+  showSt('tableStatus','success', results.join(' | '));
+}
+
+// ─── 동기화 공통 ─────────────────────────────────────
+function log(msg, cls='log-info') {
+  const el = document.getElementById('syncLog');
+  el.classList.add('show');
+  el.innerHTML += `<div class="${cls}">${new Date().toLocaleTimeString()} ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog() {
+  const el = document.getElementById('syncLog');
+  el.innerHTML = '';
+  el.classList.remove('show');
+}
+function setProgress(pct) {
+  document.getElementById('progBar').classList.add('show');
+  document.getElementById('progFill').style.width = pct + '%';
+  if (pct >= 100) setTimeout(() => {
+    document.getElementById('progBar').classList.remove('show');
+    document.getElementById('progFill').style.width = '0%';
+  }, 800);
+}
+function requireConn(statusId) {
+  if (!sb) { showSt(statusId||'connStatus','error','먼저 Supabase에 연결하세요.'); return false; }
+  return true;
+}
+
+// ─── 업로드 ──────────────────────────────────────────
+async function pushTodos() {
+  if (!requireConn()) return;
+  clearLog();
+  const raw = JSON.parse(localStorage.getItem('todos_v2') || '[]');
+  if (!raw.length) { log('할 일 데이터가 없습니다.','log-err'); return; }
+  log(`할 일 ${raw.length}건 업로드 시작...`);
+  const rows = raw.map(t => ({
+    id: t.id, title: t.title||'', memo: t.memo||'',
+    priority: t.priority||'medium', due_date: t.dueDate||null,
+    is_completed: !!t.isCompleted, completed_at: t.completedAt||null,
+    tags: t.tags||[], sub_tasks: t.subTasks||[], cat: t.cat||null,
+    created_at: t.createdAt||new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }));
+  const { error } = await sb.from('todos').upsert(rows, { onConflict: 'id' });
+  if (error) { log('오류: ' + error.message,'log-err'); }
+  else { log(`✅ 할 일 ${rows.length}건 업로드 완료`,'log-ok'); }
+  setProgress(100);
+}
+
+async function pushTasks() {
+  if (!requireConn()) return;
+  clearLog();
+  const raw = JSON.parse(localStorage.getItem('gongmu_tasks_v1') || '[]');
+  if (!raw.length) { log('업무 데이터가 없습니다.','log-err'); return; }
+  log(`월간 업무 ${raw.length}건 업로드 시작...`);
+  const rows = raw.map(t => ({
+    id: String(t.id), cat: t.cat||'', title: t.title||'',
+    priority: t.priority||'mid', status: t.status||'wait', due: t.due||null,
+    updated_at: new Date().toISOString()
+  }));
+  const { error } = await sb.from('gongmu_tasks').upsert(rows, { onConflict: 'id' });
+  if (error) { log('오류: ' + error.message,'log-err'); }
+  else { log(`✅ 월간 업무 ${rows.length}건 업로드 완료`,'log-ok'); }
+  setProgress(100);
+}
+
+async function pushContacts() {
+  if (!requireConn()) return;
+  clearLog();
+  const raw = JSON.parse(localStorage.getItem('ab_contacts') || '[]');
+  if (!raw.length) { log('주소록 데이터가 없습니다. CSV를 먼저 로드하세요.','log-err'); return; }
+  log(`주소록 ${raw.length}건 업로드 시작...`);
+
+  // 기존 전체 삭제 후 재삽입 (email 기준 중복 방지)
+  await sb.from('contacts').delete().neq('id', 0);
+
+  const CHUNK = 200;
+  let uploaded = 0;
+  for (let i = 0; i < raw.length; i += CHUNK) {
+    const chunk = raw.slice(i, i+CHUNK).map(c => ({
+      name: c.name||'', email: c.email||'', company: c.company||'',
+      department: c.department||'', title: c.title||'',
+      phone: c.phone||'', mobile: c.mobile||''
+    }));
+    const { error } = await sb.from('contacts').insert(chunk);
+    if (error) { log('오류: ' + error.message,'log-err'); break; }
+    uploaded += chunk.length;
+    setProgress(Math.round(uploaded / raw.length * 100));
+    log(`  ${uploaded}/${raw.length}건 완료...`);
+  }
+  log(`✅ 주소록 업로드 완료 (${uploaded}건)`,'log-ok');
+}
+
+// ─── 다운로드 ─────────────────────────────────────────
+async function pullTodos() {
+  if (!requireConn()) return;
+  clearLog();
+  log('할 일 다운로드 중...');
+  const { data, error } = await sb.from('todos').select('*');
+  if (error) { log('오류: ' + error.message,'log-err'); return; }
+  const todos = (data||[]).map(r => ({
+    id: r.id, title: r.title, memo: r.memo||'',
+    priority: r.priority||'medium', dueDate: r.due_date||'',
+    isCompleted: r.is_completed, completedAt: r.completed_at||'',
+    tags: r.tags||[], subTasks: r.sub_tasks||[], cat: r.cat||'',
+    createdAt: r.created_at
+  }));
+  localStorage.setItem('todos_v2', JSON.stringify(todos));
+  refreshCounts();
+  log(`✅ 할 일 ${todos.length}건 다운로드 완료 (로컬 덮어쓰기)`,'log-ok');
+  setProgress(100);
+}
+
+async function pullTasks() {
+  if (!requireConn()) return;
+  clearLog();
+  log('월간 업무 다운로드 중...');
+  const { data, error } = await sb.from('gongmu_tasks').select('*');
+  if (error) { log('오류: ' + error.message,'log-err'); return; }
+  const tasks = (data||[]).map(r => ({
+    id: r.id, cat: r.cat||'', title: r.title||'',
+    priority: r.priority||'mid', status: r.status||'wait', due: r.due||''
+  }));
+  localStorage.setItem('gongmu_tasks_v1', JSON.stringify(tasks));
+  refreshCounts();
+  log(`✅ 월간 업무 ${tasks.length}건 다운로드 완료 (로컬 덮어쓰기)`,'log-ok');
+  setProgress(100);
+}
+
+async function pullContacts() {
+  if (!requireConn()) return;
+  clearLog();
+  log('주소록 다운로드 중...');
+  const { data, error } = await sb.from('contacts').select('*');
+  if (error) { log('오류: ' + error.message,'log-err'); return; }
+  const contacts = (data||[]).map(r => ({
+    name: r.name, email: r.email, company: r.company||'',
+    department: r.department||'', title: r.title||'',
+    phone: r.phone||'', mobile: r.mobile||''
+  }));
+  localStorage.setItem('ab_contacts', JSON.stringify(contacts));
+  refreshCounts();
+  log(`✅ 주소록 ${contacts.length}건 다운로드 완료 (로컬 덮어쓰기)`,'log-ok');
+  setProgress(100);
+}
+
+// ─── 전체 동기화 ──────────────────────────────────────
+async function pushAll() {
+  if (!requireConn()) return;
+  clearLog();
+  log('=== 전체 업로드 시작 ===');
+  setProgress(10);
+  await pushTodos();  setProgress(40);
+  await pushTasks();  setProgress(70);
+  await pushContacts(); setProgress(100);
+  log('=== 전체 업로드 완료 ===','log-ok');
+}
+
+async function pullAll() {
+  if (!requireConn()) return;
+  if (!confirm('클라우드 데이터로 로컬을 덮어씁니다. 계속하시겠습니까?')) return;
+  clearLog();
+  log('=== 전체 다운로드 시작 ===');
+  setProgress(10);
+  await pullTodos();  setProgress(40);
+  await pullTasks();  setProgress(70);
+  await pullContacts(); setProgress(100);
+  log('=== 전체 다운로드 완료 ===','log-ok');
+}
+
+// ─── 테이블 초기화 ────────────────────────────────────
+async function clearTable(table, label) {
+  if (!requireConn('clearStatus')) return;
+  if (!confirm(`Supabase의 [${label}] 데이터를 전부 삭제할까요?\n로컬 데이터는 영향받지 않습니다.`)) return;
+  showSt('clearStatus','info','삭제 중...');
+  const { error } = await sb.from(table).delete().neq('id', table === 'contacts' ? 0 : '');
+  if (error) showSt('clearStatus','error','오류: ' + error.message);
+  else showSt('clearStatus','success',`✅ [${label}] 클라우드 데이터 삭제 완료`);
+}
+
+// ─── SQL 복사 ─────────────────────────────────────────
+function copySql() {
+  const sql = `-- 1. 할 일(Todo) 테이블
+create table if not exists todos (
+  id          text primary key,
+  title       text,
+  memo        text,
+  priority    text default 'medium',
+  due_date    text,
+  is_completed boolean default false,
+  completed_at timestamptz,
+  tags        jsonb default '[]',
+  sub_tasks   jsonb default '[]',
+  cat         text,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+
+-- 2. 월간 업무 테이블
+create table if not exists gongmu_tasks (
+  id        text primary key,
+  cat       text,
+  title     text,
+  priority  text,
+  status    text default 'wait',
+  due       text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- 3. 주소록 테이블
+create table if not exists contacts (
+  id         bigserial primary key,
+  name       text,
+  email      text,
+  company    text,
+  department text,
+  title      text,
+  phone      text,
+  mobile     text,
+  created_at timestamptz default now()
+);
+
+-- RLS 비활성화 (내부 사용용)
+alter table todos disable row level security;
+alter table gongmu_tasks disable row level security;
+alter table contacts disable row level security;`;
+  navigator.clipboard.writeText(sql).then(() => {
+    const btn = document.querySelector('.sql-copy');
+    btn.textContent = '복사됨 ✓';
+    setTimeout(() => btn.textContent = '복사', 1500);
+  });
+}
+
+// ─── 주소록 파일 로드 (CSV / XLSX 모두 지원) ─────────
+function loadAbFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const statusEl = document.getElementById('abFileStatus');
+  statusEl.textContent = '읽는 중...';
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        const contacts = parseExcelContacts(rows);
+        saveContacts(contacts, statusEl);
+      } catch(err) {
+        statusEl.textContent = '오류: ' + err.message;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      let text;
+      try { text = new TextDecoder('euc-kr').decode(e.target.result); }
+      catch(_) { text = new TextDecoder('utf-8').decode(e.target.result); }
+      const contacts = parseCsvContacts(text);
+      saveContacts(contacts, statusEl);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  input.value = '';
+}
+
+function parseExcelContacts(rows) {
+  return rows.map(r => {
+    const get = (...keys) => {
+      for (const k of keys) {
+        const found = Object.keys(r).find(h => h.includes(k));
+        if (found && r[found]) return String(r[found]).trim();
+      }
+      return '';
+    };
+    const email = get('전자 메일', 'E-mail', 'email', 'Email');
+    if (!email || !email.includes('@')) return null;
+    return {
+      name: get('이름', 'Name', 'name'),
+      email,
+      company: get('회사', 'Company', 'company'),
+      department: get('부서', 'Department', 'department'),
+      title: get('직책', '직함', 'Title', 'Job Title'),
+      phone: get('근무처 전화', '전화', 'Phone', 'Business Phone'),
+      mobile: get('휴대폰', 'Mobile', 'Cell'),
+    };
+  }).filter(Boolean);
+}
+
+function parseCsvContacts(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = parseCsvRow(lines[0].replace(/^﻿/, '')).map(h => h.trim().toLowerCase());
+  const col = (...keys) => { for (const k of keys) { const i = headers.findIndex(h => h.includes(k)); if (i !== -1) return i; } return -1; };
+  const iName  = col('이름','name');
+  const iEmail = col('전자 메일','e-mail','email');
+  const iComp  = col('회사','company');
+  const iDept  = col('부서','department');
+  const iTitle = col('직책','직함','title');
+  const iPhone = col('근무처 전화','phone');
+  const iMob   = col('휴대폰','mobile','cell');
+  return lines.slice(1).map(line => {
+    const c = parseCsvRow(line);
+    const email = iEmail !== -1 ? c[iEmail]?.trim() : '';
+    if (!email || !email.includes('@')) return null;
+    return {
+      name: iName !== -1 ? c[iName]?.trim() : '',
+      email,
+      company: iComp  !== -1 ? c[iComp]?.trim()  : '',
+      department: iDept !== -1 ? c[iDept]?.trim() : '',
+      title: iTitle !== -1 ? c[iTitle]?.trim() : '',
+      phone: iPhone !== -1 ? c[iPhone]?.trim() : '',
+      mobile: iMob  !== -1 ? c[iMob]?.trim()  : '',
+    };
+  }).filter(Boolean);
+}
+
+function parseCsvRow(row) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < row.length; i++) {
+    const c = row[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+function saveContacts(contacts, statusEl) {
+  if (!contacts.length) { statusEl.textContent = '❌ 연락처를 찾을 수 없습니다. 파일을 확인해주세요.'; return; }
+  localStorage.setItem('ab_contacts', JSON.stringify(contacts));
+  refreshCounts();
+  statusEl.style.color = 'var(--green)';
+  statusEl.textContent = `✅ ${contacts.length}명 로드 완료! 이제 ↑ 업로드를 클릭하세요.`;
+}
+
+// ─── 공통 유틸 ───────────────────────────────────────
+function showSt(id, type, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'status-box ' + type;
+  el.textContent = msg;
+}
+</script>
+</body>
+</html>
