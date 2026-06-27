@@ -368,10 +368,15 @@
   <select id="filterGroup" onchange="renderTxns()">
     <option value="all">전체 품목</option>
   </select>
-  <select id="filterPeriod" onchange="renderTxns()">
-    <option value="month">이번 달</option>
+  <select id="filterPeriod" onchange="onPeriodChange()">
+    <option value="recent3">최근 3개월</option>
+    <option value="month" selected>이번 달</option>
+    <option value="lastmonth">지난 달</option>
+    <option value="year">올해</option>
+    <option value="pick">월 선택…</option>
     <option value="all">전체 기간</option>
   </select>
+  <select id="filterMonth" onchange="renderTxns()" style="display:none;"></select>
   <input type="text" id="filterSearch" placeholder="검색 (품명·거래처·비고)" oninput="renderTxns()" style="flex:1; min-width:160px;">
 </div>
 <div class="table-wrap">
@@ -1534,6 +1539,65 @@ function renderItems(){
   });
 }
 
+// 기간 필터: rows를 선택된 기간으로 걸러냄
+function filterByPeriod(rows, period){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth(); // 0-base
+  const ym = `${y}-${String(m+1).padStart(2,'0')}`;
+  if(period==='month'){
+    return rows.filter(t=> (t.date||'').startsWith(ym));
+  }
+  if(period==='lastmonth'){
+    const ld = new Date(y, m-1, 1);
+    const lym = `${ld.getFullYear()}-${String(ld.getMonth()+1).padStart(2,'0')}`;
+    return rows.filter(t=> (t.date||'').startsWith(lym));
+  }
+  if(period==='year'){
+    return rows.filter(t=> (t.date||'').startsWith(`${y}-`));
+  }
+  if(period==='recent3'){
+    const limit = new Date(y, m-2, 1); // 이번 달 포함 최근 3개월 시작
+    return rows.filter(t=>{
+      const td = new Date((t.date||'') + 'T00:00:00');
+      return !isNaN(td) && td >= limit;
+    });
+  }
+  if(period==='pick'){
+    const sel = document.getElementById('filterMonth');
+    const pick = sel ? sel.value : '';
+    return pick ? rows.filter(t=> (t.date||'').startsWith(pick)) : rows;
+  }
+  return rows; // all
+}
+
+// 데이터에 존재하는 연-월 목록을 '월 선택' 드롭다운에 채움
+function fillMonthOptions(){
+  const sel = document.getElementById('filterMonth');
+  if(!sel) return;
+  const months = [...new Set(TXNS.map(t=> (t.date||'').slice(0,7)).filter(s=>s.length===7))];
+  months.sort((a,b)=> b.localeCompare(a)); // 최신순
+  const cur = sel.value;
+  sel.innerHTML = months.map(ym=>{
+    const [yy,mm] = ym.split('-');
+    return `<option value="${ym}">${yy}년 ${parseInt(mm)}월</option>`;
+  }).join('');
+  if(cur && months.includes(cur)) sel.value = cur;
+}
+
+// 기간 드롭다운 변경 핸들러 — '월 선택'일 때만 월 목록 표시
+function onPeriodChange(){
+  const period = document.getElementById('filterPeriod').value;
+  const monthSel = document.getElementById('filterMonth');
+  if(period==='pick'){
+    fillMonthOptions();
+    monthSel.style.display = '';
+  } else {
+    monthSel.style.display = 'none';
+  }
+  renderTxns();
+}
+
 function renderTxns(){
   const body = document.getElementById('txnBody');
   const ftype = document.getElementById('filterType').value;
@@ -1545,11 +1609,7 @@ function renderTxns(){
   let rows = TXNS.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.id>a.id?1:-1));
   if(ftype!=='all') rows = rows.filter(t=>t.type===ftype);
   if(fgroup!=='all') rows = rows.filter(t=> itemOf(t.key) && itemOf(t.key).group===fgroup);
-  if(fperiod==='month'){
-    const d = new Date();
-    const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    rows = rows.filter(t=> (t.date||'').startsWith(ym));
-  }
+  rows = filterByPeriod(rows, fperiod);
   if(fsearch){
     rows = rows.filter(t=>{
       const it = itemOf(t.key);
@@ -1558,7 +1618,11 @@ function renderTxns(){
     });
   }
 
-  document.getElementById('txnCount').textContent = `(${rows.length}건)`;
+  // 건수 + 입고/출고 합계 요약
+  const sumIn  = rows.filter(t=>t.type==='in').reduce((s,t)=>s+(Number(t.qty)||0),0);
+  const sumOut = rows.filter(t=>t.type==='out').reduce((s,t)=>s+(Number(t.qty)||0),0);
+  document.getElementById('txnCount').innerHTML =
+    `(${rows.length}건) <span style="color:var(--blue);">입고 ${numFmt(sumIn)}</span> · <span style="color:var(--green);">출고 ${numFmt(sumOut)}</span>`;
 
   if(!rows.length){
     body.innerHTML = '<tr><td colspan="12" class="empty">해당 조건의 입출고 내역이 없습니다.</td></tr>';
