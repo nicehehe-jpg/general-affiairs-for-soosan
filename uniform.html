@@ -2151,9 +2151,7 @@ function renderAll(){
           </tbody>
         </table>
       </div>`;
-    const firstTable = document.querySelector("table");
-    if (firstTable) firstTable.parentNode.insertBefore(container, firstTable);
-    else document.body.prepend(container);
+    document.body.appendChild(container);
   }
 
   const STATUS_MAP = {
@@ -2211,8 +2209,7 @@ function renderAll(){
 
   document.addEventListener("DOMContentLoaded", () => {
     injectUI();
-    window.loadSlackRequests();
-    setInterval(window.loadSlackRequests, 120000);  // 2분마다 갱신 (성능 개선)
+    // 자동 로드 제거 — 버튼 클릭 시에만 조회 (성능)
   });
 })();
 </script>
