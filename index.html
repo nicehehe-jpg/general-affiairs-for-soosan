@@ -844,6 +844,9 @@
 <!-- 플로팅 메일 버튼 -->
 <button class="mail-fab" onclick="openDashMailModal()" title="메일 보내기">✉️</button>
 
+<!-- Team Chat 버튼 -->
+<button class="teamchat-fab" onclick="window.open('https://team-chat-gray.vercel.app','_blank')" title="Team Chat">💬</button>
+
 <!-- AI 채팅 버튼 -->
 <button class="ai-fab" onclick="toggleAiChat()" title="AI 어시스턴트">🤖</button>
 
@@ -863,6 +866,17 @@
 </div>
 
 <style>
+.teamchat-fab{
+  position:fixed; bottom:168px; right:32px; z-index:150;
+  width:58px; height:58px; border-radius:50%;
+  background:linear-gradient(135deg,#3182F6,#00b894);
+  border:none; cursor:pointer; font-size:26px;
+  box-shadow:0 4px 18px rgba(49,130,246,.45);
+  transition:transform .18s, box-shadow .18s;
+  display:flex; align-items:center; justify-content:center;
+}
+.teamchat-fab:hover{transform:scale(1.12); box-shadow:0 10px 28px rgba(49,130,246,.55);}
+
 .ai-fab{
   position:fixed; bottom:100px; right:32px; z-index:150;
   width:58px; height:58px; border-radius:50%;
