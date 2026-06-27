@@ -2101,5 +2101,107 @@ function renderAll(){
   sbInit();
 })();
 </script>
+<script>
+// =====================================================
+// 슬랙 피복신청 연동 패치 (Supabase uniform_requests)
+// =====================================================
+(function () {
+  const SUPABASE_URL = "https://vvyqldyljajlmtydtqdf.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc";
+
+  function injectUI() {
+    const container = document.createElement("div");
+    container.id = "slack-requests-panel";
+    container.style.cssText = "margin:16px 8px;background:#fff;border:1px solid #ddd;border-radius:8px;overflow:hidden;font-family:inherit;";
+    container.innerHTML = `
+      <div style="background:#4A154B;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">💬</span>
+        <strong style="font-size:15px;">슬랙 피복신청</strong>
+        <span id="slack-badge" style="background:#E01E5A;color:#fff;border-radius:12px;padding:1px 8px;font-size:12px;margin-left:auto;display:none;"></span>
+        <button onclick="loadSlackRequests()" style="margin-left:8px;background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:13px;">↻ 새로고침</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f8f8f8;border-bottom:2px solid #eee;">
+              <th style="padding:8px 12px;text-align:left;">접수일</th>
+              <th style="padding:8px 12px;text-align:left;">신청자</th>
+              <th style="padding:8px 12px;text-align:left;">품목</th>
+              <th style="padding:8px 12px;text-align:left;">사이즈</th>
+              <th style="padding:8px 12px;text-align:left;">수량</th>
+              <th style="padding:8px 12px;text-align:left;">상태</th>
+              <th style="padding:8px 12px;text-align:left;">처리</th>
+            </tr>
+          </thead>
+          <tbody id="slack-requests-body">
+            <tr><td colspan="7" style="padding:20px;text-align:center;color:#999;">로딩 중...</td></tr>
+          </tbody>
+        </table>
+      </div>`;
+    const firstTable = document.querySelector("table");
+    if (firstTable) firstTable.parentNode.insertBefore(container, firstTable);
+    else document.body.prepend(container);
+  }
+
+  const STATUS_MAP = {
+    pending:  {label:"⏳ 접수중", bg:"#FFF3CD", color:"#856404"},
+    approved: {label:"✅ 승인",   bg:"#D4EDDA", color:"#155724"},
+    rejected: {label:"❌ 반려",   bg:"#F8D7DA", color:"#721C24"},
+  };
+
+  window.loadSlackRequests = async function () {
+    const tbody = document.getElementById("slack-requests-body");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#999;">불러오는 중...</td></tr>';
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/uniform_requests?source=eq.slack&order=created_at.desc&limit=50`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const rows = await res.json();
+      const pending = rows.filter(r => r.status === "pending");
+      const badge = document.getElementById("slack-badge");
+      if (badge) { badge.textContent = pending.length + "건 대기"; badge.style.display = pending.length ? "inline" : "none"; }
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#999;">슬랙에서 접수된 신청이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => {
+        const s = STATUS_MAP[r.status] || STATUS_MAP.pending;
+        return `<tr style="border-bottom:1px solid #f0f0f0;">
+          <td style="padding:8px 12px;">${(r.date||r.created_at||"").slice(0,10)}</td>
+          <td style="padding:8px 12px;">${r.party||"-"}</td>
+          <td style="padding:8px 12px;">${r.item_key||"-"}</td>
+          <td style="padding:8px 12px;">${r.size||"-"}</td>
+          <td style="padding:8px 12px;">${r.qty||1}</td>
+          <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:4px;font-size:12px;">${s.label}</span></td>
+          <td style="padding:8px 12px;">${r.status==="pending"
+            ? `<button onclick="updateSlackStatus(${r.id},'approved')" style="background:#28a745;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;margin-right:4px;">승인</button><button onclick="updateSlackStatus(${r.id},'rejected')" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;">반려</button>`
+            : "-"}</td>
+        </tr>`;
+      }).join("");
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:red;">오류: ${e.message}</td></tr>`;
+    }
+  };
+
+  window.updateSlackStatus = async function (id, status) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/uniform_requests?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ status })
+    });
+    if (res.ok) window.loadSlackRequests();
+    else alert("처리 실패: " + res.status);
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    injectUI();
+    window.loadSlackRequests();
+    setInterval(window.loadSlackRequests, 30000);
+  });
+})();
+</script>
 </body>
 </html>
