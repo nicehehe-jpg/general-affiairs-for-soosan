@@ -2252,6 +2252,8 @@ function renderAll(){
       // 행 데이터 캐시 저장
       window._slackRowCache = {};
       rows.forEach(r => { window._slackRowCache[r.id] = r; });
+      // 자동 복구: 승인됐는데 출고에 누락된 건 일괄 반영
+      window.backfillApprovedSlack(rows);
       const pending = rows.filter(r => r.status === "pending");
       const badge = document.getElementById("slack-badge");
       if (badge) { badge.textContent = pending.length + "건 대기"; badge.style.display = pending.length ? "inline" : "none"; }
@@ -2286,34 +2288,53 @@ function renderAll(){
     });
     if (!res.ok) { alert("처리 실패: " + res.status); return; }
 
-    // 승인 시 출고 내역에 자동 추가 (전역 TXNS 변수 직접 수정)
+    // 승인 시 출고 내역에 자동 추가 (클라우드까지 저장)
     const rowData = window._slackRowCache[id];
     if (status === "approved" && rowData) {
-      try {
-        const lastNum = TXNS.reduce((max, t) => {
-          const n = parseInt((t.id || "r0").replace(/\D/g, "")) || 0;
-          return n > max ? n : max;
-        }, 0);
-        const newId = "s" + String(lastNum + 1).padStart(4, "0"); // s prefix = slack
-        const newTxn = {
-          id: newId,
-          date: rowData.date || new Date().toISOString().split("T")[0],
-          key: rowData.item_key,
-          size: String(rowData.size),
-          type: "out",
-          qty: Number(rowData.qty),
-          price: 0,
-          maker: "",
-          party: rowData.party || "",
-          note: "슬랙 피복신청 승인"
-        };
-        TXNS.push(newTxn);
-        try { localStorage.setItem(TXN_KEY, JSON.stringify(TXNS)); } catch(e) {}
+      if (ensureSlackTxn(rowData)) {
+        saveTxns();  // localStorage + Supabase 클라우드 동기화 (핵심)
         if (typeof renderAll === "function") renderAll();
-      } catch(e) { console.error("출고 추가 실패:", e); }
+      }
     }
 
     window.loadSlackRequests();
+  };
+
+  // 슬랙 승인 건을 출고(TXNS)에 반영 — slackId 꼬리표로 중복 방지
+  // 이미 반영돼 있으면 false, 새로 추가했으면 true 반환
+  function ensureSlackTxn(rowData) {
+    try {
+      if (TXNS.some(t => t.slackId === rowData.id)) return false; // 이미 반영됨
+      const lastNum = TXNS.reduce((max, t) => {
+        const n = parseInt((t.id || "r0").replace(/\D/g, "")) || 0;
+        return n > max ? n : max;
+      }, 0);
+      const newTxn = {
+        id: "s" + String(lastNum + 1).padStart(4, "0"),
+        slackId: rowData.id,  // 슬랙 신청 ID (중복 방지 키)
+        date: rowData.date || new Date().toISOString().split("T")[0],
+        key: rowData.item_key,
+        size: String(rowData.size),
+        type: "out",
+        qty: Number(rowData.qty),
+        price: 0,
+        maker: "",
+        party: rowData.party || "",
+        note: "슬랙 피복신청 승인"
+      };
+      TXNS.push(newTxn);
+      return true;
+    } catch(e) { console.error("출고 추가 실패:", e); return false; }
+  }
+
+  // 자동 복구: 승인됐는데 아직 출고에 없는 슬랙 신청을 일괄 반영
+  window.backfillApprovedSlack = function (rows) {
+    let added = 0;
+    rows.filter(r => r.status === "approved").forEach(r => {
+      if (ensureSlackTxn(r)) added++;
+    });
+    if (added > 0) { saveTxns(); if (typeof renderAll === "function") renderAll(); }
+    return added;
   };
 
   document.addEventListener("DOMContentLoaded", () => {
