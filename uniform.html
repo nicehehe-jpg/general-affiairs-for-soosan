@@ -2188,7 +2188,7 @@ function renderAll(){
           <td style="padding:8px 12px;">${r.qty||1}</td>
           <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:4px;font-size:12px;">${s.label}</span></td>
           <td style="padding:8px 12px;">${r.status==="pending"
-            ? `<button onclick="updateSlackStatus(${r.id},'approved')" style="background:#28a745;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;margin-right:4px;">승인</button><button onclick="updateSlackStatus(${r.id},'rejected')" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;">반려</button>`
+            ? `<button onclick="updateSlackStatus(${r.id},'approved',${JSON.stringify(r).replace(/"/g,'&quot;')})" style="background:#28a745;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;margin-right:4px;">승인</button><button onclick="updateSlackStatus(${r.id},'rejected',null)" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;">반려</button>`
             : "-"}</td>
         </tr>`;
       }).join("");
@@ -2197,14 +2197,43 @@ function renderAll(){
     }
   };
 
-  window.updateSlackStatus = async function (id, status) {
+  window.updateSlackStatus = async function (id, status, rowData) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/uniform_requests?id=eq.${id}`, {
       method: "PATCH",
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify({ status })
     });
-    if (res.ok) window.loadSlackRequests();
-    else alert("처리 실패: " + res.status);
+    if (!res.ok) { alert("처리 실패: " + res.status); return; }
+
+    // 승인 시 localStorage 출고 내역에 자동 추가
+    if (status === "approved" && rowData) {
+      try {
+        const txns = JSON.parse(localStorage.getItem("stock_txns") || "[]");
+        const lastNum = txns.reduce((max, t) => {
+          const n = parseInt((t.id || "r0").replace("r", "")) || 0;
+          return n > max ? n : max;
+        }, 0);
+        const newId = "r" + String(lastNum + 1).padStart(4, "0");
+        txns.push({
+          id: newId,
+          date: rowData.date || new Date().toISOString().split("T")[0],
+          key: rowData.item_key,
+          size: String(rowData.size),
+          type: "out",
+          qty: Number(rowData.qty),
+          price: 0,
+          maker: "",
+          party: rowData.party || "",
+          note: "슬랙 피복신청 승인"
+        });
+        localStorage.setItem("stock_txns", JSON.stringify(txns));
+        // 메인 렌더 함수 호출 (uniform.html 전역 함수)
+        if (typeof renderAll === "function") renderAll();
+        else if (typeof renderTxns === "function") { renderTxns(); renderStock(); }
+      } catch(e) { console.error("출고 추가 실패:", e); }
+    }
+
+    window.loadSlackRequests();
   };
 
   document.addEventListener("DOMContentLoaded", () => {
