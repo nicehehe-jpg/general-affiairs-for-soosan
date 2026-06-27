@@ -368,6 +368,10 @@
   <select id="filterGroup" onchange="renderTxns()">
     <option value="all">전체 품목</option>
   </select>
+  <select id="filterPeriod" onchange="renderTxns()">
+    <option value="month">이번 달</option>
+    <option value="all">전체 기간</option>
+  </select>
   <input type="text" id="filterSearch" placeholder="검색 (품명·거래처·비고)" oninput="renderTxns()" style="flex:1; min-width:160px;">
 </div>
 <div class="table-wrap">
@@ -1534,11 +1538,18 @@ function renderTxns(){
   const body = document.getElementById('txnBody');
   const ftype = document.getElementById('filterType').value;
   const fgroup = document.getElementById('filterGroup').value;
+  const fperiodEl = document.getElementById('filterPeriod');
+  const fperiod = fperiodEl ? fperiodEl.value : 'all';
   const fsearch = (document.getElementById('filterSearch').value||'').trim().toLowerCase();
 
   let rows = TXNS.slice().sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.id>a.id?1:-1));
   if(ftype!=='all') rows = rows.filter(t=>t.type===ftype);
   if(fgroup!=='all') rows = rows.filter(t=> itemOf(t.key) && itemOf(t.key).group===fgroup);
+  if(fperiod==='month'){
+    const d = new Date();
+    const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    rows = rows.filter(t=> (t.date||'').startsWith(ym));
+  }
   if(fsearch){
     rows = rows.filter(t=>{
       const it = itemOf(t.key);
