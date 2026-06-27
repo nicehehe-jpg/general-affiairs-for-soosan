@@ -2109,6 +2109,19 @@ function renderAll(){
   const SUPABASE_URL = "https://vvyqldyljajlmtydtqdf.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc";
 
+  // 품목 키 → 한글 이름 매핑
+  const ITEM_NAMES = {
+    sweat_long:    "땀흡수복 긴팔티",
+    sweat_short:   "땀흡수복 반팔티",
+    winter_top:    "동복 상의",
+    winter_bottom: "동복 하의",
+    spring_top:    "춘추복 상의",
+    spring_bottom: "춘추복 하의",
+    summer_top:    "하복 상의",
+    summer_bottom: "하복 하의",
+    vest:          "조끼",
+  };
+
   function injectUI() {
     const container = document.createElement("div");
     container.id = "slack-requests-panel";
@@ -2172,7 +2185,7 @@ function renderAll(){
         return `<tr style="border-bottom:1px solid #f0f0f0;">
           <td style="padding:8px 12px;">${(r.date||r.created_at||"").slice(0,10)}</td>
           <td style="padding:8px 12px;">${r.party||"-"}</td>
-          <td style="padding:8px 12px;">${r.item_key||"-"}</td>
+          <td style="padding:8px 12px;">${ITEM_NAMES[r.item_key] || r.item_key || "-"}</td>
           <td style="padding:8px 12px;">${r.size||"-"}</td>
           <td style="padding:8px 12px;">${r.qty||1}</td>
           <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:4px;font-size:12px;">${s.label}</span></td>
@@ -2199,7 +2212,7 @@ function renderAll(){
   document.addEventListener("DOMContentLoaded", () => {
     injectUI();
     window.loadSlackRequests();
-    setInterval(window.loadSlackRequests, 30000);
+    setInterval(window.loadSlackRequests, 120000);  // 2분마다 갱신 (성능 개선)
   });
 })();
 </script>
