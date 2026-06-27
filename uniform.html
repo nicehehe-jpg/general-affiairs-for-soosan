@@ -2160,6 +2160,9 @@ function renderAll(){
     rejected: {label:"❌ 반려",   bg:"#F8D7DA", color:"#721C24"},
   };
 
+  // 행 데이터를 ID로 조회할 수 있도록 메모리에 캐시
+  window._slackRowCache = {};
+
   window.loadSlackRequests = async function () {
     const tbody = document.getElementById("slack-requests-body");
     if (!tbody) return;
@@ -2171,6 +2174,9 @@ function renderAll(){
       );
       if (!res.ok) throw new Error("HTTP " + res.status);
       const rows = await res.json();
+      // 행 데이터 캐시 저장
+      window._slackRowCache = {};
+      rows.forEach(r => { window._slackRowCache[r.id] = r; });
       const pending = rows.filter(r => r.status === "pending");
       const badge = document.getElementById("slack-badge");
       if (badge) { badge.textContent = pending.length + "건 대기"; badge.style.display = pending.length ? "inline" : "none"; }
@@ -2188,7 +2194,7 @@ function renderAll(){
           <td style="padding:8px 12px;">${r.qty||1}</td>
           <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:4px;font-size:12px;">${s.label}</span></td>
           <td style="padding:8px 12px;">${r.status==="pending"
-            ? `<button onclick="updateSlackStatus(${r.id},'approved',${JSON.stringify(r).replace(/"/g,'&quot;')})" style="background:#28a745;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;margin-right:4px;">승인</button><button onclick="updateSlackStatus(${r.id},'rejected',null)" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;">반려</button>`
+            ? `<button onclick="updateSlackStatus(${r.id},'approved')" style="background:#28a745;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;margin-right:4px;">승인</button><button onclick="updateSlackStatus(${r.id},'rejected')" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;">반려</button>`
             : "-"}</td>
         </tr>`;
       }).join("");
@@ -2197,7 +2203,7 @@ function renderAll(){
     }
   };
 
-  window.updateSlackStatus = async function (id, status, rowData) {
+  window.updateSlackStatus = async function (id, status) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/uniform_requests?id=eq.${id}`, {
       method: "PATCH",
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
@@ -2206,6 +2212,7 @@ function renderAll(){
     if (!res.ok) { alert("처리 실패: " + res.status); return; }
 
     // 승인 시 localStorage 출고 내역에 자동 추가
+    const rowData = window._slackRowCache[id];
     if (status === "approved" && rowData) {
       try {
         const txns = JSON.parse(localStorage.getItem("stock_txns") || "[]");
