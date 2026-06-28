@@ -1622,9 +1622,10 @@ async function generateOrderExcel() {
   const won2 = n => '₩' + (Number(n)||0).toLocaleString('ko-KR');
 
   const PST = {
-    pending:   { label:'⏳ 미처리', bg:'var(--bg)',        color:'var(--t3)' },
-    converted: { label:'✅ 전환됨', bg:'var(--green-bg)',  color:'var(--green)' },
-    rejected:  { label:'✖ 반려',   bg:'var(--red-bg)',    color:'var(--red)' },
+    pending:   { label:'⏳ 미처리',       bg:'var(--bg)',        color:'var(--t3)' },
+    approved:  { label:'✅ 승인(전환대기)', bg:'var(--blue-bg)',  color:'var(--blue)' },
+    converted: { label:'✅ 전환됨',        bg:'var(--green-bg)',  color:'var(--green)' },
+    rejected:  { label:'✖ 반려',          bg:'var(--red-bg)',    color:'var(--red)' },
   };
 
   function injectUI(){
@@ -1710,8 +1711,11 @@ async function generateOrderExcel() {
       }
       tbody.innerHTML = rows.map(r=>{
         const converted = r.status==='converted' || alreadyConverted(r.id);
-        const stKey = r.status==='rejected' ? 'rejected' : (converted ? 'converted' : 'pending');
-        const s = PST[stKey];
+        const stKey = r.status==='rejected' ? 'rejected'
+                    : converted ? 'converted'
+                    : r.status==='approved' ? 'approved'
+                    : 'pending';
+        const s = PST[stKey] || PST.pending;
         const done = converted || r.status==='rejected';
         return `<tr style="border-top:1px solid var(--line);">
           <td style="padding:8px 12px;">${(r.created_at||'').slice(0,10)}</td>
@@ -1724,7 +1728,7 @@ async function generateOrderExcel() {
           <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;">${s.label}</span></td>
           <td style="padding:8px 12px; white-space:nowrap;">${done ? '-' :
             `<button class="btn green sm" style="padding:4px 9px;" onclick="window.convertPurchaseReq(${r.id})">정식 전환</button>
-             <button class="btn line sm" style="padding:4px 9px;" onclick="window.rejectPurchaseReq(${r.id})">반려</button>`}</td>
+             ${stKey==='pending' ? `<button class="btn line sm" style="padding:4px 9px;" onclick="window.rejectPurchaseReq(${r.id})">반려</button>` : ''}`}</td>
         </tr>`;
       }).join("");
     }catch(e){
