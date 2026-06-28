@@ -643,5 +643,144 @@ async function sbInit(){
 }
 (function init(){ document.getElementById('monthPick').value=selMonth; renderAll(); sbInit(); })();
 </script>
+
+<script>
+// =====================================================
+// 슬랙 휴양시설 신청 연동 패치 (Supabase resort_requests)
+// =====================================================
+(function(){
+  const RST_URL = (typeof SB_URL!=='undefined') ? SB_URL : 'https://vvyqldyljajlmtydtqdf.supabase.co';
+  const RST_KEY = SB_KEY; // 상위 스크립트의 anon 키 (resort_requests만 접근, 명부는 접근 불가)
+  const H = { apikey:RST_KEY, Authorization:'Bearer '+RST_KEY, 'Content-Type':'application/json' };
+
+  const MATCH = {
+    matched:   { label:'✅ 명부확인', bg:'var(--green-bg)', color:'var(--green)' },
+    ambiguous: { label:'⚠️ 동명이인', bg:'var(--orange-bg)', color:'var(--orange)' },
+    unmatched: { label:'⚠️ 명부없음', bg:'var(--red-bg)', color:'var(--red)' },
+  };
+  const ST = {
+    pending:  { label:'⏳ 미반영', bg:'var(--bg)', color:'var(--t3)' },
+    imported: { label:'✅ 반영됨', bg:'var(--green-bg)', color:'var(--green)' },
+  };
+
+  function injectUI(){
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-top:34px;';
+    wrap.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <h2 style="font-size:18px; font-weight:800; margin:0;">💬 슬랙 휴양시설 신청</h2>
+        <span id="resort-badge" style="display:none; background:var(--purple); color:#fff; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;"></span>
+        <div style="flex:1;"></div>
+        <button class="btn line sm" onclick="window.loadResortRequests()">↻ 새로고침</button>
+        <button class="btn green sm" onclick="window.importAllResort()">⬇ 전체 반영</button>
+      </div>
+      <div class="table-wrap" style="background:var(--card); border-radius:16px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.03);">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead><tr style="background:var(--bg); color:var(--t3); text-align:left;">
+            <th style="padding:9px 12px;">접수일</th><th style="padding:9px 12px;">신청자</th>
+            <th style="padding:9px 12px;">부서</th><th style="padding:9px 12px;">시설</th>
+            <th style="padding:9px 12px;">체크인</th><th style="padding:9px 12px;">박</th>
+            <th style="padding:9px 12px;">명부</th><th style="padding:9px 12px;">상태</th>
+            <th style="padding:9px 12px;">처리</th>
+          </tr></thead>
+          <tbody id="resort-tbody"><tr><td colspan="9" style="padding:18px;text-align:center;color:var(--t3);">새로고침을 눌러 슬랙 신청을 불러오세요.</td></tr></tbody>
+        </table>
+      </div>`;
+    document.body.appendChild(wrap);
+  }
+
+  // 이미 APPS에 반영됐는지 (slackId 꼬리표)
+  function alreadyImported(reqId){ return APPS.some(a => a.slackId === reqId); }
+
+  // 슬랙 신청 1건을 휴양 신청 목록(APPS)에 반영
+  function importOne(r){
+    if(alreadyImported(r.id)) return false;
+    APPS.push({
+      id: 'slack'+r.id,
+      slackId: r.id,
+      facility: r.facility,
+      useMonth: r.use_month || (r.check_in||'').slice(0,7),
+      name: r.name,
+      empNo: '',
+      position: r.position || '',
+      dept: r.dept || '',
+      contact: r.contact || '',
+      hireDate: r.hire_date || '',
+      checkIn: r.check_in || '',
+      nights: r.nights || 1,
+      note: r.note || '',
+      manual: null,
+    });
+    return true;
+  }
+
+  async function markImported(id){
+    await fetch(`${RST_URL}/rest/v1/resort_requests?id=eq.${id}`, {
+      method:'PATCH', headers:{...H, Prefer:'return=minimal'}, body:JSON.stringify({ status:'imported' })
+    });
+  }
+
+  window.importResortReq = async function(id){
+    const r = (window._resortCache||{})[id];
+    if(!r){ alert('데이터를 찾을 수 없습니다. 새로고침 후 다시 시도하세요.'); return; }
+    if(importOne(r)){ saveApps(); if(typeof renderAll==='function') renderAll(); }
+    await markImported(id);
+    window.loadResortRequests();
+  };
+
+  window.importAllResort = async function(){
+    const rows = Object.values(window._resortCache||{});
+    let n=0;
+    for(const r of rows){ if(r.status!=='imported' && importOne(r)){ n++; await markImported(r.id); } }
+    if(n>0){ saveApps(); if(typeof renderAll==='function') renderAll(); }
+    window.loadResortRequests();
+    if(n>0) alert(`${n}건을 신청 목록에 반영했습니다.`);
+  };
+
+  window.loadResortRequests = async function(){
+    const tbody = document.getElementById('resort-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--t3);">불러오는 중…</td></tr>';
+    try{
+      const res = await fetch(`${RST_URL}/rest/v1/resort_requests?source=eq.slack&order=created_at.desc&limit=80`, { headers:H });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const rows = await res.json();
+      window._resortCache = {};
+      rows.forEach(r=>{ window._resortCache[r.id]=r; });
+      const pending = rows.filter(r=> r.status!=='imported' && !alreadyImported(r.id));
+      const badge = document.getElementById('resort-badge');
+      if(badge){ badge.textContent = pending.length+'건 미반영'; badge.style.display = pending.length?'inline':'none'; }
+      if(!rows.length){
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--t3);">슬랙에서 접수된 신청이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r=>{
+        const imported = r.status==='imported' || alreadyImported(r.id);
+        const m = MATCH[r.match_status] || MATCH.unmatched;
+        const s = imported ? ST.imported : ST.pending;
+        const facName = r.facility==='birch'?'⛷️ 버치힐':(r.facility==='kimila'?'🏖️ 키밀라':r.facility||'-');
+        return `<tr style="border-top:1px solid var(--line);">
+          <td style="padding:8px 12px;">${(r.created_at||'').slice(0,10)}</td>
+          <td style="padding:8px 12px; font-weight:700;">${r.name||'-'}</td>
+          <td style="padding:8px 12px; color:var(--t2);">${r.dept||'-'}</td>
+          <td style="padding:8px 12px;">${facName}</td>
+          <td style="padding:8px 12px;">${r.check_in||'-'}</td>
+          <td style="padding:8px 12px;">${r.nights||1}</td>
+          <td style="padding:8px 12px;"><span style="background:${m.bg};color:${m.color};padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;" title="${r.hire_date?('입사일 '+r.hire_date):'입사일 미확인 — 신청 목록에서 직접 입력 필요'}">${m.label}</span></td>
+          <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;">${s.label}</span></td>
+          <td style="padding:8px 12px;">${imported ? '-' :
+            `<button class="mini on" onclick="window.importResortReq(${r.id})">반영</button>`}</td>
+        </tr>`;
+      }).join('');
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--red);">오류: ${e.message}</td></tr>`;
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', injectUI);
+  // DOMContentLoaded가 이미 지났으면 즉시 주입
+  if(document.readyState!=='loading') injectUI();
+})();
+</script>
 </body>
 </html>
