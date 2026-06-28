@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회사 규정 안내 | 수산이앤에스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#F2F4F6; --card:#fff; --t1:#191F28; --t2:#4E5968; --t3:#8B95A1;
+    --blue:#3182F6; --blue-bg:#EBF2FF; --green:#1DB67F; --green-bg:#E6F9F0;
+    --orange:#FF9800; --orange-bg:#FFF4E5; --line:#E5E8EB; --purple:#6C5CE7; --purple-bg:#F0EEFF;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0 auto; max-width:860px; background:var(--bg); color:var(--t1);
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; padding:28px 32px 80px;}
+  .back-link{display:inline-flex; gap:6px; font-size:13px; color:var(--t3); text-decoration:none; font-weight:600; margin-bottom:14px;}
+  .back-link:hover{color:var(--blue);}
+  h1{font-size:24px; font-weight:800; margin:0 0 4px;}
+  .page-sub{font-size:13.5px; color:var(--t2); margin:0 0 22px;}
+  .search{width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:12px; font-size:14px; font-family:inherit; background:var(--card); margin-bottom:18px;}
+  .search:focus{outline:none; border-color:var(--blue);}
+  .cat{font-size:13px; font-weight:800; color:var(--purple); background:var(--purple-bg); display:inline-block; padding:3px 11px; border-radius:20px; margin:18px 0 10px;}
+  .rule{background:var(--card); border-radius:14px; padding:16px 18px; box-shadow:0 1px 2px rgba(0,0,0,.03); margin-bottom:10px;}
+  .rule h3{font-size:15px; font-weight:800; margin:0 0 6px;}
+  .rule p{font-size:13.5px; color:var(--t2); line-height:1.7; margin:0; white-space:pre-wrap;}
+  .notice{background:var(--card); border:1px dashed var(--line); border-radius:16px; padding:30px; text-align:center; color:var(--t3);}
+  .notice b{color:var(--t2);}
+</style>
+</head>
+<body>
+  <a href="onboarding.html" class="back-link">‹ 신규입사 온보딩</a>
+  <h1>📋 회사 규정 안내</h1>
+  <p class="page-sub">신입사원이 알아야 할 회사 규정입니다 · 수산이앤에스</p>
+
+  <input class="search" id="q" placeholder="🔍 규정 검색 (예: 휴가, 근태, 복리후생)" oninput="render()">
+  <div id="list"><div class="notice">불러오는 중…</div></div>
+
+<script>
+const SB_URL='https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY};
+const esc=s=>(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+let ROWS=[];
+
+async function load(){
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/company_rules?order=ord.asc&limit=500`,{headers:H});
+    ROWS=r.ok?await r.json():[];
+  }catch(e){ ROWS=[]; }
+  render();
+}
+function render(){
+  const el=document.getElementById('list');
+  if(!ROWS.length){
+    el.innerHTML='<div class="notice">📄 <b>아직 등록된 회사 규정이 없습니다.</b><br><br>총무팀에서 규정 PDF를 등록하면<br>여기와 슬랙 <code>/규정</code> 명령어에서 바로 확인할 수 있습니다.</div>';
+    return;
+  }
+  const q=(document.getElementById('q').value||'').trim().toLowerCase();
+  let rows=ROWS;
+  if(q) rows=rows.filter(r=>`${r.category||''} ${r.title||''} ${r.content||''}`.toLowerCase().includes(q));
+  if(!rows.length){ el.innerHTML='<div class="notice">검색 결과가 없습니다.</div>'; return; }
+  let html='', lastCat=null;
+  rows.forEach(r=>{
+    if(r.category && r.category!==lastCat){ html+=`<div class="cat">${esc(r.category)}</div>`; lastCat=r.category; }
+    html+=`<div class="rule"><h3>${esc(r.title||'')}</h3><p>${esc(r.content||'')}</p></div>`;
+  });
+  el.innerHTML=html;
+}
+load();
+</script>
+</body>
+</html>
