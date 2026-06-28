@@ -1609,10 +1609,132 @@ async function generateOrderExcel() {
   };
   reader.readAsArrayBuffer(_orderExcelFile);
 }
+</script>
 
+<script>
+// =====================================================
+// 슬랙 구매신청 연동 패치 (Supabase purchase_requests)
+// =====================================================
+(function(){
+  const PR_URL = (typeof SB_URL!=='undefined') ? SB_URL : 'https://vvyqldyljajlmtydtqdf.supabase.co';
+  const PR_KEY = SB_KEY;
+  const HH = { apikey:PR_KEY, Authorization:'Bearer '+PR_KEY, 'Content-Type':'application/json' };
+  const won2 = n => '₩' + (Number(n)||0).toLocaleString('ko-KR');
 
+  const PST = {
+    pending:   { label:'⏳ 미처리', bg:'var(--bg)',        color:'var(--t3)' },
+    converted: { label:'✅ 전환됨', bg:'var(--green-bg)',  color:'var(--green)' },
+    rejected:  { label:'✖ 반려',   bg:'var(--red-bg)',    color:'var(--red)' },
+  };
 
+  function injectUI(){
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'max-width:1180px; margin:34px auto 0; padding:0 0 40px;';
+    wrap.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+        <h2 style="font-size:18px; font-weight:800; margin:0;">💬 슬랙 구매 신청</h2>
+        <span id="pr-badge" style="display:none; background:var(--purple,#6C5CE7); color:#fff; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px;"></span>
+        <div style="flex:1;"></div>
+        <button class="btn line sm" onclick="window.loadPurchaseRequests()">↻ 새로고침</button>
+      </div>
+      <div style="background:var(--card); border-radius:16px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.03);">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead><tr style="background:var(--bg); color:var(--t3); text-align:left;">
+            <th style="padding:9px 12px;">접수일</th><th style="padding:9px 12px;">신청자</th>
+            <th style="padding:9px 12px;">부서</th><th style="padding:9px 12px;">품목</th>
+            <th style="padding:9px 12px;">수량</th><th style="padding:9px 12px;">예상금액</th>
+            <th style="padding:9px 12px;">희망납기</th><th style="padding:9px 12px;">상태</th>
+            <th style="padding:9px 12px;">처리</th>
+          </tr></thead>
+          <tbody id="pr-tbody"><tr><td colspan="9" style="padding:18px;text-align:center;color:var(--t3);">새로고침을 눌러 슬랙 구매신청을 불러오세요.</td></tr></tbody>
+        </table>
+      </div>`;
+    document.body.appendChild(wrap);
+  }
 
+  function alreadyConverted(reqId){ return CASES.some(c => c.slackReqId === reqId); }
+
+  // 슬랙 구매요청 → 정식 구매건(CASE)으로 전환
+  window.convertPurchaseReq = async function(id){
+    const r = (window._prCache||{})[id];
+    if(!r){ alert('데이터를 찾을 수 없습니다. 새로고침 후 다시 시도하세요.'); return; }
+    if(alreadyConverted(r.id)){ alert('이미 전환된 신청입니다.'); return; }
+    const newCase = {
+      id: 'slack'+r.id,
+      slackReqId: r.id,
+      type: 'purchase',
+      name: r.item + (r.qty?` (${r.qty}개)`:''),
+      vendor: '', bizNo: '', vendorEmail: '',
+      payTermType: '30d', payTermEtc: '',
+      dept: r.dept || '',
+      manager: r.name || '',
+      costCenter: r.dept || '',
+      supply: Number(r.est_amount)||0,
+      vat: 0,
+      contractDate: new Date().toISOString().slice(0,10),
+      dueDate: r.due_date || '',
+      note: `[슬랙 구매신청] ${r.reason||''}`.trim(),
+      stages: { approval:'todo', contract:'todo', advanceBond:'na', performBond:'na', defectBond:'na', payment:'todo' },
+    };
+    CASES.push(newCase);
+    saveCases();
+    if(typeof renderAll==='function') renderAll();
+    // 원본 요청 상태 전환표시
+    await fetch(`${PR_URL}/rest/v1/purchase_requests?id=eq.${id}`, { method:'PATCH', headers:{...HH, Prefer:'return=minimal'}, body:JSON.stringify({ status:'converted' }) });
+    window.loadPurchaseRequests();
+    alert('정식 구매건으로 전환했습니다. 위 목록에서 거래처·금액 등을 채워주세요.');
+  };
+
+  window.rejectPurchaseReq = async function(id){
+    if(!confirm('이 구매신청을 반려할까요?')) return;
+    await fetch(`${PR_URL}/rest/v1/purchase_requests?id=eq.${id}`, { method:'PATCH', headers:{...HH, Prefer:'return=minimal'}, body:JSON.stringify({ status:'rejected' }) });
+    window.loadPurchaseRequests();
+  };
+
+  window.loadPurchaseRequests = async function(){
+    const tbody = document.getElementById('pr-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--t3);">불러오는 중…</td></tr>';
+    try{
+      const res = await fetch(`${PR_URL}/rest/v1/purchase_requests?source=eq.slack&order=created_at.desc&limit=80`, { headers:HH });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const rows = await res.json();
+      window._prCache = {};
+      rows.forEach(r=>{ window._prCache[r.id]=r; });
+      const pending = rows.filter(r=> r.status==='pending' && !alreadyConverted(r.id));
+      const badge = document.getElementById('pr-badge');
+      if(badge){ badge.textContent = pending.length+'건 미처리'; badge.style.display = pending.length?'inline':'none'; }
+      if(!rows.length){
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--t3);">슬랙에서 접수된 구매신청이 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r=>{
+        const converted = r.status==='converted' || alreadyConverted(r.id);
+        const stKey = r.status==='rejected' ? 'rejected' : (converted ? 'converted' : 'pending');
+        const s = PST[stKey];
+        const done = converted || r.status==='rejected';
+        return `<tr style="border-top:1px solid var(--line);">
+          <td style="padding:8px 12px;">${(r.created_at||'').slice(0,10)}</td>
+          <td style="padding:8px 12px; font-weight:700;">${esc(r.name||'-')}</td>
+          <td style="padding:8px 12px; color:var(--t2);">${esc(r.dept||'-')}</td>
+          <td style="padding:8px 12px;">${esc(r.item||'-')}</td>
+          <td style="padding:8px 12px;">${esc(String(r.qty||1))}</td>
+          <td style="padding:8px 12px;">${r.est_amount?won2(r.est_amount):'-'}</td>
+          <td style="padding:8px 12px;">${r.due_date||'-'}</td>
+          <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;">${s.label}</span></td>
+          <td style="padding:8px 12px; white-space:nowrap;">${done ? '-' :
+            `<button class="btn green sm" style="padding:4px 9px;" onclick="window.convertPurchaseReq(${r.id})">정식 전환</button>
+             <button class="btn line sm" style="padding:4px 9px;" onclick="window.rejectPurchaseReq(${r.id})">반려</button>`}</td>
+        </tr>`;
+      }).join("");
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--red);">오류: ${e.message}</td></tr>`;
+    }
+  };
+
+  if(document.readyState!=='loading') injectUI();
+  else document.addEventListener('DOMContentLoaded', injectUI);
+})();
 </script>
 
 </body>
