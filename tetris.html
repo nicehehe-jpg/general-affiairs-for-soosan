@@ -67,38 +67,6 @@
     gap:14px;
     padding:16px;
   }
-  @media (max-width:640px){
-    body{padding:0; align-items:stretch;}
-    .frame{width:100%; border-radius:0; border-left:none; border-right:none; min-height:100vh; min-height:100dvh; display:flex; flex-direction:column;}
-    .titlebar{padding:7px 12px;}
-    .titlebar .logo{font-size:15px;}
-    .titlebar .sub{display:none;}
-    /* 세로 한 줄 배치: [홀드+점수 가로줄] → [게임판 크게] → [다음블록] */
-    .stage{display:flex; flex-direction:column; align-items:center; gap:8px; padding:8px; flex:1; min-height:0;}
-    .col{flex-direction:row; width:100%; gap:8px; flex:0 0 auto;}
-    .col .box{flex:1; padding:7px;}
-    .col .box h3{margin-bottom:4px; font-size:10px; letter-spacing:1px;}
-    .mini{min-height:auto;}
-    .help{display:none;}            /* 도움말은 모바일에서 숨김 (스와이프로 조작) */
-    .stat{padding:3px 4px; font-size:11px;}
-    .stat .v{font-size:15px;}
-    /* 홀드/다음 블록 미리보기 작게, 다음은 가로 한 줄 */
-    #hold{height:42px; width:auto;}
-    #next0,#next1,#next2{height:36px; width:auto;}
-    .col:last-child .mini{flex-direction:row !important; gap:6px;}
-    /* 게임판: 화면 너비/높이에 맞춰 자동 확대 */
-    .center{flex:1; min-height:0; justify-content:center; width:100%;}
-    .playfield{width:auto;}
-    #board{height:min(56vh,168vw); width:auto; aspect-ratio:1 / 2;}
-    .pad{margin-top:6px;}
-    .pad button{touch-action:none; padding:16px 0;}
-    .overlay h2{font-size:20px;}
-    .setup{max-width:260px;}
-  }
-  @media (max-width:640px) and (min-height:740px){
-    #board{height:min(62vh,170vw);}
-  }
-
   .col{display:flex; flex-direction:column; gap:12px;}
 
   .box{
@@ -205,6 +173,55 @@
   }
   @keyframes pop{0%{opacity:0; transform:translateX(-50%) scale(.6);} 20%{opacity:1; transform:translateX(-50%) scale(1.15);} 100%{opacity:0; transform:translateX(-50%) translateY(-30px) scale(1);}}
   .combo.show{animation:pop 1s ease-out;}
+
+  /* ===== 모바일 레이아웃 (모든 기본 규칙 뒤에 와야 우선 적용됨) ===== */
+  @media (max-width:640px){
+    body{padding:0; align-items:flex-start;}
+    .frame{width:100%; border-radius:0; border-left:none; border-right:none; min-height:100dvh;}
+    .titlebar{padding:7px 12px;}
+    .titlebar .logo{font-size:15px;}
+    .titlebar .sub{display:none;}
+
+    /* 세로 흐름: [HOLD+점수] → [NEXT] → [게임판] → [버튼]. 압축(flex:1) 안 해서 겹침 없음 */
+    .stage{display:flex; flex-direction:column; align-items:center; gap:6px; padding:7px;}
+    .help{display:none;}                       /* 도움말 숨김 (스와이프/버튼으로 조작) */
+    .col{flex-direction:row; width:100%; gap:6px; align-items:stretch;}
+    .col:first-child{order:1;}                 /* HOLD + 점수 */
+    .col:last-child{order:2;}                  /* NEXT */
+    .center{order:3; width:100%;}
+    .box{padding:5px 8px;}
+    .box h3{font-size:9px; letter-spacing:1px; margin-bottom:3px;}
+    .mini{min-height:auto;}
+
+    /* HOLD: 작은 칸 */
+    .col:first-child .box:first-child{flex:0 0 58px;}
+    #hold{height:32px; width:auto;}
+
+    /* 점수: 가로 스트립 (라벨 위, 숫자 아래) */
+    .col:first-child .box:last-child{flex:1; display:flex; flex-wrap:wrap; align-content:center; gap:1px 9px; padding:5px 9px;}
+    .stat{flex:0 1 auto; min-width:46px; flex-direction:column; align-items:flex-start; gap:0; padding:1px 0; border:none;}
+    .stat .k{font-size:8px; letter-spacing:.3px;}
+    .stat .v{font-size:14px;}
+
+    /* NEXT: 가로 한 줄 작게 (help 박스는 제외 — 첫 박스만) */
+    .col:last-child .box:first-child{display:flex; align-items:center; gap:8px; padding:4px 9px;}
+    .col:last-child .box:first-child h3{margin:0; flex:0 0 auto;}
+    .col:last-child .mini{flex-direction:row !important; gap:6px; min-height:auto; flex:1; justify-content:flex-start;}
+    #next0,#next1,#next2{height:28px; width:auto;}
+
+    /* 게임판: 가용 높이 기준으로 적당히 (겹침 방지) */
+    .center{display:flex; flex-direction:column; align-items:center;}
+    .playfield{width:auto;}
+    #board{height:min(52vh,160vw); width:auto; aspect-ratio:1 / 2;}
+
+    .pad{margin-top:5px;}
+    .pad button{touch-action:none; padding:14px 0; font-size:17px;}
+    .overlay h2{font-size:19px;}
+    .setup{max-width:260px;}
+  }
+  @media (max-width:640px) and (min-height:780px){
+    #board{height:min(58vh,166vw);}
+  }
 </style>
 </head>
 <body>
