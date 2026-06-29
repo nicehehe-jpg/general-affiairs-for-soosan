@@ -97,6 +97,7 @@
     if(hash===GATE_PW_HASH){
       sessionStorage.setItem('gm_auth','ok');
       document.getElementById('gate').style.display='none';
+      if(window.loadStoredRates) loadStoredRates();  // 저장된 적용률 자동 적용
     } else {
       const err=document.getElementById('gateErr');
       err.textContent='비밀번호가 올바르지 않습니다';
@@ -131,8 +132,12 @@
   <div class="upload-box">
     <label class="upl">📎 ① 급상여전표처리사원별적용률 업로드 (선택)</label>
     <input type="file" id="rateMasterFile" accept=".xlsx,.xls">
-    <div class="hint">업로드하면 ④ 법인운전대행, ⑤ 직책보임자 통신비에서 사번(또는 성명)이 일치하는 직원의 금액이 적용률에 따라 여러 코스트센터로 자동 분할됩니다. 업로드하지 않으면 기존처럼 표에서 직접 부서를 선택합니다.</div>
+    <div class="hint">📌 <b>한 번 업로드하면 클라우드에 암호화 저장되어, 다음에 열 때 자동으로 적용</b>됩니다(집·회사 PC 공통). 업로드하면 ④ 법인운전대행, ⑤ 직책보임자 통신비에서 사번(또는 성명)이 일치하는 직원의 금액이 적용률에 따라 여러 코스트센터로 자동 분할됩니다. 업로드하지 않으면 기존처럼 표에서 직접 부서를 선택합니다.</div>
     <div class="status-msg" id="rateMasterStatus">적용률 파일 미업로드</div>
+    <div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" onclick="clearStoredRates()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🗑 저장된 적용률 삭제</button>
+      <button type="button" onclick="resetRatePass()" style="background:#F2F4F6;color:#4E5968;border:1px solid #E5E8EB;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🔑 적용률 암호 재설정</button>
+    </div>
   </div>
 </div>
 
@@ -385,11 +390,110 @@ async function handleRateMasterUpload(ev){
       cnt++;
     }
     statusEl.classList.remove('err');
-    statusEl.textContent = `적용률 자료 로드 완료: 사원 ${Object.keys(rateMaster).length}명, ${cnt}행`;
+    await saveRatesEncrypted(statusEl, cnt);  // 암호화하여 클라우드 저장 → 다음에 열 때 자동 적용
   } catch(e){
     statusEl.classList.add('err');
     statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
   }
+}
+
+/* ===================== 적용률 클라우드 저장 (암호화) =====================
+   Supabase anon 키는 공개되므로, 적용률(사번·성명 등 사원정보)은 브라우저에서
+   AES-256-GCM으로 암호화하여 Supabase(app_store)에는 '암호문'만 저장한다.
+   복호화 암호는 Supabase·소스 어디에도 없고, 각 PC localStorage에만 캐시된다. */
+const SB_URL  = 'https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc'; // anon(공개) 키 — 데이터는 추가로 암호화 저장됨
+const SB_REST = SB_URL + '/rest/v1/app_store';
+const SB_H    = { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json' };
+const RATE_KEY     = 'voucher_rate_master_enc'; // app_store 키
+const RATE_PASS_LS = 'gm_voucher_rate_pass';    // 이 PC에 캐시된 적용률 암호
+
+async function sbGet(key){ try{ const r=await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`,{headers:SB_H}); const d=await r.json(); return d&&d[0]?d[0].value:null; }catch(e){ return null; } }
+async function sbSet(key,val){ try{ const r=await fetch(SB_REST,{method:'POST',headers:{...SB_H,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key,value:val,updated_at:new Date().toISOString()})}); return r.ok; }catch(e){ return false; } }
+async function sbDel(key){ try{ await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}`,{method:'DELETE',headers:SB_H}); return true; }catch(e){ return false; } }
+
+function ratePass(){
+  let p = (localStorage.getItem(RATE_PASS_LS)||'').trim();
+  if(!p){
+    p = (prompt('적용률 암호를 입력하세요.\n(적용률 데이터 암호화/복호화 전용 암호 — 집·회사 PC에서 동일하게 입력)')||'').trim();
+    if(p) localStorage.setItem(RATE_PASS_LS, p);
+  }
+  return p;
+}
+function resetRatePass(){
+  localStorage.removeItem(RATE_PASS_LS);
+  const p = (prompt('새 적용률 암호를 입력하세요. (집·회사 PC 동일하게)')||'').trim();
+  if(p){ localStorage.setItem(RATE_PASS_LS, p); loadStoredRates(); }
+}
+
+function _b64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function _unb64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+async function _deriveKey(pass, salt){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function encryptJSON(obj, pass){
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await _deriveKey(pass, salt);
+  const ct   = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(JSON.stringify(obj)));
+  return { v:1, salt:_b64(salt), iv:_b64(iv), ct:_b64(ct) };
+}
+async function decryptJSON(blob, pass){
+  const key = await _deriveKey(pass, _unb64(blob.salt));
+  const pt  = await crypto.subtle.decrypt({name:'AES-GCM', iv:_unb64(blob.iv)}, key, _unb64(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+async function saveRatesEncrypted(statusEl, rows){
+  const count  = Object.keys(rateMaster).length;
+  const months = [...new Set([].concat(...Object.values(rateMaster)).map(e=>e.ym).filter(Boolean))];
+  const pass   = ratePass();
+  if(!pass){ statusEl.textContent = `적용률 로드됨 · 사원 ${count}명 · ⚠️ 암호 미입력 → 이번 세션만 적용(저장 안 함)`; return; }
+  statusEl.textContent = '🔒 암호화하여 저장 중…';
+  try{
+    const blob = await encryptJSON({ rateMaster, rateMasterByName }, pass);
+    blob.meta = { count, rows, uploadedAt:new Date().toISOString(), months };
+    const ok = await sbSet(RATE_KEY, blob);
+    statusEl.classList.remove('err');
+    statusEl.textContent = ok
+      ? `✅ 적용률 적용 중 · 사원 ${count}명 · ${months.join(', ')||'월정보 없음'} · 클라우드 암호저장 완료`
+      : `적용률 로드됨 · 사원 ${count}명 · ⚠️ 클라우드 저장 실패(이번 세션만 적용)`;
+  }catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '저장 중 오류: '+e.message;
+  }
+}
+
+async function loadStoredRates(){
+  const statusEl = document.getElementById('rateMasterStatus');
+  if(!statusEl) return;
+  let blob = null;
+  try{ blob = await sbGet(RATE_KEY); }catch(e){}
+  if(!blob || !blob.ct) return;  // 저장된 적용률 없음 → 기존 안내 유지
+  const pass = ratePass();
+  if(!pass){ statusEl.textContent = '🔒 저장된 적용률 있음 — 암호를 입력하면 자동 적용됩니다. [🔑 암호 재설정]'; return; }
+  try{
+    const data = await decryptJSON(blob, pass);
+    rateMaster       = data.rateMaster || {};
+    rateMasterByName = data.rateMasterByName || {};
+    const m = blob.meta || {};
+    const d = m.uploadedAt ? new Date(m.uploadedAt) : null;
+    statusEl.classList.remove('err');
+    statusEl.textContent = `✅ 적용률 적용 중 · 사원 ${m.count||Object.keys(rateMaster).length}명 · ${(m.months||[]).join(', ')||'월정보 없음'}${d?(' · 업로드 '+(d.getMonth()+1)+'/'+d.getDate()):''} (클라우드 암호저장)`;
+  }catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '🔒 저장된 적용률 복호화 실패 — 암호가 다른 듯합니다. [🔑 암호 재설정]으로 다시 입력하세요.';
+    localStorage.removeItem(RATE_PASS_LS);
+  }
+}
+
+async function clearStoredRates(){
+  if(!confirm('클라우드에 저장된 적용률을 삭제할까요?\n(자동 적용이 해제됩니다)')) return;
+  await sbDel(RATE_KEY);
+  rateMaster = {}; rateMasterByName = {};
+  const statusEl = document.getElementById('rateMasterStatus');
+  if(statusEl){ statusEl.classList.remove('err'); statusEl.textContent = '적용률 파일 미업로드 (저장본 삭제됨)'; }
 }
 
 // ===================== PDF 텍스트 추출 =====================
@@ -899,6 +1003,8 @@ function generate(){
 }
 
 document.getElementById('rateMasterFile').addEventListener('change', handleRateMasterUpload);
+// 이미 인증된 세션이면, 저장해 둔 적용률을 자동으로 불러와 적용
+if(sessionStorage.getItem('gm_auth')==='ok') loadStoredRates();
 document.getElementById('mgmtPdfFile').addEventListener('change', handleMgmtPdfUpload);
 document.getElementById('etcPdfFile').addEventListener('change', handleEtcPdfUpload);
 document.getElementById('driverXlsxFile').addEventListener('change', handleDriverUpload);
