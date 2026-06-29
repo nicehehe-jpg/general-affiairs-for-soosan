@@ -1955,6 +1955,30 @@ async function loadWeather(){
    식단표 위젯  (stxfood.com 울산테크노매곡)
    ============================================================ */
 const MEAL_DATA = {
+  '2026-06-29':{
+    lunch:['쌀밥/잡곡밥','사골떡국','김치돈육볶음','두부구이*양념장','알배기겉절이','깍두기'],
+    dinner:['쌀밥','들깨미역국','산적구이','애호박볶음','깻잎지','배추김치']
+  },
+  '2026-06-30':{
+    lunch:['쌀밥','조랭이떡미역국','해물까스*칠리S','열무비빔국수','양배추샐러드*딸기D','배추김치'],
+    dinner:['쌀밥','오징어무국','찹쌀탕수','청포묵간장무침','배추김치']
+  },
+  '2026-07-01':{
+    lunch:['톳밥/양념장','바지락순두부찌개','버섯탕수','매운콩나물잡채','오이생채','배추김치'],
+    dinner:['쌀밥','황태해장국','가라아게*강정S','브로컬리참깨무침','배추김치']
+  },
+  '2026-07-02':{
+    lunch:['쌀밥','근대된장국','간장찜닭','비엔나마늘쫑볶음','매운우엉채','배추김치'],
+    dinner:['쌀밥','종합짬뽕국','스크램블에그','꼬시래기무침','배추김치']
+  },
+  '2026-07-03':{
+    lunch:['쌀밥/잡곡밥','대파육개장','모듬꼬치*케찹','매콤버섯불고기','얼갈이겉절이','배추김치'],
+    dinner:['쌀밥','동태조림','오색전','배추김치']
+  },
+  '2026-07-04':{
+    lunch:['김치볶음밥','계란파국','야채튀김','치커리유자소스무침','마시는비비머스','배추김치'],
+    dinner:null
+  },
   '2026-06-16':{
     lunch:['쌀밥/잡곡밥','얼갈이국','닭고추장볶음','감자크로켓·케찹','홍자반','배추김치/깍두기'],
     dinner:['쌀밥','육개장','참치야채계란찜','미니새송이볶음','마늘종절임','배추김치']
@@ -2006,6 +2030,11 @@ const MEAL_DATA = {
 };
 
 const MEAL_WEEK_IMAGES = [
+  {
+    label:'7월 1주 (6/29~7/4)',
+    url:'https://www.stxfood.com/_data/archives/202606/25/d323244e6bd7b87954411e70d7561830_thumb_720x720.png',
+    detailUrl:'https://www.stxfood.com/archives/menu/detail/73?row=10&block=10'
+  },
   {
     label:'6월 4주 (22일~27일)',
     url:'https://www.stxfood.com/_data/archives/202606/18/8cf8d1f29e6603299b3abd94b79eda7b_thumb_720x720.png',
@@ -2083,9 +2112,10 @@ function initMealWidget(){
   const key = info.key;
   const badge = document.getElementById('mealWeekBadge');
   if(badge){
-    if(key >= '2026-06-22' && key <= '2026-06-27') badge.textContent = '6월 4주';
+    if(key >= '2026-06-29' && key <= '2026-07-04') badge.textContent = '7월 1주';
+    else if(key >= '2026-06-22' && key <= '2026-06-27') badge.textContent = '6월 4주';
     else if(key >= '2026-06-16' && key <= '2026-06-21') badge.textContent = '6월 3주';
-    else badge.textContent = '6월';
+    else badge.textContent = '식단표';
   }
   renderMealBody();
 }
