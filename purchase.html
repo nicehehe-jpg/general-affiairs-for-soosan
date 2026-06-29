@@ -946,7 +946,8 @@ function parseSoosanPO(raw){
   if(dm){ out.dept = dm[1].trim(); out.manager = dm[2].trim(); }
   out.contractDate = grab(/계약일자\s+(\d{4}-\d{2}-\d{2})/);
   out.project      = grab(/프로젝트\s+(.+?)\s+납품장소/);
-  out.dueDate      = grab(/납품기한\s+(\d{4}-\d{2}-\d{2})/);
+  // 계약종료일(cmDueDate 필드) — 명시된 계약종료일 우선, 없으면 납품기한
+  out.dueDate      = grab(/계약\s*종료일\s+(\d{4}-\d{2}-\d{2})/) || grab(/납품기한\s+(\d{4}-\d{2}-\d{2})/);
 
   const amt = T.match(/계약금액\s+([\d,]{5,})\s*(?:부가세\s*(별도|포함))?/);
   if(amt){
@@ -962,20 +963,29 @@ function parseSoosanPO(raw){
   const biz = grab(/사업자등록번호\s+(\d{3}-\d{2}-\d{5})/);
   out.bizNo = biz; out.vendorBizNo = biz;
 
-  const pay = T.match(/납품\s*후\s*(\d+)\s*일\s*이내\s*계약금액의\s*(\d+)\s*%/);
-  if(pay){
-    const days = parseInt(pay[1],10), rate = parseInt(pay[2],10);
-    out.balRate = rate;
-    out.payTermEtc = days + '일 이내 계약금액의 ' + rate + '% 현금지급';
-    out.payTermType = (days===30)?'30d':(days===60)?'60d':'etc';
+  // ── 지급일정: '…계약금액의 N% 현금/현급 지급' 단계를 모두 모아 선급/중도/잔금으로 분류 ──
+  //  (보증증권의 % 는 '현금지급'이 아니므로 자동 제외됨)
+  const stages = [];
+  const installRe = /(.{0,24}?)계약금액의\s*(\d+)\s*%\s*현[금급]\s*지급/g;
+  let mm;
+  while((mm = installRe.exec(T)) !== null){
+    stages.push({ cond: mm[1], rate: parseInt(mm[2],10),
+                  days: (mm[1].match(/(\d+)\s*일/)||[])[1] || '' });
   }
-
-  const pre = T.match(/선급금이행보증증권\s*(?:(해당\s*없음)|계약금액의\s*(\d+)\s*%)/);
-  if(pre && pre[2]) out.prepayRate = parseInt(pre[2],10);
-
-  if(out.balRate > 0 || out.prepayRate > 0){
-    const mid = 100 - out.prepayRate - out.balRate;
-    out.midRate = mid > 0 ? mid : 0;
+  if(stages.length){
+    stages.forEach((s, i) => {
+      if(/계약\s*후|착수|선급|계약\s*체결/.test(s.cond))                              out.prepayRate += s.rate;
+      else if(/시운전|준공|최종|검수\s*완료/.test(s.cond) || i === stages.length-1)   out.balRate    += s.rate;
+      else                                                                            out.midRate    += s.rate;
+    });
+    if(stages.length === 1){
+      const d = stages[0].days;
+      out.payTermType = (d==='30')?'30d':(d==='60')?'60d':(d==='90')?'90d':'etc';
+      out.payTermEtc  = (d ? d + '일 이내 ' : '') + '계약금액의 ' + stages[0].rate + '% 현금지급';
+    } else {
+      out.payTermType = 'etc';
+      out.payTermEtc  = '분할지급 — 선급 ' + out.prepayRate + '% · 중도 ' + out.midRate + '% · 잔금 ' + out.balRate + '%';
+    }
   }
   return out;
 }
