@@ -955,6 +955,11 @@ function parseSoosanPO(raw){
     const m2 = T.match(/프로젝트\s+(.+?)\s+(?:납품장소|품목)/);
     return m2 ? m2[1].trim() : '';
   })();
+  // 비용구분: 외주용역→'외주'(위에서 설정). 물품구매→ 국책과제면 '국책제조', 아니면 '재료'
+  if(out.type !== 'service'){
+    out.costType = /국책과제/.test(T) ? '국책제조' : '재료';
+  }
+
   // 계약종료일(cmDueDate 필드) — 명시된 계약종료일 우선, 없으면 납품기한
   out.dueDate      = grab(/계약\s*종료일\s+(\d{4}-\d{2}-\d{2})/) || grab(/납품기한\s+(\d{4}-\d{2}-\d{2})/);
 
