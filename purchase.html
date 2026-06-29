@@ -755,6 +755,7 @@ function calcPayAmt(key) {
 
 function openCaseModal(id){
   editingCaseId = id || null;
+  _cmAutoBonds = null; // 모달 열 때 초기화 (이전 자동입력 잔존 방지)
   const c = id ? CASES.find(x=>x.id===id) : null;
   document.getElementById('cmTitle').textContent = c ? '구매 건 수정' : '구매 건 추가';
   document.getElementById('cmType').value = c ? c.type : (activeType!=='all' ? activeType : 'purchase');
@@ -840,10 +841,16 @@ function saveCaseModal(){
     const c = CASES.find(x=>x.id===editingCaseId);
     Object.assign(c, data);
   } else {
-    CASES.push({ id:'c'+Date.now(), ...data, stages:{approval:'todo',contract:'todo',advanceBond:'todo',performBond:'todo',defectBond:'todo',payment:'todo'} });
+    const stages = {approval:'todo',contract:'todo',advanceBond:'todo',performBond:'todo',defectBond:'todo',payment:'todo'};
+    // 발주서 자동입력으로 읽은 보증증권 상태를 단계에 반영 (해당없음→na, 해당→todo)
+    if(_cmAutoBonds){
+      ['advanceBond','performBond','defectBond'].forEach(k => { if(_cmAutoBonds[k]) stages[k] = _cmAutoBonds[k]; });
+    }
+    CASES.push({ id:'c'+Date.now(), ...data, stages });
     if(!allPeriod && data.contractDate) selMonth = data.contractDate.slice(0,7);
     syncMonthUI();
   }
+  _cmAutoBonds = null; // 소비 후 초기화
   saveCases(); closeCaseModal(); renderAll();
 }
 function deleteCase(id){
@@ -897,6 +904,7 @@ function fillVendorDatalist(){
 }
 /* ============== 발주서 PDF → 구매건 자동입력 (로컬 파싱 · 무료, API 미사용) ============== */
 let _cmPdfFile = null;
+let _cmAutoBonds = null; // 발주서 자동입력으로 읽은 보증증권 단계 상태(저장 시 적용)
 
 function onCmPdfFileChange(input) {
   const f = input.files && input.files[0];
@@ -1003,6 +1011,19 @@ function parseSoosanPO(raw){
       out.payTermEtc  = '분할지급 — 선급 ' + out.prepayRate + '% · 중도 ' + out.midRate + '% · 잔금 ' + out.balRate + '%';
     }
   }
+
+  // ── 보증증권 → 진행단계 자동연계용 상태 ('해당없음'→na / 금액·%있음→todo / 정보없음→undefined) ──
+  const bondStage = (name) => {
+    const m = T.match(new RegExp(name + '\\s*(?:\\([^)]*\\))?\\s*(해당\\s*없음|계약금액의\\s*[\\d.]+\\s*%|[\\d,]+\\s*원)'));
+    if(!m) return undefined;
+    return /해당/.test(m[1]) ? 'na' : 'todo';
+  };
+  out.bonds = {
+    advanceBond: bondStage('선급금이행보증증권'),
+    performBond: bondStage('계약이행보증증권'),
+    defectBond:  bondStage('하자이행보증증권')
+  };
+
   return out;
 }
 
@@ -1075,7 +1096,8 @@ async function runCmPdfOcr(){
     }
     if(parsed.project) {
       document.getElementById('cmProject').value = parsed.project;
-      filled.push('프로젝트');
+      document.getElementById('cmCostCenter').value = parsed.project; // 코스트센터 = 프로젝트(과제) 동일 입력
+      filled.push('프로젝트·코스트센터');
     }
     if(parsed.costType) {
       document.getElementById('cmCostType').value = parsed.costType;
@@ -1129,6 +1151,17 @@ async function runCmPdfOcr(){
       if(total > 0 && total !== 100) {
         console.warn('지급일정 비율 합계가 ' + total + '% 입니다 (100% 아님). 확인 필요.');
       }
+    }
+
+    // 보증증권 → 진행단계 자동연계 (저장 시 적용). 해당없음=na, 해당=todo
+    _cmAutoBonds = parsed.bonds || null;
+    if(parsed.bonds){
+      const L = { na:'해당없음', todo:'해당' };
+      const ps = [];
+      if(parsed.bonds.advanceBond) ps.push('선급 ' + L[parsed.bonds.advanceBond]);
+      if(parsed.bonds.performBond) ps.push('계약이행 ' + L[parsed.bonds.performBond]);
+      if(parsed.bonds.defectBond)  ps.push('하자 ' + L[parsed.bonds.defectBond]);
+      if(ps.length) filled.push('보증증권단계(' + ps.join(' · ') + ')');
     }
 
     st.style.color = 'var(--green)';
