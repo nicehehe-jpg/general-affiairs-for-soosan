@@ -941,6 +941,8 @@ function parseSoosanPO(raw){
   const grab = re => { const m = T.match(re); return m ? m[1].trim() : ''; };
 
   out.contractName = grab(/계약명\s+(.+?)\s+발주\s*승인/);
+  // 종류: 계약명에 '용역'/'외주'가 있으면 외주용역계약(service), 비용구분 '외주'
+  if(/용역|외주/.test(out.contractName)){ out.type = 'service'; out.costType = '외주'; }
   out.vendor       = grab(/공급업체\s+(.+?)\s+구매요청번호/);
   const dm = T.match(/계약부서\s*\/\s*담당\s+(.+?)\s*\/\s*(.+?)\s+전화번호/);
   if(dm){ out.dept = dm[1].trim(); out.manager = dm[2].trim(); }
