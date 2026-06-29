@@ -941,8 +941,8 @@ function parseSoosanPO(raw){
   const grab = re => { const m = T.match(re); return m ? m[1].trim() : ''; };
 
   out.contractName = grab(/계약명\s+(.+?)\s+발주\s*승인/);
-  // 종류: 계약명에 '용역'/'외주'가 있으면 외주용역계약(service), 비용구분 '외주'
-  if(/용역|외주/.test(out.contractName)){ out.type = 'service'; out.costType = '외주'; }
+  // 종류: 계약명에 '용역'/'외주'가 있으면 외주용역계약(service)  (비용구분은 아래 키워드 규칙에서 별도 결정)
+  if(/용역|외주/.test(out.contractName)){ out.type = 'service'; }
   out.vendor       = grab(/공급업체\s+(.+?)\s+구매요청번호/);
   const dm = T.match(/계약부서\s*\/\s*담당\s+(.+?)\s*\/\s*(.+?)\s+전화번호/);
   if(dm){ out.dept = dm[1].trim(); out.manager = dm[2].trim(); }
@@ -955,10 +955,12 @@ function parseSoosanPO(raw){
     const m2 = T.match(/프로젝트\s+(.+?)\s+(?:납품장소|품목)/);
     return m2 ? m2[1].trim() : '';
   })();
-  // 비용구분: 외주용역→'외주'(위에서 설정). 물품구매→ 국책과제면 '국책제조', 아니면 '재료'
-  if(out.type !== 'service'){
-    out.costType = /국책과제/.test(T) ? '국책제조' : '재료';
-  }
+  // 비용구분 — 계약명(건명) 안의 키워드로만 판정(우선순위): 자체→자체연구과제, 국책→국책, 하자보수→하자보수충당부채, 그 외→제조
+  const _cn = out.contractName || '';
+  if(/자체/.test(_cn))            out.costType = '자체연구과제';
+  else if(/국책/.test(_cn))       out.costType = '국책';
+  else if(/하자보수/.test(_cn))   out.costType = '하자보수충당부채';
+  else                            out.costType = '제조';
 
   // 계약종료일(cmDueDate 필드) — 명시된 계약종료일 우선, 없으면 납품기한
   out.dueDate      = grab(/계약\s*종료일\s+(\d{4}-\d{2}-\d{2})/) || grab(/납품기한\s+(\d{4}-\d{2}-\d{2})/);
