@@ -178,12 +178,15 @@
   @media (max-width:640px){
     body{padding:0; align-items:flex-start;}
     .frame{width:100%; border-radius:0; border-left:none; border-right:none; min-height:100dvh;}
-    .titlebar{padding:7px 12px;}
+    /* 아이폰 다이나믹 아일랜드/노치 회피: 제목바 상단 여백에 안전영역 추가 */
+    .titlebar{padding:calc(7px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 7px calc(12px + env(safe-area-inset-left));}
     .titlebar .logo{font-size:15px;}
     .titlebar .sub{display:none;}
 
     /* 세로 흐름: [HOLD+점수] → [NEXT] → [게임판] → [버튼]. 압축(flex:1) 안 해서 겹침 없음 */
-    .stage{display:flex; flex-direction:column; align-items:center; gap:6px; padding:7px;}
+    /* 하단 홈 인디케이터 회피: 하단 여백에 안전영역 추가 */
+    .stage{display:flex; flex-direction:column; align-items:center; gap:6px;
+      padding:7px calc(7px + env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) calc(7px + env(safe-area-inset-left));}
     .help{display:none;}                       /* 도움말 숨김 (스와이프/버튼으로 조작) */
     .col{flex-direction:row; width:100%; gap:6px; align-items:stretch;}
     .col:first-child{order:1;}                 /* HOLD + 점수 */
