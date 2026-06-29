@@ -1,0 +1,14 @@
+# ===== 비밀키 / 개인정보 (공개 repo에 올리지 않음) =====
+groq api.txt
+*api*.txt
+*.key
+.env
+.env.*
+
+# 개인정보(주소록 등)
+주소록.csv
+*.csv
+
+# ===== 의존성 / 캐시 / 도구 =====
+node_modules/
+.claude/
