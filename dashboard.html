@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>인사총무 통합 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#F2F4F6;
+    --card:#ffffff;
+    --t1:#191F28;   /* primary text */
+    --t2:#4E5968;   /* secondary text */
+    --t3:#8B95A1;   /* tertiary text */
+    --blue:#3182F6;
+    --blue-bg:#EBF2FF;
+    --green:#1DB67F;
+    --green-bg:#E6F9F0;
+    --orange:#FF9800;
+    --orange-bg:#FFF4E5;
+    --red:#F04452;
+    --red-bg:#FDEAEC;
+    --purple:#6C5CE7;
+    --purple-bg:#F0EEFF;
+    --line:#E5E8EB;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--t1);
+    font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  }
+  main{max-width:1100px; margin:0 auto; padding:32px 24px 60px;}
+
+  /* ===== 헤더 ===== */
+  .top-row{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:26px; gap:12px; flex-wrap:wrap;}
+  .date{font-size:13px; color:var(--t3); margin-bottom:6px;}
+  h1.greet{font-size:24px; font-weight:800; margin:0 0 4px;}
+  .greet-sub{font-size:13.5px; color:var(--t2); margin:0;}
+  .sync-badge{display:inline-block; font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; margin-left:6px; vertical-align:middle;}
+  .sync-badge.online{background:var(--green-bg); color:var(--green);}
+  .sync-badge.loading{background:#F2F4F6; color:var(--t3);}
+  .sync-badge.offline{background:var(--orange-bg); color:var(--orange);}
+  .refresh-btn{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:10px 16px; font-size:13px; font-weight:700; color:var(--t2);
+    cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px;
+    transition:background .12s;
+  }
+  .refresh-btn:hover{background:#F7F9FB; color:var(--t1);}
+
+  /* ===== KPI 스트립 ===== */
+  .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:26px;}
+  .stat-card{
+    background:var(--card); border-radius:20px; padding:20px 20px 18px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.03);
+  }
+  .stat-card .icon-circle{
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; font-size:16px; margin-bottom:14px;
+  }
+  .stat-card .num{font-size:26px; font-weight:800; line-height:1;}
+  .stat-card .num small{font-size:14px; font-weight:700; color:var(--t3); margin-left:2px;}
+  .stat-card .lbl{font-size:12.5px; color:var(--t3); margin-top:4px; font-weight:500;}
+
+  h2.section-title{font-size:16px; font-weight:800; margin:0 0 14px;}
+
+  /* ===== 업무 카드 그리드 ===== */
+  .biz-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:30px;}
+  .biz-card{
+    background:var(--card); border-radius:20px; padding:20px 18px 16px; cursor:pointer;
+    box-shadow:0 1px 2px rgba(0,0,0,0.03); border:2px solid transparent;
+    transition:box-shadow .15s, transform .15s, border-color .15s;
+    display:flex; flex-direction:column;
+  }
+  .biz-card:hover{box-shadow:0 8px 20px rgba(25,31,40,0.08); transform:translateY(-2px); border-color:var(--blue);}
+  .biz-head{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .biz-head .icon-circle{
+    width:42px; height:42px; border-radius:14px; display:flex; align-items:center;
+    justify-content:center; font-size:19px; flex-shrink:0;
+  }
+  .biz-head .name{font-size:14px; font-weight:700;}
+  .biz-head .sub{font-size:11px; color:var(--t3); margin-top:2px;}
+  .biz-head .alert-badge{
+    margin-left:auto; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; flex-shrink:0;
+  }
+  .alert-badge.warn{background:var(--orange-bg); color:var(--orange);}
+  .alert-badge.danger{background:var(--red-bg); color:var(--red);}
+  .alert-badge.ok{background:var(--green-bg); color:var(--green);}
+  .alert-badge.local{background:#F2F4F6; color:var(--t3);}
+  .biz-metrics{display:flex; flex-direction:column; gap:6px; flex:1;}
+  .biz-metric{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:12.5px; color:var(--t2); background:var(--bg); border-radius:10px; padding:7px 11px;
+  }
+  .biz-metric b{font-size:13px; color:var(--t1);}
+  .biz-metric b.warn{color:var(--orange);}
+  .biz-metric b.danger{color:var(--red);}
+  .biz-metric b.good{color:var(--green);}
+  .biz-loading{font-size:12.5px; color:var(--t3); padding:10px 2px;}
+  .biz-error{font-size:12.5px; color:var(--red); font-weight:600; padding:10px 2px;}
+  .biz-foot{
+    margin-top:12px; font-size:12px; font-weight:700; color:var(--blue);
+    display:flex; justify-content:flex-end;
+  }
+  .biz-card.link-only .biz-metrics{justify-content:center;}
+  .biz-card.link-only .biz-desc{font-size:12px; color:var(--t3); line-height:1.5;}
+
+  @media(max-width:860px){
+    .stat-grid{grid-template-columns:repeat(2,1fr);}
+    .biz-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media(max-width:560px){
+    main{padding:20px 14px 40px;}
+    .biz-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 비밀번호 잠금 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;
+    box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">인사총무 통합 대시보드</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력"
+      style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;
+      font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;"
+      onkeydown="if(event.key==='Enter')gateCheck()"
+      onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()"
+      style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;
+      font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s;"
+      onmouseover="this.style.background='#1B6FE0'" onmouseout="this.style.background='#3182F6'">
+      들어가기
+    </button>
+    <div style="font-size:11px;color:#C0C7D0;margin-top:14px;">
+      이 시스템은 수산이앤에스 총무팀 전용입니다
+    </div>
+  </div>
+</div>
+<script>
+  /* index.html과 동일한 비밀번호 게이트 (sessionStorage 세션 공유) */
+  const GATE_PW_HASH = 'fbdb32e45b2566ac0a1ead4d585162645698e431dfec179c69ccffb31d996a03';
+
+  (function(){
+    if(sessionStorage.getItem('gm_auth')==='ok'){
+      document.getElementById('gate').style.display='none';
+    } else {
+      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
+    }
+  })();
+
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim();
+    if(!v) return;
+    const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+    const hash=[...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(hash===GATE_PW_HASH){
+      sessionStorage.setItem('gm_auth','ok');
+      document.getElementById('gate').style.display='none';
+    } else {
+      document.getElementById('gateErr').textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value='';
+    }
+  }
+</script>
+
+<main>
+  <div class="top-row">
+    <div>
+      <div class="date" id="todayStr"></div>
+      <h1 class="greet">인사총무 통합 대시보드 <span id="syncBadge" class="sync-badge loading">☁ 연결 중…</span></h1>
+      <p class="greet-sub">모든 인사총무 업무 현황을 한눈에 확인하세요 · 카드를 클릭하면 해당 업무로 이동합니다</p>
+    </div>
+    <button class="refresh-btn" onclick="loadAll()">🔄 새로고침</button>
+  </div>
+
+  <!-- KPI 스트립 -->
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="icon-circle" style="background:var(--blue-bg);">📋</div>
+      <div class="num" id="kpiMonthly">-</div>
+      <div class="lbl" id="kpiMonthlyLbl">이번 달 월간업무 완료율</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon-circle" style="background:var(--orange-bg);">📥</div>
+      <div class="num" id="kpiPending">-</div>
+      <div class="lbl">미처리 신청·요청 합계</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon-circle" style="background:var(--red-bg);">⏰</div>
+      <div class="num" id="kpiOverdue">-</div>
+      <div class="lbl">기한초과 업무·할일</div>
+    </div>
+    <div class="stat-card">
+      <div class="icon-circle" style="background:var(--purple-bg);">💰</div>
+      <div class="num" id="kpiContract">-</div>
+      <div class="lbl">진행 중 계약 금액 (VAT 포함)</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">업무별 현황</h2>
+  <div class="biz-grid" id="bizGrid"></div>
+
+  <h2 class="section-title">바로가기 <span style="font-size:12px;font-weight:600;color:var(--t3);">· 데이터가 담당자 PC(로컬)에만 있어 현황 집계는 제공되지 않습니다</span></h2>
+  <div class="biz-grid" id="linkGrid"></div>
+</main>
+
+<script>
+/* ============== Supabase 연결 (index.html과 동일 프로젝트, 읽기 전용) ============== */
+const SB_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+const SB_HEADERS = { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY };
+
+function setSyncStatus(state){
+  const b = document.getElementById('syncBadge'); if(!b) return;
+  const map = { online:['online','☁ 연결됨'], loading:['loading','☁ 연결 중…'], offline:['offline','⚠ 오프라인'] };
+  const [cls,txt] = map[state] || map.loading;
+  b.className = 'sync-badge ' + cls; b.textContent = txt;
+}
+
+/* app_store 키 일괄 조회 → {key: value} 맵 반환 */
+const APP_STORE_KEYS = [
+  'gongmu_tasks_v1','todos_v2','purchase_cases_v1',
+  'pibok_items_v3','pibok_txns_v3','resort_apps_v1',
+  'assoc_schedules_v1','assoc_done',
+];
+async function fetchAppStore(){
+  const inList = APP_STORE_KEYS.map(k=>`"${k}"`).join(',');
+  const url = `${SB_URL}/rest/v1/app_store?key=in.(${encodeURIComponent(inList)})&select=key,value`;
+  const r = await fetch(url, { headers:SB_HEADERS });
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const rows = await r.json();
+  const map = {};
+  rows.forEach(row=>{ map[row.key] = row.value; });
+  return map;
+}
+async function fetchTable(path){
+  const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers:SB_HEADERS });
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+/* ============== 날짜 유틸 ============== */
+const _now = new Date();
+const TODAY_STR = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
+const THIS_YM = TODAY_STR.slice(0,7);
+const THIS_YEAR = TODAY_STR.slice(0,4);
+function nextYM(){ const d=new Date(); d.setMonth(d.getMonth()+1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+document.getElementById('todayStr').textContent =
+  `${_now.getFullYear()}년 ${_now.getMonth()+1}월 ${_now.getDate()}일 ${['일','월','화','수','목','금','토'][_now.getDay()]}요일`;
+
+/* ============== 앱별 판정 로직 (각 앱 원본 코드에서 이식) ============== */
+
+/* 월간업무 — index.html monthlyStatusOf(): monthlyLog[ym] 우선, 없으면 CURRENT_YM일 때만 t.status */
+const INDEX_CURRENT_YM = '2026-06'; // index.html:1203의 CURRENT_YM과 동일하게 유지
+function monthlyStatusOf(t, ym){
+  if(t.monthlyLog && (ym in t.monthlyLog)) return t.monthlyLog[ym];
+  if(ym === INDEX_CURRENT_YM) return t.status;
+  return 'wait';
+}
+function monthlyDueDate(t, ym){
+  const [y,m] = ym.split('-').map(Number);
+  let day = t.sortDay || 1;
+  const lastDay = new Date(y, m, 0).getDate();
+  if(day > lastDay) day = lastDay;
+  return `${ym}-${String(day).padStart(2,'0')}`;
+}
+
+/* 구매계약 — purchase.html statusOf()/progressOf() */
+const PURCHASE_STAGES = ['approval','contract','advanceBond','performBond','defectBond','payment'];
+function purchaseStatusOf(c){
+  const stages = c.stages || {};
+  const applicable = PURCHASE_STAGES.filter(k => (stages[k]||'todo') !== 'na');
+  const done = applicable.filter(k => stages[k]==='done');
+  if(applicable.length>0 && done.length===applicable.length) return 'done';
+  if(done.length>0) return 'doing';
+  return 'wait';
+}
+
+/* 피복 — uniform.html computeStock()/renderStats(): q <= safety 면 부족 */
+function uniformLowCount(items, txns){
+  const stock = {};
+  items.forEach(it=>{ stock[it.key] = {}; (it.sizes||[]).forEach(s=> stock[it.key][s]=0); });
+  txns.forEach(t=>{
+    if(!stock[t.key] || !(t.size in stock[t.key])) return;
+    stock[t.key][t.size] += (t.type==='in' ? t.qty : -t.qty);
+  });
+  let lowCnt = 0;
+  items.forEach(it=>{ (it.sizes||[]).forEach(s=>{ if(stock[it.key][s] <= it.safety) lowCnt++; }); });
+  return lowCnt;
+}
+
+/* 온보딩 — onboarding.html doneCount()/isDone() */
+const ONBOARD_ITEMS = ['c_uniform','c_kit','c_insurance','c_idcard','c_rules'];
+function onboardIsDone(r){ return ONBOARD_ITEMS.every(k=>r[k]); }
+
+/* 금액 축약 표기 */
+function fmtWon(n){
+  if(!n) return '0원';
+  if(n >= 1e8) return (n/1e8).toFixed(1).replace(/\.0$/,'') + '억원';
+  if(n >= 1e4) return Math.round(n/1e4).toLocaleString() + '만원';
+  return n.toLocaleString() + '원';
+}
+
+/* ============== 카드 정의 ============== */
+/* compute(data)는 {metrics:[{label, value, cls}], badge:{txt, cls}} 반환 */
+const BIZ_CARDS = [
+  {
+    id:'monthly', icon:'📋', name:'월간업무', sub:'총무 정기 업무', url:'index.html',
+    color:'var(--blue)', bg:'var(--blue-bg)',
+    sources:['store'],
+    compute(d){
+      const tasks = (d.store['gongmu_tasks_v1']||[]).filter(t=>t.cat==='monthly');
+      const st = { done:0, doing:0, wait:0 };
+      tasks.forEach(t=>{ st[monthlyStatusOf(t, THIS_YM)] = (st[monthlyStatusOf(t, THIS_YM)]||0)+1; });
+      const overdue = tasks.filter(t=> monthlyStatusOf(t, THIS_YM)!=='done' && monthlyDueDate(t, THIS_YM) < TODAY_STR).length;
+      return {
+        metrics:[
+          {label:'이번 달 완료', value:`${st.done} / ${tasks.length}건`, cls:'good'},
+          {label:'진행 중', value:st.doing+'건'},
+          {label:'기한초과', value:overdue+'건', cls:overdue?'danger':''},
+        ],
+        badge: overdue ? {txt:'기한초과 '+overdue, cls:'danger'} : {txt:'정상', cls:'ok'},
+      };
+    },
+  },
+  {
+    id:'todo', icon:'✅', name:'할 일 관리', sub:'개인·팀 할 일', url:'todo.html',
+    color:'var(--green)', bg:'var(--green-bg)',
+    sources:['store'],
+    compute(d){
+      const todos = d.store['todos_v2']||[];
+      const open = todos.filter(t=>!t.isCompleted);
+      const overdue = open.filter(t=> t.dueDate && t.dueDate < TODAY_STR).length;
+      return {
+        metrics:[
+          {label:'미완료', value:open.length+'건'},
+          {label:'기한초과', value:overdue+'건', cls:overdue?'danger':''},
+          {label:'전체', value:todos.length+'건'},
+        ],
+        badge: overdue ? {txt:'기한초과 '+overdue, cls:'danger'} : {txt:'정상', cls:'ok'},
+      };
+    },
+  },
+  {
+    id:'purchase', icon:'🛒', name:'구매·외주계약', sub:'계약 진행 관리', url:'purchase.html',
+    color:'var(--purple)', bg:'var(--purple-bg)',
+    sources:['store'],
+    compute(d){
+      const cases = d.store['purchase_cases_v1']||[];
+      const doing = cases.filter(c=>purchaseStatusOf(c)!=='done');
+      const payWait = cases.filter(c=>(c.stages||{}).payment==='todo').length;
+      const amt = doing.reduce((s,c)=>s+(Number(c.supply)||0)+(Number(c.vat)||0),0);
+      return {
+        metrics:[
+          {label:'진행 중', value:`${doing.length} / ${cases.length}건`},
+          {label:'지급 대기', value:payWait+'건', cls:payWait?'warn':''},
+          {label:'진행 중 금액', value:fmtWon(amt)},
+        ],
+        badge: payWait ? {txt:'지급대기 '+payWait, cls:'warn'} : {txt:'정상', cls:'ok'},
+      };
+    },
+  },
+  {
+    id:'supplies', icon:'🧰', name:'비품 구매', sub:'슬랙 신청 접수', url:'supplies.html',
+    color:'var(--orange)', bg:'var(--orange-bg)',
+    sources:['supply'],
+    compute(d){
+      const rows = d.supply||[];
+      const cnt = s => rows.filter(r=>r.status===s).length;
+      const pending = cnt('pending');
+      return {
+        metrics:[
+          {label:'승인 대기', value:pending+'건', cls:pending?'warn':''},
+          {label:'발주 진행', value:(cnt('approved')+cnt('ordered'))+'건'},
+          {label:'수령 완료', value:cnt('received')+'건', cls:'good'},
+        ],
+        badge: pending ? {txt:'대기 '+pending, cls:'warn'} : {txt:'정상', cls:'ok'},
+      };
+    },
+  },
+  {
+    id:'uniform', icon:'🧥', name:'피복 관리', sub:'재고·지급 관리', url:'uniform.html',
+    color:'var(--blue)', bg:'var(--blue-bg)',
+    sources:['store','uniformReq'],
+    compute(d){
+      const items = d.store['pibok_items_v3']||[];
+      const txns = d.store['pibok_txns_v3']||[];
+      const low = items.length ? uniformLowCount(items, txns) : 0;
+      const slackPending = (d.uniformReq||[]).filter(r=>r.status==='pending').length;
+      return {
+        metrics:[
+          {label:'재고 부족 사이즈', value:low+'건', cls:low?'warn':''},
+          {label:'슬랙 신청 대기', value:slackPending+'건', cls:slackPending?'warn':''},
+          {label:'관리 품목', value:items.length+'종'},
+        ],
+        badge: slackPending ? {txt:'신청 '+slackPending, cls:'warn'} : (low ? {txt:'재고부족', cls:'warn'} : {txt:'정상', cls:'ok'}),
+      };
+    },
+  },
+  {
+    id:'resort', icon:'🏝️', name:'휴양시설', sub:'신청·선정 관리', url:'resort.html',
+    color:'var(--green)', bg:'var(--green-bg)',
+    sources:['store','resortReq'],
+    compute(d){
+      const apps = d.store['resort_apps_v1']||[];
+      const nm = nextYM();
+      const nextApps = apps.filter(a=>a.useMonth===nm).length;
+      const notImported = (d.resortReq||[]).filter(r=>r.status!=='imported').length;
+      return {
+        metrics:[
+          {label:`다음 달(${nm.slice(5)}월) 신청`, value:nextApps+'건'},
+          {label:'미반영 슬랙 신청', value:notImported+'건', cls:notImported?'warn':''},
+          {label:'전체 신청', value:apps.length+'건'},
+        ],
+        badge: notImported ? {txt:'미반영 '+notImported, cls:'warn'} : {txt:'정상', cls:'ok'},
+      };
+    },
+  },
+  {
+    id:'assoc', icon:'🏛️', name:'협회 관리', sub:'회비·실적신고 일정', url:'association.html',
+    color:'var(--purple)', bg:'var(--purple-bg)',
+    sources:['store'],
+    compute(d){
+      const sch = d.store['assoc_schedules_v1']||[];
+      const doneArr = d.store['assoc_done'];
+      const doneSet = new Set(Array.isArray(doneArr)?doneArr:[]);
+      // assoc_done은 클라우드 미동기화(localStorage 전용)라 paidDate(클라우드 동기화됨)도 완료로 인정
+      const isDone = s => doneSet.has(s.id) || !!s.paidDate;
+      const thisYear = sch.filter(s=>(s.date||'').startsWith(THIS_YEAR));
+      const undone = thisYear.filter(s=>!isDone(s));
+      const dueSoon = undone.filter(s=>s.date && s.date <= TODAY_STR).length;
+      const thisMonth = thisYear.filter(s=>(s.date||'').startsWith(THIS_YM)).length;
+      return {
+        metrics:[
+          {label:'올해 미완료', value:`${undone.length} / ${thisYear.length}건`, cls:undone.length?'warn':''},
+          {label:'납부일 경과', value:dueSoon+'건', cls:dueSoon?'danger':''},
+          {label:'이번 달 예정', value:thisMonth+'건'},
+        ],
+        badge: dueSoon ? {txt:'경과 '+dueSoon, cls:'danger'} : (undone.length ? {txt:'미완료 '+undone.length, cls:'warn'} : {txt:'정상', cls:'ok'}),
+      };
+    },
+  },
+  {
+    id:'onboard', icon:'🎉', name:'신규입사 온보딩', sub:'입사자 체크리스트', url:'onboarding.html',
+    color:'var(--orange)', bg:'var(--orange-bg)',
+    sources:['onboard'],
+    compute(d){
+      const rows = d.onboard||[];
+      const doing = rows.filter(r=>!onboardIsDone(r)).length;
+      return {
+        metrics:[
+          {label:'진행 중', value:doing+'명', cls:doing?'warn':''},
+          {label:'완료', value:(rows.length-doing)+'명', cls:'good'},
+          {label:'전체', value:rows.length+'명'},
+        ],
+        badge: doing ? {txt:'진행 '+doing, cls:'warn'} : {txt:'정상', cls:'ok'},
+      };
+    },
+  },
+];
+
+/* 바로가기 카드 (로컬/파일 기반 앱 — 집계 불가) */
+const LINK_CARDS = [
+  { icon:'💳', name:'법인카드 정산', desc:'영수증 OCR·전표 처리', url:'card.html', color:'var(--blue)', bg:'var(--blue-bg)' },
+  { icon:'🛡️', name:'단체보험 관리', desc:'보험 명단 관리 (PC 전용)', url:'insurance.html', color:'var(--green)', bg:'var(--green-bg)' },
+  { icon:'🍗', name:'선물지급 관리', desc:'명절 선물 취합·대사', url:'gift.html', color:'var(--orange)', bg:'var(--orange-bg)' },
+  { icon:'🧾', name:'전표 생성기', desc:'ERP 전표 자동 생성', url:'voucher.html', color:'var(--purple)', bg:'var(--purple-bg)' },
+  { icon:'⏱️', name:'시간외업무', desc:'시간외근무 ERP 입력 보조', url:'시간외업무/시간외업무.html', color:'var(--red)', bg:'var(--red-bg)' },
+  { icon:'📖', name:'회사 규정', desc:'규정 조회 (참고자료)', url:'rules.html', color:'var(--blue)', bg:'var(--blue-bg)' },
+];
+
+/* ============== 렌더링 ============== */
+function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderCardShell(){
+  const grid = document.getElementById('bizGrid');
+  grid.innerHTML = BIZ_CARDS.map(c=>`
+    <div class="biz-card" onclick="window.open('${c.url}','_blank')">
+      <div class="biz-head">
+        <div class="icon-circle" style="background:${c.bg}; color:${c.color};">${c.icon}</div>
+        <div>
+          <div class="name">${c.name}</div>
+          <div class="sub">${c.sub}</div>
+        </div>
+        <span class="alert-badge local" id="badge-${c.id}" style="display:none;"></span>
+      </div>
+      <div class="biz-metrics" id="metrics-${c.id}">
+        <div class="biz-loading">불러오는 중…</div>
+      </div>
+      <div class="biz-foot">열기 →</div>
+    </div>`).join('');
+
+  document.getElementById('linkGrid').innerHTML = LINK_CARDS.map(c=>`
+    <div class="biz-card link-only" onclick="window.open('${c.url}','_blank')">
+      <div class="biz-head">
+        <div class="icon-circle" style="background:${c.bg}; color:${c.color};">${c.icon}</div>
+        <div>
+          <div class="name">${c.name}</div>
+          <div class="sub">${c.desc}</div>
+        </div>
+        <span class="alert-badge local">로컬</span>
+      </div>
+      <div class="biz-foot">열기 →</div>
+    </div>`).join('');
+}
+
+function renderCard(card, data){
+  const box = document.getElementById('metrics-'+card.id);
+  const badge = document.getElementById('badge-'+card.id);
+  try{
+    const r = card.compute(data);
+    box.innerHTML = r.metrics.map(m=>
+      `<div class="biz-metric"><span>${esc(m.label)}</span><b class="${m.cls||''}">${esc(m.value)}</b></div>`
+    ).join('');
+    if(r.badge){
+      badge.textContent = r.badge.txt;
+      badge.className = 'alert-badge ' + r.badge.cls;
+      badge.style.display = '';
+    }
+  }catch(e){
+    box.innerHTML = '<div class="biz-error">⚠ 집계 실패</div>';
+  }
+}
+function renderCardError(card){
+  document.getElementById('metrics-'+card.id).innerHTML = '<div class="biz-error">⚠ 연결 실패</div>';
+}
+
+/* ============== KPI ============== */
+function renderKPIs(data){
+  // 1) 이번 달 월간업무 완료율
+  try{
+    const tasks = (data.store['gongmu_tasks_v1']||[]).filter(t=>t.cat==='monthly');
+    const done = tasks.filter(t=>monthlyStatusOf(t, THIS_YM)==='done').length;
+    const pct = tasks.length ? Math.round(done/tasks.length*100) : 0;
+    document.getElementById('kpiMonthly').innerHTML = pct+'<small>%</small>';
+    document.getElementById('kpiMonthlyLbl').textContent = `이번 달 월간업무 완료율 (${done}/${tasks.length}건)`;
+  }catch(e){ document.getElementById('kpiMonthly').textContent = '-'; }
+
+  // 2) 미처리 신청·요청 합계
+  try{
+    const pending =
+      (data.supply||[]).filter(r=>r.status==='pending').length +
+      (data.uniformReq||[]).filter(r=>r.status==='pending').length +
+      (data.resortReq||[]).filter(r=>r.status!=='imported').length +
+      (data.onboard||[]).filter(r=>!onboardIsDone(r)).length;
+    document.getElementById('kpiPending').innerHTML = pending+'<small>건</small>';
+  }catch(e){ document.getElementById('kpiPending').textContent = '-'; }
+
+  // 3) 기한초과 (월간업무 + 일반업무 + 할일)
+  try{
+    const tasks = data.store['gongmu_tasks_v1']||[];
+    const taskOverdue = tasks.filter(t=>{
+      if(t.cat==='monthly') return monthlyStatusOf(t, THIS_YM)!=='done' && monthlyDueDate(t, THIS_YM) < TODAY_STR;
+      return t.status!=='done' && t.due && t.due < TODAY_STR;
+    }).length;
+    const todoOverdue = (data.store['todos_v2']||[]).filter(t=>!t.isCompleted && t.dueDate && t.dueDate < TODAY_STR).length;
+    const total = taskOverdue + todoOverdue;
+    const el = document.getElementById('kpiOverdue');
+    el.innerHTML = total+'<small>건</small>';
+    el.style.color = total ? 'var(--red)' : '';
+  }catch(e){ document.getElementById('kpiOverdue').textContent = '-'; }
+
+  // 4) 진행 중 계약 금액
+  try{
+    const cases = data.store['purchase_cases_v1']||[];
+    const amt = cases.filter(c=>purchaseStatusOf(c)!=='done')
+      .reduce((s,c)=>s+(Number(c.supply)||0)+(Number(c.vat)||0),0);
+    document.getElementById('kpiContract').textContent = fmtWon(amt);
+  }catch(e){ document.getElementById('kpiContract').textContent = '-'; }
+}
+
+/* ============== 로딩 ============== */
+async function loadAll(){
+  setSyncStatus('loading');
+  renderCardShell();
+
+  const data = { store:{}, supply:null, uniformReq:null, resortReq:null, onboard:null };
+  const jobs = [
+    fetchAppStore().then(m=>{ data.store=m; }),
+    fetchTable('supply_requests?select=status').then(r=>{ data.supply=r; }),
+    fetchTable('uniform_requests?source=eq.slack&select=status').then(r=>{ data.uniformReq=r; }),
+    fetchTable('resort_requests?select=status').then(r=>{ data.resortReq=r; }),
+    fetchTable('onboarding?select='+ONBOARD_ITEMS.join(',')).then(r=>{ data.onboard=r; }),
+  ];
+  const results = await Promise.allSettled(jobs);
+  const storeOk = results[0].status==='fulfilled';
+  const tableOk = { supply:results[1], uniformReq:results[2], resortReq:results[3], onboard:results[4] };
+
+  setSyncStatus(results.some(r=>r.status==='fulfilled') ? 'online' : 'offline');
+
+  BIZ_CARDS.forEach(card=>{
+    // 카드가 의존하는 소스가 하나라도 실패하면 연결 실패 표시
+    const failed = card.sources.some(src=>{
+      if(src==='store') return !storeOk;
+      const map = {supply:'supply', uniformReq:'uniformReq', resortReq:'resortReq', onboard:'onboard'};
+      const key = map[src] || src;
+      const idx = {supply:1, uniformReq:2, resortReq:3, onboard:4}[key];
+      return results[idx] && results[idx].status!=='fulfilled';
+    });
+    if(failed){ renderCardError(card); return; }
+    renderCard(card, data);
+  });
+
+  renderKPIs(data);
+}
+
+loadAll();
+</script>
+</body>
+</html>

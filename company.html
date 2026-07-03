@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>수산이앤에스 | 함께 만드는 깨끗하고 안전한 세상</title>
+<meta name="description" content="수산이앤에스(수산ENS) - 친환경 원자력에너지 관리 전문 기업. 원자력·화력·수력·플랜트·방위·R&D 사업을 통해 깨끗하고 안전한 세상을 만듭니다.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    /* 수산 Corporate Identity 색상 */
+    --navy:#122142;     /* 수산인디고 Pantone 2767C */
+    --navy-2:#0a3a63;   /* 인디고~블루 중간 */
+    --blue:#005383;     /* 수산블루 Pantone 3025C */
+    --sky:#59bded;      /* 수산스카이블루 Pantone 2985C */
+    --green:#c4d700;    /* 수산그린 Pantone 382C */
+    --teal:#59bded;     /* 기존 강조색 → 수산스카이블루로 매핑 */
+    --ink:#172033;
+    --muted:#5a6b85;
+    --line:#e6ebf2;
+    --bg:#ffffff;
+    --bg-soft:#f3f7fb;
+    --maxw:1180px;
+    --shadow:0 18px 50px rgba(11,34,64,.10);
+    --brand-grad:linear-gradient(120deg,var(--blue) 0%,var(--sky) 45%,var(--green) 100%);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.6;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  .eyebrow{
+    display:inline-block;font-size:13px;font-weight:700;letter-spacing:.14em;
+    color:var(--blue);text-transform:uppercase;margin-bottom:14px;
+  }
+  .sec-title{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.25}
+  .sec-desc{color:var(--muted);font-size:17px;margin-top:14px;max-width:640px}
+  section{padding:110px 0}
+
+  /* ===== Nav ===== */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:100;
+    transition:background .3s, box-shadow .3s, padding .3s;
+    padding:22px 0;
+  }
+  header.scrolled,header.nav-open{background:rgba(255,255,255,.97);backdrop-filter:blur(10px);box-shadow:0 1px 0 var(--line);padding:14px 0}
+  .nav{display:flex;align-items:center;justify-content:space-between;gap:20px}
+  .logo{display:flex;align-items:center;flex-shrink:0}
+  .logo img{height:30px;width:auto;display:block}
+  .logo .logo-color{display:none}
+  header.scrolled .logo .logo-white,header.nav-open .logo .logo-white{display:none}
+  header.scrolled .logo .logo-color,header.nav-open .logo .logo-color{display:block}
+
+  /* GNB (메가 메뉴) */
+  .gnb{flex:1;display:flex;justify-content:center}
+  .gnb-top{display:flex;gap:clamp(20px,3.4vw,52px);list-style:none}
+  .gnb-top>li>a{display:inline-block;padding:6px 2px;color:rgba(255,255,255,.92);font-weight:600;font-size:16px;position:relative;transition:color .2s;white-space:nowrap}
+  header.scrolled .gnb-top>li>a,header.nav-open .gnb-top>li>a{color:var(--ink)}
+  .gnb-top>li>a::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:2px;background:var(--blue);transform:scaleX(0);transition:transform .2s}
+  .gnb-top>li:hover>a{color:var(--blue)}
+  .gnb-top>li:hover>a::after{transform:scaleX(1)}
+  .mega{position:absolute;left:0;right:0;top:100%;background:#fff;border-top:1px solid var(--line);box-shadow:0 22px 40px rgba(11,34,64,.10);max-height:0;opacity:0;visibility:hidden;overflow:hidden;transition:max-height .32s ease,opacity .25s}
+  header.nav-open .mega{max-height:440px;opacity:1;visibility:visible}
+  .mega-inner{display:grid;grid-template-columns:repeat(7,1fr);gap:14px;padding:24px 0 34px}
+  .mcol{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .mcol a{padding:9px 4px;font-size:14.5px;color:var(--muted);transition:color .2s,transform .2s}
+  .mcol a:hover{color:var(--blue);transform:translateY(-1px)}
+  .hamb{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:0;padding:6px;flex-shrink:0;z-index:120}
+  .hamb span{width:24px;height:2px;background:#fff;transition:.3s}
+  header.scrolled .hamb span,header.nav-open .hamb span{background:var(--ink)}
+
+  /* ===== Hero ===== */
+  .hero{
+    min-height:100vh;display:flex;align-items:center;position:relative;color:#fff;
+    background:#0a1830;overflow:hidden;
+  }
+  .hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+  .hero::after{
+    content:"";position:absolute;inset:0;z-index:1;
+    background:linear-gradient(115deg,rgba(10,24,48,.90) 0%,rgba(0,83,131,.62) 55%,rgba(89,189,237,.32) 100%);
+  }
+  .hero .wrap{position:relative;z-index:2;width:100%}
+  .hero-tag{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);padding:8px 16px;border-radius:999px;font-size:14px;font-weight:600;margin-bottom:26px}
+  .hero-tag .dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px rgba(31,182,166,.3)}
+  .hero h1{font-size:clamp(34px,6vw,68px);font-weight:800;line-height:1.15;letter-spacing:-.03em}
+  .hero h1 .hl{background:linear-gradient(90deg,var(--sky),var(--green));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{font-size:clamp(16px,2.2vw,20px);color:rgba(255,255,255,.82);margin-top:24px;max-width:560px}
+  .hero-actions{display:flex;gap:14px;margin-top:40px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:15px 28px;border-radius:999px;font-weight:700;font-size:16px;transition:transform .2s,box-shadow .2s,background .2s}
+  .btn-primary{background:var(--blue);color:#fff}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,83,131,.45)}
+  .btn-ghost{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3)}
+  .btn-ghost:hover{background:rgba(255,255,255,.18)}
+  .scroll-hint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);z-index:2;color:rgba(255,255,255,.7);font-size:13px;letter-spacing:.1em;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .scroll-hint .arrow{width:22px;height:22px;border-right:2px solid rgba(255,255,255,.7);border-bottom:2px solid rgba(255,255,255,.7);transform:rotate(45deg);animation:bob 1.6s infinite}
+  @keyframes bob{0%,100%{transform:rotate(45deg) translate(0,0);opacity:.4}50%{transform:rotate(45deg) translate(5px,5px);opacity:1}}
+
+  /* ===== Stats ===== */
+  .stats{background:var(--navy);color:#fff;padding:0}
+  .stats-inner{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:-1px}
+  .stat{padding:54px 28px;text-align:center;border-right:1px solid rgba(255,255,255,.08)}
+  .stat:last-child{border-right:0}
+  .stat .num{font-size:clamp(32px,4.5vw,52px);font-weight:800;letter-spacing:-.02em;line-height:1}
+  .stat .num .unit{font-size:.5em;font-weight:700;margin-left:4px;color:var(--teal)}
+  .stat .lbl{color:rgba(255,255,255,.7);font-size:15px;margin-top:12px}
+
+  /* ===== About ===== */
+  .about{background:var(--bg)}
+  .about-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:64px;align-items:center}
+  .about-visual{border-radius:22px;overflow:hidden;box-shadow:var(--shadow);aspect-ratio:4/3;
+    background:
+      radial-gradient(700px 400px at 20% 10%,rgba(31,182,166,.35),transparent 60%),
+      linear-gradient(135deg,var(--navy),var(--navy-2));
+    position:relative;display:grid;place-items:center;color:rgba(255,255,255,.85)}
+  .about-visual img{width:100%;height:100%;object-fit:cover}
+  .about-visual .ph{text-align:center;padding:24px}
+  .about-visual .ph .ico{font-size:54px}
+  .about-visual .ph small{display:block;margin-top:10px;opacity:.7;font-size:13px}
+  .about p.lead{font-size:18px;color:var(--ink);margin-top:18px}
+  .about p.body{color:var(--muted);margin-top:16px}
+  .pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .pill{background:var(--bg-soft);border:1px solid var(--line);color:var(--navy-2);font-weight:600;font-size:14px;padding:9px 16px;border-radius:999px}
+
+  /* ===== Business (Our business 영상 패널) ===== */
+  .biz{background:var(--navy)}
+  .biz-head{text-align:center;display:flex;flex-direction:column;align-items:center;margin-bottom:56px}
+  .biz .biz-head .sec-title{color:#fff}
+  .biz .biz-head .sec-desc{margin-left:auto;margin-right:auto;color:rgba(255,255,255,.78)}
+  .biz-head .sec-desc{margin-left:auto;margin-right:auto}
+  .biz-panels{display:flex;gap:0;height:560px;border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+  .bpanel{position:relative;flex:1 1 0;overflow:hidden;cursor:pointer;transition:flex .5s cubic-bezier(.2,.6,.2,1);min-width:0}
+  .bpanel video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+  .bpanel::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(8,18,38,.25) 0%,rgba(8,18,38,.78) 100%);transition:background .4s}
+  .bpanel:hover{flex:2.4 1 0}
+  .bpanel:hover::after{background:linear-gradient(180deg,rgba(0,83,131,.25) 0%,rgba(8,18,38,.6) 100%)}
+  .bp-txt{position:absolute;left:0;right:0;bottom:46px;z-index:2;text-align:center;color:#fff;padding:0 10px}
+  .bp-txt .en{display:block;font-size:13px;font-weight:600;letter-spacing:.08em;color:rgba(255,255,255,.85);margin-bottom:10px}
+  .bp-txt h3{font-size:24px;font-weight:800;letter-spacing:-.01em;text-shadow:0 2px 14px rgba(0,0,0,.45);white-space:nowrap}
+  .bpanel::before{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;z-index:2;background:var(--brand-grad);transform:scaleX(0);transform-origin:left;transition:transform .45s}
+  .bpanel:hover::before{transform:scaleX(1)}
+
+  /* ===== Works (사업실적: 필터 + 카드) ===== */
+  .works{background:var(--bg)}
+  .filterbar{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:52px 0 40px}
+  .ftab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 8px;cursor:pointer;
+    color:var(--muted);font-size:15px;font-weight:600;transition:all .2s;min-height:108px}
+  .ftab .fi{font-size:26px;line-height:1;opacity:.85}
+  .ftab small{font-size:12.5px;font-weight:600;opacity:.9}
+  .ftab:hover{border-color:var(--sky);color:var(--blue);box-shadow:0 8px 22px rgba(0,83,131,.08)}
+  .ftab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+  .ftab.active .fi{opacity:1}
+  .pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px 30px}
+  .pcard{cursor:pointer}
+  .pcard.hide{display:none}
+  .pthumb{border-radius:6px;overflow:hidden;aspect-ratio:16/11;background:var(--bg-soft);border:1px solid var(--line)}
+  .pthumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .pcard:hover .pthumb img{transform:scale(1.05)}
+  .pmeta{display:flex;gap:8px;margin:18px 0 12px}
+  .badge{font-size:12.5px;font-weight:700;padding:5px 12px;border-radius:4px;line-height:1}
+  .badge.loc{background:#fff;border:1px solid var(--blue);color:var(--blue)}
+  .badge.cat{background:var(--blue);color:#fff}
+  .pcard h4{font-size:17.5px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .more-wrap{text-align:center;margin-top:56px}
+  .btn-more{display:inline-flex;align-items:center;gap:10px;background:var(--blue);color:#fff;border:0;cursor:pointer;
+    font-size:16px;font-weight:600;padding:16px 44px;border-radius:4px;transition:background .2s,transform .2s}
+  .btn-more:hover{background:#06426a;transform:translateY(-2px)}
+  .btn-more.hide{display:none}
+
+  /* ===== Recruit ===== */
+  .recruit{position:relative;color:#fff;text-align:center;
+    background:linear-gradient(120deg,rgba(7,22,43,.92),rgba(31,182,166,.55)),linear-gradient(135deg,#07162b,#10325e)}
+  .recruit .wrap{position:relative;z-index:2}
+  .recruit h2{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em}
+  .recruit p{color:rgba(255,255,255,.85);font-size:18px;margin:18px auto 36px;max-width:560px}
+
+  /* ===== News ===== */
+  .news{background:var(--bg-soft)}
+  .news-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:52px}
+  .news-card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .25s,box-shadow .25s}
+  .news-card:hover{transform:translateY(-5px);box-shadow:var(--shadow)}
+  .news-card .thumb{height:190px;background:linear-gradient(135deg,var(--navy),var(--navy-2));position:relative;overflow:hidden}
+  .news-card .thumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .news-card:hover .thumb img{transform:scale(1.06)}
+  .news-card .body{padding:22px}
+  .news-card .date{font-size:13px;color:var(--blue);font-weight:700}
+  .news-card h4{font-size:17px;font-weight:700;margin-top:8px;line-height:1.4}
+  .news-card p{color:var(--muted);font-size:14.5px;margin-top:10px}
+
+  /* ===== Footer ===== */
+  footer{background:var(--navy);color:rgba(255,255,255,.7);padding:64px 0 36px}
+  .foot-top{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;padding-bottom:40px;border-bottom:1px solid rgba(255,255,255,.1)}
+  .foot-logo{margin-bottom:16px}
+  .foot-logo img{height:28px;width:auto}
+  .foot-col h5{color:#fff;font-size:15px;font-weight:700;margin-bottom:14px}
+  .foot-col a{display:block;font-size:14.5px;padding:5px 0;transition:color .2s}
+  .foot-col a:hover{color:var(--teal)}
+  .foot-bottom{display:flex;justify-content:space-between;align-items:center;padding-top:26px;font-size:13.5px;flex-wrap:wrap;gap:12px}
+
+  /* ===== Reveal ===== */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.6,.2,1),transform .7s cubic-bezier(.2,.6,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ===== Responsive ===== */
+  @media(max-width:980px){
+    .about-grid{grid-template-columns:1fr;gap:40px}
+    .result-grid,.news-grid{grid-template-columns:repeat(2,1fr)}
+    .stats-inner{grid-template-columns:repeat(2,1fr)}
+    .stat:nth-child(2){border-right:0}
+    .stat{border-bottom:1px solid rgba(255,255,255,.08)}
+    .foot-top{grid-template-columns:1fr 1fr}
+    .biz-panels{flex-wrap:wrap;height:auto}
+    .bpanel{flex:1 1 50%;height:240px}
+    .bpanel:hover{flex:1 1 50%}
+    .bp-txt{bottom:28px}
+    .bp-txt h3{font-size:21px}
+    /* 모바일 GNB: 슬라이드 메뉴 */
+    .hamb{display:flex}
+    .gnb{position:fixed;top:0;right:-100%;height:100vh;width:78%;max-width:330px;background:var(--navy);
+      justify-content:flex-start;padding:90px 30px 30px;transition:right .35s;box-shadow:-20px 0 60px rgba(0,0,0,.3);overflow-y:auto}
+    .gnb.open{right:0}
+    .gnb-top{flex-direction:column;gap:6px;width:100%}
+    .gnb-top>li>a,header.scrolled .gnb-top>li>a,header.nav-open .gnb-top>li>a{color:#fff;font-size:18px;display:block;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12)}
+    .mega{display:none}
+    .filterbar{grid-template-columns:repeat(3,1fr)}
+    .pgrid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:640px){
+    section{padding:80px 0}
+    .result-grid,.news-grid{grid-template-columns:1fr}
+    .bpanel{flex:1 1 100%;height:200px}
+    .bpanel:hover{flex:1 1 100%}
+    .filterbar{grid-template-columns:repeat(2,1fr)}
+    .pgrid{grid-template-columns:1fr}
+    .foot-top{grid-template-columns:1fr}
+    .hero-actions{flex-direction:column;align-items:stretch}
+    .btn{justify-content:center}
+  }
+</style>
+</head>
+<body>
+
+<header id="header">
+  <div class="wrap nav">
+    <a href="#top" class="logo" aria-label="수산이앤에스 홈">
+      <img class="logo-white" src="company_assets/common/logo.png" alt="수산이앤에스">
+      <img class="logo-color" src="company_assets/common/f_logo.png" alt="수산이앤에스">
+    </a>
+    <nav class="gnb" id="menu" aria-label="주메뉴">
+      <ul class="gnb-top">
+        <li><a href="#about">회사소개</a></li>
+        <li><a href="#business">사업분야</a></li>
+        <li><a href="#works">사업실적</a></li>
+        <li><a href="#about">ESG경영</a></li>
+        <li><a href="#recruit">인재채용</a></li>
+        <li><a href="#news">뉴스</a></li>
+        <li><a href="#contact">고객센터</a></li>
+      </ul>
+    </nav>
+    <button class="hamb" id="hamb" aria-label="메뉴 열기"><span></span><span></span><span></span></button>
+  </div>
+  <div class="mega">
+    <div class="wrap mega-inner">
+      <div class="mcol">
+        <a href="#about">기업정보</a><a href="#about">인사말</a><a href="#about">연혁</a><a href="#about">글로벌 네트워크</a><a href="#contact">오시는길</a>
+      </div>
+      <div class="mcol">
+        <a href="#business">원자력사업</a><a href="#business">화력사업</a><a href="#business">수력사업</a><a href="#business">플랜트</a><a href="#business">방위사업</a><a href="#business">R&amp;BD</a>
+      </div>
+      <div class="mcol">
+        <a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a>
+      </div>
+      <div class="mcol">
+        <a href="#about">품질환경</a><a href="#about">안전경영</a><a href="#about">인권정도경영</a><a href="#about">상생경영</a>
+      </div>
+      <div class="mcol">
+        <a href="#recruit">조직문화</a><a href="#recruit">인재상</a><a href="#recruit">복리후생</a><a href="#recruit">채용공고</a><a href="#recruit">합격여부확인</a>
+      </div>
+      <div class="mcol">
+        <a href="#news">새소식</a><a href="#news">홍보자료실</a><a href="#news">공고자료실</a>
+      </div>
+      <div class="mcol">
+        <a href="#contact">사이버신문고</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <video class="hero-video" autoplay muted loop playsinline preload="auto" poster="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png">
+    <source src="main_230405.mp4" type="video/mp4">
+  </video>
+  <div class="wrap">
+    <span class="hero-tag"><span class="dot"></span>친환경 원자력에너지 관리 전문</span>
+    <h1>함께 만드는<br><span class="hl">깨끗하고 안전한</span> 세상</h1>
+    <p>1974년부터 이어온 기술과 신뢰. 수산이앤에스는 원자력·화력·수력·플랜트·방위 전 영역에서 대한민국 에너지의 안전을 책임집니다.</p>
+    <div class="hero-actions">
+      <a href="#business" class="btn btn-primary">사업영역 보기 →</a>
+      <a href="#about" class="btn btn-ghost">회사소개</a>
+    </div>
+  </div>
+  <div class="scroll-hint">SCROLL<span class="arrow"></span></div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="wrap stats-inner">
+    <div class="stat reveal"><div class="num" data-target="1974">1974</div><div class="lbl">설립 (창립 50년+)</div></div>
+    <div class="stat reveal"><div class="num"><span data-target="624">0</span><span class="unit">명</span></div><div class="lbl">임직원</div></div>
+    <div class="stat reveal"><div class="num"><span data-target="494">0</span><span class="unit">명</span></div><div class="lbl">기술자격 보유 인원</div></div>
+    <div class="stat reveal"><div class="num"><span data-target="1017">0</span><span class="unit">억</span></div><div class="lbl">연 매출액</div></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about" id="about">
+  <div class="wrap about-grid">
+    <div class="about-visual reveal">
+      <img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="원자력 발전소 전경" loading="lazy">
+    </div>
+    <div class="reveal">
+      <span class="eyebrow">About Us</span>
+      <h2 class="sec-title">반세기의 기술,<br>흔들림 없는 신뢰</h2>
+      <p class="lead">수산이앤에스는 1974년 설립 이래 대한민국 발전설비의 안전과 신뢰도를 지켜온 에너지 관리 전문기업입니다.</p>
+      <p class="body">원자력 발전설비 예방정비와 계측제어시스템(MMIS) 개발을 중심으로 화력·수력·플랜트·방위 산업까지 사업 영역을 확장하며, 지속적인 R&D 투자로 친환경 에너지 시대를 선도하고 있습니다.</p>
+      <div class="pill-row">
+        <span class="pill">원전 예방정비</span>
+        <span class="pill">MMIS 계측제어</span>
+        <span class="pill">플랜트 시운전</span>
+        <span class="pill">국방 방호 솔루션</span>
+        <span class="pill">신기술 R&D</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BUSINESS -->
+<section class="biz" id="business">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow" style="color:var(--sky)">Our business</span>
+      <h2 class="sec-title">사업영역</h2>
+      <p class="sec-desc">원자력발전소의 계측제어설비 정비 및 원자력 발전의 핵심기술인 원전계측제어시스템(MMIS)의 개발 전문 기업, 수산이앤에스</p>
+    </div>
+    <div class="biz-panels reveal">
+      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="원자력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Nuclear Power</span><h3>원자력 사업</h3></div></a>
+      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="화력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Thermal Plant Power</span><h3>화력 사업</h3></div></a>
+      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="수력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Hydro</span><h3>수력 사업</h3></div></a>
+      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="플랜트%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Construction &amp; Commissioning</span><h3>플랜트</h3></div></a>
+      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="방위%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">ANTI-UAV Defence System</span><h3>방위 사업</h3></div></a>
+      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="R&BD.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Research &amp; Development</span><h3>R&amp;BD</h3></div></a>
+    </div>
+  </div>
+</section>
+
+<!-- WORKS -->
+<section class="works" id="works">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Projects</span>
+      <h2 class="sec-title">사업실적</h2>
+      <p class="sec-desc">국내를 넘어 해외까지, 수산이앤에스의 기술이 닿은 현장입니다.</p>
+    </div>
+
+    <div class="filterbar reveal" id="filterbar">
+      <button class="ftab active" data-cat="all"><span class="fi">▦</span>ALL<small>전체</small></button>
+      <button class="ftab" data-cat="nuc"><span class="fi">⚛</span>원자력사업</button>
+      <button class="ftab" data-cat="the"><span class="fi">🔥</span>화력사업</button>
+      <button class="ftab" data-cat="hyd"><span class="fi">💧</span>수력사업</button>
+      <button class="ftab" data-cat="pla"><span class="fi">🏗</span>플랜트</button>
+      <button class="ftab" data-cat="def"><span class="fi">🛡</span>방위사업</button>
+    </div>
+
+    <div class="pgrid reveal" id="pgrid">
+      <article class="pcard" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="신한울발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>신한울발전소 계측제어 설비 정비 용역</h4></article>
+      <article class="pcard" data-cat="def"><div class="pthumb"><img src="company_assets/result/81724e620e2bb00a25b5a829aefaba0a.png" alt="드론방호 통합제어 시스템" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">방위사업</span></div><h4>드론방호 통합제어 시스템 개발</h4></article>
+      <article class="pcard" data-cat="def"><div class="pthumb"><img src="company_assets/result/ca54df8385c76dd5b9686b22f9f907ee.png" alt="위성방탐 RF스캐너" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">방위사업</span></div><h4>위성방탐 RF스캐너 개발</h4></article>
+      <article class="pcard" data-cat="the"><div class="pthumb"><img src="company_assets/result/cb4df3ce20fb2bce45ae19a1cf3291d5.png" alt="하동화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>하동화력 계측제어설비 경상정비 용역</h4></article>
+      <article class="pcard" data-cat="the"><div class="pthumb"><img src="company_assets/result/583e5bb609c5f23febdd8dc6c2eed9e5.png" alt="고성하이화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>고성하이화력 계측제어설비 경상정비용역</h4></article>
+      <article class="pcard" data-cat="hyd"><div class="pthumb"><img src="company_assets/result/7040562cbf62e6a769fa95b9d23c7334.png" alt="필리핀 카섹난 수력발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국외</span><span class="badge cat">수력사업</span></div><h4>필리핀 카섹난 수력발전소 O&amp;M 용역</h4></article>
+
+      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="한울 1발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>한울 1발전소 계측제어 정비</h4></article>
+      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="UAE BNPP" loading="lazy"></div><div class="pmeta"><span class="badge loc">국외</span><span class="badge cat">원자력사업</span></div><h4>UAE BNPP 1~4호기 전기·계측 시운전공사</h4></article>
+      <article class="pcard more hide" data-cat="the"><div class="pthumb"><img src="company_assets/result/cb4df3ce20fb2bce45ae19a1cf3291d5.png" alt="당진화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>당진화력 #1~4 계측제어 경상정비 용역</h4></article>
+      <article class="pcard more hide" data-cat="pla"><div class="pthumb"><img src="company_assets/result/583e5bb609c5f23febdd8dc6c2eed9e5.png" alt="인천공항 BHS" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">플랜트</span></div><h4>인천공항 4단계 BHS 시운전 용역</h4></article>
+      <article class="pcard more hide" data-cat="hyd"><div class="pthumb"><img src="company_assets/result/7040562cbf62e6a769fa95b9d23c7334.png" alt="주암수력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">수력사업</span></div><h4>주암수력 1·2호기 조속기 공급</h4></article>
+    </div>
+
+    <div class="more-wrap reveal"><button class="btn-more" id="moreBtn">더 많은 실적보기 <span>›</span></button></div>
+  </div>
+</section>
+
+<!-- RECRUIT -->
+<section class="recruit" id="recruit">
+  <div class="wrap">
+    <span class="eyebrow reveal" style="color:#7ad9cf">Recruit</span>
+    <h2 class="reveal">함께 땀 흘릴 인재를 찾습니다</h2>
+    <p class="reveal">기술로 세상을 안전하게 만드는 일. 수산이앤에스와 함께 성장할 여러분을 기다립니다.</p>
+    <a href="#contact" class="btn btn-primary reveal">채용 정보 보기 →</a>
+  </div>
+</section>
+
+<!-- NEWS -->
+<section class="news" id="news">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">News</span>
+      <h2 class="sec-title">새로운 소식</h2>
+      <p class="sec-desc">수산이앤에스의 최신 수상 내역과 활동 소식을 전합니다.</p>
+    </div>
+    <div class="news-grid">
+      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/37299edb913cd872bbca55ee059693df.png" alt="대한민국엔지니어링대상 수상" loading="lazy"></div><div class="body"><span class="date">NEWS</span><h4>대한민국엔지니어링대상 수상</h4><p>기술력과 사업 성과를 인정받아 엔지니어링대상을 수상했습니다.</p></div></div>
+      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/8f0772e73742705725ca6272149be463.png" alt="해군작전사령부 위문금 전달" loading="lazy"></div><div class="body"><span class="date">NEWS</span><h4>해군작전사령부 위문금 전달</h4><p>국가 안보에 헌신하는 장병들을 위해 위문금을 전달했습니다.</p></div></div>
+      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/644fcec0f351eb2d642c209aaed1e7c8.png" alt="한국수력원자력 표창장 수상" loading="lazy"></div><div class="body"><span class="date">NEWS</span><h4>한국수력원자력 표창장 수상</h4><p>안전 최우선 발전소 운영에 기여한 공로로 표창장을 받았습니다.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER / CONTACT -->
+<footer id="contact">
+  <div class="wrap">
+    <div class="foot-top">
+      <div>
+        <div class="foot-logo"><img src="company_assets/common/logo.png" alt="수산이앤에스"></div>
+        <p>함께 만드는 깨끗하고 안전한 세상.<br>친환경 원자력에너지 관리 전문기업.</p>
+      </div>
+      <div class="foot-col">
+        <h5>바로가기</h5>
+        <a href="#about">회사소개</a>
+        <a href="#business">사업영역</a>
+        <a href="#works">사업실적</a>
+        <a href="#recruit">채용</a>
+      </div>
+      <div class="foot-col">
+        <h5>문의</h5>
+        <a href="tel:000-0000-0000">대표전화 000-0000-0000</a>
+        <a href="mailto:info@soosanens.co.kr">info@soosanens.co.kr</a>
+        <a href="https://www.soosanens.co.kr/" target="_blank" rel="noopener">공식 홈페이지</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 SOOSAN ENS. All rights reserved.</span>
+      <span>본 페이지는 사내 리뉴얼 시안입니다. 이미지·연락처는 실제 정보로 교체하세요.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // 헤더 스크롤 효과
+  const header = document.getElementById('header');
+  const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 40);
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  // 메가 메뉴 (데스크톱: 헤더 hover 시 펼침)
+  const isDesktop = () => window.matchMedia('(min-width:981px)').matches;
+  header.addEventListener('mouseenter', () => { if(isDesktop()) header.classList.add('nav-open'); });
+  header.addEventListener('mouseleave', () => header.classList.remove('nav-open'));
+
+  // 모바일 메뉴 (햄버거 슬라이드)
+  const hamb = document.getElementById('hamb');
+  const menu = document.getElementById('menu');
+  hamb.addEventListener('click', () => menu.classList.toggle('open'));
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => menu.classList.remove('open')));
+
+  // 사업실적 필터 + 더보기
+  const ftabs = document.querySelectorAll('.ftab');
+  const pcards = document.querySelectorAll('.pcard');
+  const moreBtn = document.getElementById('moreBtn');
+  let activeCat = 'all', showMore = false;
+  const renderCards = () => {
+    pcards.forEach(c => {
+      const match = (activeCat === 'all') ? (showMore || !c.classList.contains('more')) : (c.dataset.cat === activeCat);
+      c.classList.toggle('hide', !match);
+    });
+    if(moreBtn) moreBtn.classList.toggle('hide', !(activeCat === 'all' && !showMore));
+  };
+  const setCat = (cat) => {
+    activeCat = cat; showMore = false;
+    ftabs.forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+    renderCards();
+  };
+  ftabs.forEach(t => t.addEventListener('click', () => setCat(t.dataset.cat)));
+  if(moreBtn) moreBtn.addEventListener('click', () => { showMore = true; renderCards(); });
+  // 메가 메뉴의 사업실적 항목 클릭 → 해당 분야로 필터
+  document.querySelectorAll('.mega [data-filter]').forEach(a => {
+    a.addEventListener('click', () => { setCat(a.dataset.filter); header.classList.remove('nav-open'); });
+  });
+
+  // 배경 영상 자동재생 (뷰포트에 보일 때만 재생 → 성능/배터리 절약)
+  const videos = document.querySelectorAll('video[autoplay]');
+  const tryPlay = (v) => { v.muted = true; const p = v.play(); if(p && p.catch) p.catch(()=>{}); };
+  if('IntersectionObserver' in window){
+    const vio = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if(e.isIntersecting) tryPlay(e.target); else e.target.pause(); });
+    }, {threshold:.2});
+    videos.forEach(v => vio.observe(v));
+  } else {
+    videos.forEach(tryPlay);
+  }
+  // 일부 브라우저에서 선언적 autoplay가 지연될 때 대비
+  window.addEventListener('load', () => videos.forEach(v => { if(v.getBoundingClientRect().top < innerHeight && v.paused) tryPlay(v); }));
+
+  // 스크롤 등장 애니메이션
+  const reveals = document.querySelectorAll('.reveal');
+  const showAll = () => reveals.forEach(el => el.classList.add('in'));
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!('IntersectionObserver' in window) || reduceMotion){
+    showAll();
+  } else {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, {threshold:.15});
+    reveals.forEach(el => io.observe(el));
+    // 안전장치: 어떤 이유로든 관찰자가 동작하지 않아도 콘텐츠가 영구히 숨지 않도록
+    setTimeout(showAll, 2500);
+  }
+
+  // 숫자 카운트업
+  const countEls = document.querySelectorAll('[data-target]');
+  const countIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if(!e.isIntersecting) return;
+      const el = e.target, target = +el.dataset.target;
+      const isYear = target > 1900 && target < 2100;
+      let cur = 0, step = Math.max(1, Math.ceil(target/60));
+      const tick = () => {
+        cur += step;
+        if(cur >= target){ el.textContent = target; return; }
+        el.textContent = isYear ? cur : cur.toLocaleString();
+        requestAnimationFrame(tick);
+      };
+      tick();
+      countIO.unobserve(el);
+    });
+  }, {threshold:.5});
+  countEls.forEach(el => countIO.observe(el));
+</script>
+</body>
+</html>

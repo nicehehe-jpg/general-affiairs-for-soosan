@@ -97,7 +97,7 @@
     if(hash===GATE_PW_HASH){
       sessionStorage.setItem('gm_auth','ok');
       document.getElementById('gate').style.display='none';
-      if(window.loadStoredRates) loadStoredRates();  // 저장된 적용률 자동 적용
+      if(window.loadStoredRates) loadStoredRates().then(()=>{ if(window.loadStoredEmps) loadStoredEmps(); });  // 저장된 적용률·사원명부 자동 적용
     } else {
       const err=document.getElementById('gateErr');
       err.textContent='비밀번호가 올바르지 않습니다';
@@ -118,6 +118,7 @@
     <label><input type="checkbox" id="task-etc" onchange="updateTaskVisibility()"> 🧰 ③ 기타 본사관리비</label>
     <label><input type="checkbox" id="task-driver" onchange="updateTaskVisibility()"> 🚗 ④ 법인운전대행(대리운전)</label>
     <label><input type="checkbox" id="task-comm" onchange="updateTaskVisibility()"> 📱 ⑤ 직책보임자 통신비</label>
+    <label><input type="checkbox" id="task-lib" onchange="updateTaskVisibility()"> 📚 ⑥ 전자도서관</label>
   </div>
   <div class="hint">처리할 업무를 선택하면 아래에 공통 설정과 해당 업무의 입력 항목이 나타납니다. 여러 업무를 동시에 선택할 수 있습니다.</div>
 </div>
@@ -137,6 +138,15 @@
     <div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">
       <button type="button" onclick="clearStoredRates()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🗑 저장된 적용률 삭제</button>
       <button type="button" onclick="resetRatePass()" style="background:#F2F4F6;color:#4E5968;border:1px solid #E5E8EB;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🔑 적용률 암호 재설정</button>
+    </div>
+  </div>
+  <div class="upload-box">
+    <label class="upl">📎 ② 사원명부 업로드 (선택)</label>
+    <input type="file" id="empMasterFile" accept=".xlsx,.xls">
+    <div class="hint">📌 <b>한 번 업로드하면 클라우드에 암호화 저장되어, 다음에 열 때 자동으로 적용</b>됩니다(집·회사 PC 공통, 적용률과 같은 암호 사용). "사번", "아이디" 컬럼이 있는 사원명부를 올리면 ⑥ 전자도서관에서 아이디가 일치하는 직원의 사번·성명이 자동으로 채워져 적용률과 정확히 매칭됩니다.</div>
+    <div class="status-msg" id="empMasterStatus">사원명부 미업로드</div>
+    <div style="margin-top:7px;">
+      <button type="button" onclick="clearStoredEmps()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🗑 저장된 사원명부 삭제</button>
     </div>
   </div>
 </div>
@@ -240,6 +250,27 @@
   <div class="total-line" id="commTotalLine"></div>
 </div>
 
+<div class="card hidden" id="libCard">
+  <h2>📚 ⑥ 전자도서관 (대여형 - 사원별)</h2>
+  <div class="upload-box">
+    <label class="upl">📎 전자도서관 견적서 엑셀 업로드 (대여형 시트: 회원그룹/이름/아이디/대여금액)</label>
+    <input type="file" id="libXlsxFile" accept=".xlsx,.xls,.xlsm">
+    <div class="hint">"대여형" 시트에서 회원그룹이 "수산이앤에스"인 행만 골라 아이디별로 대여금액을 합산해 아래 표를 채웁니다. 공통설정에서 사원명부를 올렸다면 아이디로 사번·성명이 자동으로 채워지고, 적용률 파일을 올렸다면 사번(또는 성명)이 일치하는 직원은 자동으로 여러 코스트센터로 분할 처리됩니다.</div>
+    <div class="status-msg" id="libXlsxStatus"></div>
+  </div>
+  <div class="row">
+    <label>거래처</label><input id="libVendor" value="교보문고" style="width:200px">
+    <label>대상월</label><input id="libYM" type="month">
+    <div class="hint">전자도서는 면세(전자계산서) — 부가세는 0원으로 처리됩니다.</div>
+  </div>
+  <table id="libTable">
+    <thead><tr><th style="width:12%">사번</th><th style="width:14%">성명</th><th style="width:18%">아이디</th><th style="width:24%">귀속부서(적용률 미매칭시 사용)</th><th style="width:18%">금액</th><th style="width:8%"></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="actions"><button class="btn small" onclick="addLibRow()">➕ 사원 추가</button></div>
+  <div class="total-line" id="libTotalLine"></div>
+</div>
+
 <div class="footer hidden" id="footerBar">
   <button class="btn gen" onclick="generate()">📥 엑셀 생성 및 다운로드</button>
 </div>
@@ -315,11 +346,18 @@ let etcItems = [
 let driverEmployees = [
   {empno:'', name:'', dept:'경영지원팀', amount:0},
 ];
+let libEmployees = [
+  {empno:'', name:'', userid:'', dept:'경영지원팀', amount:0},
+];
 
 // ===================== 적용률 마스터 =====================
 // rateMaster: { 사번: [{name, dept, cc, ym, rate}, ...], ... }
 let rateMaster = {};
 let rateMasterByName = {}; // 성명 -> 사번(첫 매칭) 보조 인덱스
+
+// ===================== 사원명부 마스터 =====================
+// empMaster: { 아이디(소문자): {empno, name, dept}, ... }
+let empMaster = {};
 
 function lookupRates(empno, name, ym){
   let entries = null;
@@ -423,7 +461,7 @@ function ratePass(){
 function resetRatePass(){
   localStorage.removeItem(RATE_PASS_LS);
   const p = (prompt('새 적용률 암호를 입력하세요. (집·회사 PC 동일하게)')||'').trim();
-  if(p){ localStorage.setItem(RATE_PASS_LS, p); loadStoredRates(); }
+  if(p){ localStorage.setItem(RATE_PASS_LS, p); loadStoredRates().then(()=>loadStoredEmps()); }
 }
 
 function _b64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
@@ -494,6 +532,92 @@ async function clearStoredRates(){
   rateMaster = {}; rateMasterByName = {};
   const statusEl = document.getElementById('rateMasterStatus');
   if(statusEl){ statusEl.classList.remove('err'); statusEl.textContent = '적용률 파일 미업로드 (저장본 삭제됨)'; }
+}
+
+/* ===================== 사원명부 클라우드 저장 (암호화) =====================
+   적용률과 동일하게 사원명부(사번·성명·아이디)도 개인정보이므로 브라우저에서
+   AES-256-GCM으로 암호화하여 Supabase에는 암호문만 저장한다. 암호는 적용률과 공용. */
+const EMP_KEY = 'voucher_emp_master_enc'; // app_store 키
+
+async function handleEmpMasterUpload(ev){
+  const file = ev.target.files[0];
+  const statusEl = document.getElementById('empMasterStatus');
+  if(!file) return;
+  try{
+    const wb = await readWorkbookSafe(file);
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:null});
+    const head = findHeaderRow(aoa, ['사번','아이디']);
+    if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(사번/아이디)를 찾지 못했습니다.'; return; }
+    empMaster = {};
+    let cnt=0;
+    for(let i=head.idx+1;i<aoa.length;i++){
+      const r=aoa[i];
+      if(!r) continue;
+      const userid = r[head.col['아이디']]!==null && r[head.col['아이디']]!==undefined ? String(r[head.col['아이디']]).trim() : '';
+      const empno = r[head.col['사번']]!==null && r[head.col['사번']]!==undefined ? String(r[head.col['사번']]).trim() : '';
+      if(!userid || !empno) continue;
+      empMaster[userid.toLowerCase()] = {
+        empno,
+        name: head.col['사원']!==undefined ? String(r[head.col['사원']]||'').trim() : '',
+        dept: head.col['부서']!==undefined ? String(r[head.col['부서']]||'').trim() : '',
+      };
+      cnt++;
+    }
+    if(cnt===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행을 찾지 못했습니다.'; return; }
+    statusEl.classList.remove('err');
+    await saveEmpsEncrypted(statusEl, cnt);  // 암호화하여 클라우드 저장 → 다음에 열 때 자동 적용
+  } catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
+  }
+}
+
+async function saveEmpsEncrypted(statusEl, rows){
+  const count = Object.keys(empMaster).length;
+  const pass  = ratePass();
+  if(!pass){ statusEl.textContent = `사원명부 로드됨 · ${count}명 · ⚠️ 암호 미입력 → 이번 세션만 적용(저장 안 함)`; return; }
+  statusEl.textContent = '🔒 암호화하여 저장 중…';
+  try{
+    const blob = await encryptJSON({ empMaster }, pass);
+    blob.meta = { count, rows, uploadedAt:new Date().toISOString() };
+    const ok = await sbSet(EMP_KEY, blob);
+    statusEl.classList.remove('err');
+    statusEl.textContent = ok
+      ? `✅ 사원명부 적용 중 · ${count}명 · 클라우드 암호저장 완료`
+      : `사원명부 로드됨 · ${count}명 · ⚠️ 클라우드 저장 실패(이번 세션만 적용)`;
+  }catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '저장 중 오류: '+e.message;
+  }
+}
+
+async function loadStoredEmps(){
+  const statusEl = document.getElementById('empMasterStatus');
+  if(!statusEl) return;
+  let blob = null;
+  try{ blob = await sbGet(EMP_KEY); }catch(e){}
+  if(!blob || !blob.ct) return;  // 저장된 사원명부 없음 → 기존 안내 유지
+  const pass = ratePass();
+  if(!pass){ statusEl.textContent = '🔒 저장된 사원명부 있음 — 암호를 입력하면 자동 적용됩니다.'; return; }
+  try{
+    const data = await decryptJSON(blob, pass);
+    empMaster = data.empMaster || {};
+    const m = blob.meta || {};
+    const d = m.uploadedAt ? new Date(m.uploadedAt) : null;
+    statusEl.classList.remove('err');
+    statusEl.textContent = `✅ 사원명부 적용 중 · ${m.count||Object.keys(empMaster).length}명${d?(' · 업로드 '+(d.getMonth()+1)+'/'+d.getDate()):''} (클라우드 암호저장)`;
+  }catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '🔒 저장된 사원명부 복호화 실패 — 암호가 다른 듯합니다. [🔑 적용률 암호 재설정]으로 다시 입력하세요.';
+  }
+}
+
+async function clearStoredEmps(){
+  if(!confirm('클라우드에 저장된 사원명부를 삭제할까요?\n(자동 적용이 해제됩니다)')) return;
+  await sbDel(EMP_KEY);
+  empMaster = {};
+  const statusEl = document.getElementById('empMasterStatus');
+  if(statusEl){ statusEl.classList.remove('err'); statusEl.textContent = '사원명부 미업로드 (저장본 삭제됨)'; }
 }
 
 // ===================== PDF 텍스트 추출 =====================
@@ -730,6 +854,55 @@ async function handleDriverUpload(ev){
   }
 }
 
+async function handleLibUpload(ev){
+  const file = ev.target.files[0];
+  const statusEl = document.getElementById('libXlsxStatus');
+  if(!file) return;
+  try{
+    const wb = await readWorkbookSheets(file);
+    const sheetName = wb.SheetNames.find(n=>n.includes('대여')) || wb.SheetNames[0];
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
+    const head = findHeaderRow(aoa, ['회원그룹','아이디','대여금액']);
+    if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(회원그룹/아이디/대여금액)를 찾지 못했습니다.'; return; }
+    const sums={}, names={};
+    let firstYM='';
+    for(let i=head.idx+1;i<aoa.length;i++){
+      const r=aoa[i];
+      if(!r) continue;
+      const group = r[head.col['회원그룹']]!==null && r[head.col['회원그룹']]!==undefined ? String(r[head.col['회원그룹']]).trim() : '';
+      if(group!=='수산이앤에스') continue;
+      const userid = r[head.col['아이디']]!==null && r[head.col['아이디']]!==undefined ? String(r[head.col['아이디']]).trim() : '';
+      const amount = toNum(r[head.col['대여금액']]);
+      if(!userid || !amount) continue;
+      if(!sums[userid]){
+        sums[userid]=0;
+        names[userid] = head.col['이름']!==undefined ? String(r[head.col['이름']]||'').trim() : '';
+      }
+      sums[userid]+=amount;
+      if(!firstYM && head.col['대출일']!==undefined && r[head.col['대출일']]!==null){
+        let d = r[head.col['대출일']];
+        if(d instanceof Date){ firstYM = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+        else { const m = String(d).match(/^(\d{4})-(\d{2})/); if(m) firstYM = `${m[1]}-${m[2]}`; }
+      }
+    }
+    const rows = Object.entries(sums).map(([userid,amount])=>{
+      const emp = empMaster[userid.toLowerCase()];
+      const name = (emp && emp.name) || names[userid];
+      const empno = (emp && emp.empno) || rateMasterByName[name] || '';
+      return {empno, name, userid, dept:'경영지원팀', amount};
+    });
+    if(rows.length===0){ statusEl.classList.add('err'); statusEl.textContent='수산이앤에스 데이터 행을 찾지 못했습니다.'; return; }
+    libEmployees = rows;
+    renderLibTable();
+    if(firstYM && !document.getElementById('libYM').value) document.getElementById('libYM').value = firstYM;
+    statusEl.classList.remove('err');
+    statusEl.textContent = `수산이앤에스 ${rows.length}명 불러왔습니다. (시트: ${sheetName}, 아이디별 대여금액 합산)`;
+  } catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
+  }
+}
+
 // ===================== 표 렌더링 =====================
 function renderEtcTable(){
   const tbody=document.querySelector('#etcTable tbody');
@@ -775,6 +948,27 @@ function renderDriverTable(){
   document.getElementById('driverTotalLine').textContent = `대리운전 합계: ${total.toLocaleString()}원`;
 }
 function addDriverRow(){ driverEmployees.push({empno:'',name:'',dept:'경영지원팀',amount:0}); renderDriverTable(); }
+
+function renderLibTable(){
+  const tbody=document.querySelector('#libTable tbody');
+  tbody.innerHTML='';
+  const deptOptions = DEPTS.map(d=>`<option value="${d[0]}">${d[0]}</option>`).join('');
+  libEmployees.forEach((e,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input value="${e.empno}" oninput="libEmployees[${i}].empno=this.value"></td>
+      <td><input value="${e.name}" oninput="libEmployees[${i}].name=this.value"></td>
+      <td><input value="${e.userid}" oninput="libEmployees[${i}].userid=this.value"></td>
+      <td><select onchange="libEmployees[${i}].dept=this.value">${deptOptions}</select></td>
+      <td><input type="number" value="${e.amount}" oninput="libEmployees[${i}].amount=Number(this.value)||0; renderLibTable()"></td>
+      <td><button class="btn small danger" onclick="libEmployees.splice(${i},1);renderLibTable()">삭제</button></td>`;
+    tr.querySelector('select').value = e.dept;
+    tbody.appendChild(tr);
+  });
+  const total=libEmployees.reduce((s,x)=>s+x.amount,0);
+  document.getElementById('libTotalLine').textContent = `전자도서관 합계: ${total.toLocaleString()}원 (면세)`;
+}
+function addLibRow(){ libEmployees.push({empno:'',name:'',userid:'',dept:'경영지원팀',amount:0}); renderLibTable(); }
 
 function renderMgmtTable(){
   const tbody=document.querySelector('#mgmtTable tbody');
@@ -859,13 +1053,14 @@ function generate(){
   const incEtc=document.getElementById('task-etc').checked;
   const incDriver=document.getElementById('task-driver').checked;
   const incComm=document.getElementById('task-comm').checked;
+  const incLib=document.getElementById('task-lib').checked;
 
-  if(!incMgmt && !incRent && !incEtc && !incDriver && !incComm){
+  if(!incMgmt && !incRent && !incEtc && !incDriver && !incComm && !incLib){
     alert('처리할 업무를 먼저 선택해주세요.');
     return;
   }
 
-  let mgmtYM='', rentYM='', commYM='';
+  let mgmtYM='', rentYM='', commYM='', libYM='';
 
   // ① 관리비
   if(incMgmt){
@@ -968,6 +1163,36 @@ function generate(){
     }
   }
 
+  // ⑥ 전자도서관(대여형) - 면세(전자계산서), 사원별 적용률 분할 후 코스트센터별 합산
+  if(incLib){
+    const libVendor=document.getElementById('libVendor').value;
+    libYM=document.getElementById('libYM').value;
+    let libTotal=0;
+    const splitRows=[];
+    const libMemo=`'${fmtYM(libYM)} 수산그룹 전자도서관 이용료`;
+    libEmployees.filter(e=>e.amount>0).forEach(e=>{
+      splitRows.push(...allocateByRateOrDept(e.amount, e.empno, e.name, e.dept, libYM, '도서인쇄비_단행본구입', libMemo, libVendor, docDate));
+      libTotal+=e.amount;
+    });
+    if(libTotal>0){
+      // 국책과제 코스트센터는 경상연구개발비 계정 사용
+      splitRows.forEach(r=>{
+        if(String(r.코스트센터).includes('국책과제') && String(r.계정과목).startsWith('제조비용_')) r.계정과목='제조비용_경상연구개발비_도서인쇄비_단행본구입';
+      });
+      // 사원별 분할 행을 계정과목+귀속부서+코스트센터 단위로 합산 (ERP 전표 형식)
+      const merged={};
+      splitRows.forEach(r=>{
+        const k=`${r.계정과목}|${r.귀속부서}|${r.코스트센터}`;
+        if(!merged[k]) merged[k]={...r};
+        else merged[k].차변금액+=r.차변금액;
+      });
+      const libRows=Object.values(merged).sort((a,b)=> String(a.귀속부서).localeCompare(String(b.귀속부서),'ko') || String(a.코스트센터).localeCompare(String(b.코스트센터),'ko'));
+      libRows.push({계정과목:'일반매입부가세',적요:libMemo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:0,거래처:libVendor,증빙:'전자계산서(면세)',기표일:docDate,출납예정일:''});
+      libRows.push({계정과목:'미지급금_일반',적요:libMemo,귀속부서:'',코스트센터:'',차변금액:0,대변금액:libTotal,거래처:libVendor,증빙:'',기표일:docDate,출납예정일:payDate});
+      groups.push({label:`  ▶  전자도서관(대여형)  |  ${libVendor||'-'}  |  ${fmtYMFull(libYM)}분 (전자계산서 ${docDate})`, rows:libRows});
+    }
+  }
+
   if(groups.length===0){ alert('입력된 금액이 없습니다. 항목을 입력해주세요.'); return; }
 
   const header=['계정과목','적요','귀속부서','코스트센터','차변금액','대변금액','거래처','증빙','기표일','출납예정일'];
@@ -998,17 +1223,19 @@ function generate(){
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'전표입력참조');
 
-  const ymTag=(mgmtYM||rentYM||commYM||'').replace('-','');
+  const ymTag=(mgmtYM||rentYM||commYM||libYM||'').replace('-','');
   XLSX.writeFile(wb, `전표_${ymTag||'결과'}.xlsx`);
 }
 
 document.getElementById('rateMasterFile').addEventListener('change', handleRateMasterUpload);
-// 이미 인증된 세션이면, 저장해 둔 적용률을 자동으로 불러와 적용
-if(sessionStorage.getItem('gm_auth')==='ok') loadStoredRates();
+document.getElementById('empMasterFile').addEventListener('change', handleEmpMasterUpload);
+// 이미 인증된 세션이면, 저장해 둔 적용률·사원명부를 자동으로 불러와 적용
+if(sessionStorage.getItem('gm_auth')==='ok') loadStoredRates().then(()=>loadStoredEmps());
 document.getElementById('mgmtPdfFile').addEventListener('change', handleMgmtPdfUpload);
 document.getElementById('etcPdfFile').addEventListener('change', handleEtcPdfUpload);
 document.getElementById('driverXlsxFile').addEventListener('change', handleDriverUpload);
 document.getElementById('commXlsxFile').addEventListener('change', handleCommUpload);
+document.getElementById('libXlsxFile').addEventListener('change', handleLibUpload);
 
 // ===================== 업무 선택에 따른 카드 표시/숨김 =====================
 function updateTaskVisibility(){
@@ -1018,6 +1245,7 @@ function updateTaskVisibility(){
     etc: document.getElementById('task-etc').checked,
     driver: document.getElementById('task-driver').checked,
     comm: document.getElementById('task-comm').checked,
+    lib: document.getElementById('task-lib').checked,
   };
   const any = Object.values(checks).some(v=>v);
   document.getElementById('commonCard').classList.toggle('hidden', !any);
@@ -1026,6 +1254,7 @@ function updateTaskVisibility(){
   document.getElementById('etcCard').classList.toggle('hidden', !checks.etc);
   document.getElementById('driverCard').classList.toggle('hidden', !checks.driver);
   document.getElementById('commCard').classList.toggle('hidden', !checks.comm);
+  document.getElementById('libCard').classList.toggle('hidden', !checks.lib);
   document.getElementById('footerBar').classList.toggle('hidden', !any);
 }
 // ===================== 총무 대시보드 연동: URL 파라미터로 사전 설정 =====================
@@ -1033,7 +1262,7 @@ function applyUrlParams(){
   const params = new URLSearchParams(window.location.search);
   const task = params.get('task');
   if(!task) return;
-  const idMap = {mgmt:'task-mgmt', rent:'task-rent', etc:'task-etc', driver:'task-driver', comm:'task-comm'};
+  const idMap = {mgmt:'task-mgmt', rent:'task-rent', etc:'task-etc', driver:'task-driver', comm:'task-comm', lib:'task-lib'};
   const tasks = task.split(',').map(s=>s.trim()).filter(Boolean);
   tasks.forEach(t=>{
     const id = idMap[t];
@@ -1056,8 +1285,11 @@ function applyUrlParams(){
   if(tasks.includes('comm') && vendor){
     const el=document.getElementById('commVendor'); if(el) el.value = vendor;
   }
+  if(tasks.includes('lib') && vendor){
+    const el=document.getElementById('libVendor'); if(el) el.value = vendor;
+  }
   if(ym){
-    ['mgmtYM','rentYM','etcYM','driverYM','commYM'].forEach(id=>{
+    ['mgmtYM','rentYM','etcYM','driverYM','commYM','libYM'].forEach(id=>{
       const el=document.getElementById(id);
       if(el) el.value = ym;
     });
@@ -1071,6 +1303,7 @@ renderMgmtTable();
 renderEtcTable();
 renderDriverTable();
 renderCommTable();
+renderLibTable();
 </script>
 </body>
 </html>
