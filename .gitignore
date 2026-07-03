@@ -9,6 +9,18 @@ groq api.txt
 주소록.csv
 *.csv
 
+# 개인정보가 든 업무 문서/데이터 (직원 이름·사번 등) — 공개 repo에 올리지 않음
+*.hwp
+*.hwpx
+*.hml
+*.xlsx
+*.xls
+*_수정본.*
+
 # ===== 의존성 / 캐시 / 도구 =====
 node_modules/
 .claude/
+
+# 영상 원본(고용량) 백업 — 압축본만 배포, 원본은 로컬 보관
+_video_src_backup/
+_compressed/
