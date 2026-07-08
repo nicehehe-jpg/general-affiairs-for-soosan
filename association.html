@@ -549,8 +549,10 @@ function fmtMoney(n){
   if(n<0)return '▼ '+Math.abs(n).toLocaleString()+'원';
   return n.toLocaleString()+'원';
 }
+// 완료 판정: 납부일자(paidDate)가 있으면 완료로 간주(완료 체크박스 doneSet과 통합)
+function isDone(s){ return !!s.paidDate || doneSet.has(s.id); }
 function getStatus(s){
-  if(doneSet.has(s.id))return 'done';
+  if(isDone(s))return 'done';
   if(!s.date)return 'future';
   const d=dday(s.date);
   if(d<0)return 'over';
@@ -589,9 +591,9 @@ function renderSchedule(){
 
   // 통계
   const paid=yearSch.filter(s=>s.amount>0).reduce((a,s)=>a+s.amount,0);
-  const done=yearSch.filter(s=>doneSet.has(s.id)).length;
-  const soon=yearSch.filter(s=>!doneSet.has(s.id)&&['urgent','soon'].includes(getStatus(s))).length;
-  const over=yearSch.filter(s=>!doneSet.has(s.id)&&getStatus(s)==='over').length;
+  const done=yearSch.filter(s=>isDone(s)).length;
+  const soon=yearSch.filter(s=>!isDone(s)&&['urgent','soon'].includes(getStatus(s))).length;
+  const over=yearSch.filter(s=>!isDone(s)&&getStatus(s)==='over').length;
   document.getElementById('statTotal').textContent=paid.toLocaleString();
   document.getElementById('statDone').textContent=done;
   document.getElementById('statSoon').textContent=soon;
@@ -618,21 +620,21 @@ function renderSchedule(){
     const st=getStatus(s);
     const d=s.date?dday(s.date):null;
     let ddayTxt='-',ddayCls='far';
-    if(doneSet.has(s.id)){ddayTxt='완료';ddayCls='ok';}
+    if(isDone(s)){ddayTxt='완료';ddayCls='ok';}
     else if(d===null){ddayTxt='-';}
     else if(d<0){ddayTxt=`D+${Math.abs(d)}`;ddayCls='over';}
     else if(d<=7){ddayTxt=`D-${d}`;ddayCls='urgent';}
     else if(d<=30){ddayTxt=`D-${d}`;ddayCls='soon';}
     else{ddayTxt=`D-${d}`;ddayCls='far';}
 
-    const stTag=doneSet.has(s.id)?'<span class="tag tag-green">완료</span>':
+    const stTag=isDone(s)?'<span class="tag tag-green">완료</span>':
       st==='over'?'<span class="tag tag-red">기한초과</span>':
       st==='urgent'?'<span class="tag tag-red">긴급</span>':
       st==='soon'?'<span class="tag tag-orange">임박</span>':'<span class="tag tag-blue">예정</span>';
 
     const amtStyle=s.amount<0?'color:var(--green)':'';
-    return `<tr class="${doneSet.has(s.id)?'done-row':''}">
-      <td><input type="checkbox" ${doneSet.has(s.id)?'checked':''} onchange="toggleDone('${s.id}')" style="width:16px;height:16px;cursor:pointer"></td>
+    return `<tr class="${isDone(s)?'done-row':''}">
+      <td><input type="checkbox" ${isDone(s)?'checked':''} onchange="toggleDone('${s.id}')" style="width:16px;height:16px;cursor:pointer"></td>
       <td style="font-weight:600">${s.assoc}</td>
       <td style="color:var(--t2)">${s.detail}</td>
       <td style="font-family:monospace;font-size:12px">${fmtDate(s.date)}</td>
@@ -666,7 +668,7 @@ function renderTimeline(yearSch){
     if(!items.length)return '';
     const chips=items.map(s=>{
       const st=getStatus(s);
-      const cls=doneSet.has(s.id)?'tl-done':st==='over'?'tl-over':st==='urgent'?'tl-urgent':st==='soon'?'tl-soon':'tl-future';
+      const cls=isDone(s)?'tl-done':st==='over'?'tl-over':st==='urgent'?'tl-urgent':st==='soon'?'tl-soon':'tl-future';
       const short=s.assoc.replace('한국','').replace('협회','').replace('공사','').slice(0,5);
       return `<span class="tl-chip ${cls}" title="${s.assoc} - ${s.detail}\n${s.date}\n${s.amount?s.amount.toLocaleString()+'원':''}" onclick="openModal('${s.id}')">${short} ${s.detail.slice(0,4)}</span>`;
     }).join('');
@@ -689,9 +691,16 @@ function savePaidDate(id, paidDate){
 }
 
 function toggleDone(id){
-  if(doneSet.has(id))doneSet.delete(id);else doneSet.add(id);
+  const s=SCHEDULES.find(x=>x.id===id);
+  const currentlyDone = s ? isDone(s) : doneSet.has(id);
+  if(currentlyDone){
+    doneSet.delete(id);
+    if(s) s.paidDate='';   // 완료 해제 시 납부일자도 초기화(상태 일관성)
+  }else{
+    doneSet.add(id);
+  }
   localStorage.setItem('assoc_done',JSON.stringify([...doneSet]));
-  sbPushSch();
+  saveSch();               // paidDate 변경 저장 + Supabase 반영
   renderSchedule();
 }
 
