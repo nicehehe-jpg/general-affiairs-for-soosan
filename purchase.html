@@ -41,8 +41,9 @@
 
   /* 통계 */
   .stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px;}
-  .stat-card{background:var(--card); border-radius:20px; padding:20px; box-shadow:0 1px 2px rgba(0,0,0,.03); transition:.15s;}
+  .stat-card{background:var(--card); border-radius:20px; padding:20px; box-shadow:0 1px 2px rgba(0,0,0,.03); transition:.15s; cursor:pointer; border:1.5px solid transparent;}
   .stat-card:hover{box-shadow:0 8px 20px rgba(25,31,40,.08); transform:translateY(-2px);}
+  .stat-card.active{border-color:var(--blue); box-shadow:0 8px 20px rgba(37,99,235,.14);}
   .stat-card .icon-circle{width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:14px;}
   .stat-card .num{font-size:24px; font-weight:800; line-height:1;}
   .stat-card .num small{font-size:14px; font-weight:700; color:var(--t3); margin-left:2px;}
@@ -140,6 +141,9 @@
     .pm-grid.c3{grid-template-columns:1fr;}
     body{padding:20px 16px 60px;}
   }
+  @media(max-width:440px){
+    .stat-grid{grid-template-columns:1fr;}
+  }
 
   /* ===== 발주서 생성 모달 ===== */
   .order-modal-overlay{position:fixed;inset:0;background:rgba(25,31,40,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;}
@@ -168,6 +172,8 @@
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";}</script>
+<!-- 공급업체 마스터(업체명→사업자등록번호) — 구매 건 추가 시 사업자번호 자동입력용 -->
+<script src="vendors_dir.js"></script>
 </head>
 <body>
 <!-- ===== 비밀번호 잠금 ===== -->
@@ -229,22 +235,22 @@
 
 <!-- 통계 -->
 <div class="stat-grid">
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterByStatus('all')" title="클릭하면 전체 구매 건을 봅니다">
     <div class="icon-circle" style="background:var(--blue-bg); color:var(--blue);">📋</div>
     <div class="num" id="statTotal">0<small>건</small></div>
     <div class="lbl">전체 구매 건</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterByStatus('doing')" title="클릭하면 진행중 건만 봅니다">
     <div class="icon-circle" style="background:var(--orange-bg); color:var(--orange);">⏳</div>
     <div class="num" id="statDoing">0<small>건</small></div>
     <div class="lbl">진행중</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterByStatus('done')" title="클릭하면 완료 건만 봅니다">
     <div class="icon-circle" style="background:var(--green-bg); color:var(--green);">✅</div>
     <div class="num" id="statDone">0<small>건</small></div>
     <div class="lbl">완료</div>
   </div>
-  <div class="stat-card">
+  <div class="stat-card" onclick="filterByStatus('all')" title="클릭하면 전체 구매 건을 봅니다">
     <div class="icon-circle" style="background:var(--purple-bg); color:var(--purple);">💰</div>
     <div class="num" id="statAmount">₩0</div>
     <div class="lbl">계약금액 합계</div>
@@ -546,6 +552,20 @@ function clearFilters(){
   document.getElementById('fDept').value='all';
   document.getElementById('fFlag').value='all';
   applyFilters();
+}
+// 대시보드 카드 클릭 → 진행상태 필터 적용 후 목록으로 스크롤
+function filterByStatus(st){
+  const sel=document.getElementById('fStatus');
+  if(sel) sel.value=st;
+  applyFilters();
+  highlightStatCard(st);
+  const grid=document.getElementById('caseGrid');
+  if(grid) grid.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function highlightStatCard(st){
+  const map={all:0, doing:1, done:2};
+  const cards=document.querySelectorAll('.stat-grid .stat-card');
+  cards.forEach((c,i)=> c.classList.toggle('active', i===map[st]));
 }
 function populateFilterOptions(){
   const costs=[...new Set(CASES.map(c=>c.costType).filter(Boolean))].sort();
@@ -900,7 +920,9 @@ function updateVendorDir(cases){
 }
 function fillVendorDatalist(){
   const dl=document.getElementById('vendorList'); if(!dl) return;
-  dl.innerHTML=Object.keys(VENDOR_DIR).sort().map(v=>`<option value="${esc(v)}">`).join('');
+  const names=new Set(Object.keys(VENDOR_DIR));
+  if(window.VENDOR_SEED) Object.keys(window.VENDOR_SEED).forEach(v=>names.add(v));
+  dl.innerHTML=[...names].sort().map(v=>`<option value="${esc(v)}">`).join('');
 }
 /* ============== 발주서 PDF → 구매건 자동입력 (로컬 파싱 · 무료, API 미사용) ============== */
 let _cmPdfFile = null;
@@ -1207,10 +1229,15 @@ async function runCmPdfOcr(){
   }
 }
 
+function lookupBizNo(v){
+  if(!v) return '';
+  return VENDOR_DIR[v] || (window.VENDOR_SEED && window.VENDOR_SEED[v]) || '';
+}
 function onCmVendorChange(){
   const v=document.getElementById('cmVendor').value.trim();
   const biz=document.getElementById('cmBizNo');
-  if(v && VENDOR_DIR[v] && !biz.value.trim()) biz.value=VENDOR_DIR[v];
+  const found=lookupBizNo(v);
+  if(v && found && !biz.value.trim()) biz.value=found;
 }
 
 /* ============== 엑셀 가져오기 (기존 계약현황 양식) ============== */
