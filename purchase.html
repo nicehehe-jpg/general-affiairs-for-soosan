@@ -301,7 +301,7 @@
       <div style="display:flex;gap:10px;align-items:stretch;">
         <label for="cmPdfFile" style="flex:1;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;cursor:pointer;min-height:48px;transition:.15s;" id="cmPdfLabel" onmouseover="this.style.background='#F7F9FB'" onmouseout="this.style.background='var(--card)'">
           <span style="font-size:18px;">📄</span>
-          <span id="cmPdfLabelTxt" style="font-size:12.5px;color:var(--t3);font-weight:600;">발주서 PDF 클릭하여 선택…</span>
+          <span id="cmPdfLabelTxt" style="font-size:12.5px;color:var(--t3);font-weight:600;">발주서 PDF 클릭 또는 드래그하여 올리기…</span>
           <input type="file" id="cmPdfFile" accept=".pdf" style="display:none" onchange="onCmPdfFileChange(this)">
         </label>
         <button onclick="runCmPdfOcr()" id="cmPdfOcrBtn" style="background:var(--blue);color:#fff;border:none;border-radius:11px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;min-width:90px;" disabled>자동 입력</button>
@@ -906,9 +906,13 @@ function fillVendorDatalist(){
 let _cmPdfFile = null;
 let _cmAutoBonds = null; // 발주서 자동입력으로 읽은 보증증권 단계 상태(저장 시 적용)
 
-function onCmPdfFileChange(input) {
-  const f = input.files && input.files[0];
+// 클릭 선택·드래그&드롭 공용 파일 수용 처리
+function acceptCmPdf(f) {
   if(!f) return;
+  if(!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf'){
+    alert('PDF 파일만 업로드할 수 있습니다.');
+    return;
+  }
   _cmPdfFile = f;
   const lbl = document.getElementById('cmPdfLabelTxt');
   if(lbl) lbl.textContent = '✅ ' + f.name;
@@ -917,6 +921,29 @@ function onCmPdfFileChange(input) {
   const st = document.getElementById('cmPdfOcrStatus');
   if(st){ st.style.display='none'; st.textContent=''; }
 }
+
+function onCmPdfFileChange(input) {
+  acceptCmPdf(input.files && input.files[0]);
+}
+
+// 발주서 PDF 자동입력 박스에 드래그&드롭 지원 (클릭 선택과 동일 처리)
+(function initCmPdfDrop(){
+  function setup(){
+    const zone = document.getElementById('cmPdfImportSection');
+    if(!zone) return;
+    const hi = () => { zone.style.background='var(--blue-bg)'; zone.style.borderStyle='solid'; };
+    const lo = () => { zone.style.background='var(--blue-bg)'; zone.style.borderStyle='dashed'; };
+    ['dragenter','dragover'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); hi(); }));
+    ['dragleave'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); lo(); }));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation(); lo();
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      acceptCmPdf(f);
+    });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setup);
+  else setup();
+})();
 
 /* PDF 텍스트 추출 (pdf.js) — 읽기순서(y↓, x→)로 줄 재구성 */
 async function extractPdfText(file){
