@@ -1739,7 +1739,7 @@ function renderTaskList(){
   // 구매업무는 마감일의 년/월별로 그룹핑해서 표시
   if(activeCat==='purchase'){
     items.sort((a,b)=> (a.due||'').localeCompare(b.due||'') || a.title.localeCompare(b.title));
-    title.innerHTML = `${CATS.purchase.name} 업무 <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(년/월별 · ${items.length}건)</span>`;
+    title.innerHTML = `${CATS.purchase.name} <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(년/월별 · ${items.length}건)</span>`;
 
     const groups = [];
     items.forEach(t=>{
@@ -1767,7 +1767,7 @@ function renderTaskList(){
   }
 
   items.sort((a,b)=> (a.due||'').localeCompare(b.due||''));
-  title.innerHTML = (activeCat==='all' ? '처리 예정 업무' : CATS[activeCat].name + ' 업무') +
+  title.innerHTML = (activeCat==='all' ? '처리 예정 업무' : CATS[activeCat].name) +
     ` <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(마감일 순 · ${items.length}건)</span>`;
 
   wrap.innerHTML = '';
