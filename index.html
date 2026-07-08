@@ -1204,19 +1204,23 @@ const STATUS_DOT = {done:'var(--green)', doing:'var(--blue)', wait:'var(--t3)'};
 const STORAGE_KEY = 'gongmu_tasks_v1';
 
 // ===================== 월간업무 월별 처리 현황 =====================
-const CURRENT_YM = '2026-06';
-const TODAY_DAY = 16;
+// SEED_YM: 코드에 하드코딩된 초기 status(완료 여부)가 대표하는 기준 월. 데이터 하위호환용으로 고정.
+const SEED_YM = '2026-06';
+// CURRENT_YM / TODAY_DAY: 실제 오늘 날짜 기준으로 계산 (월이 바뀌면 자동 반영).
+const _todayNow = new Date();
+const CURRENT_YM = `${_todayNow.getFullYear()}-${String(_todayNow.getMonth()+1).padStart(2,'0')}`;
+const TODAY_DAY = _todayNow.getDate();
 let selectedMonth = CURRENT_YM;
 
 function monthlyStatusOf(t, ym){
   if(t.monthlyLog && (ym in t.monthlyLog)) return t.monthlyLog[ym];
-  if(ym === CURRENT_YM) return t.status;
+  if(ym === SEED_YM) return t.status;
   return 'wait';
 }
 function setMonthlyStatus(t, ym, status){
   if(!t.monthlyLog) t.monthlyLog = {};
   t.monthlyLog[ym] = status;
-  if(ym === CURRENT_YM) t.status = status;
+  if(ym === SEED_YM) t.status = status;
 }
 function shiftMonth(ym, delta){
   let [y,m] = ym.split('-').map(Number);
@@ -1698,7 +1702,7 @@ function renderTaskList(){
   const items = activeFilter==='all' ? catItems : catItems.filter(t=>effStatus(t)===activeFilter);
 
   if(items.length===0){
-    title.innerHTML = (activeCat==='all' ? '처리 예정 업무' : CATS[activeCat].name + ' 업무') +
+    title.innerHTML = (activeCat==='all' ? '처리 예정 업무' : CATS[activeCat].name) +
       ` <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(0건)</span>`;
     wrap.innerHTML = '<div class="empty">해당 조건에 업무가 없습니다.</div>';
     return;
@@ -1707,7 +1711,7 @@ function renderTaskList(){
   // 월간업무는 선택한 월의 처리 일자(매월 며칠)별로 그룹핑해서 표시
   if(activeCat==='monthly'){
     items.sort((a,b)=> (a.sortDay||0)-(b.sortDay||0) || a.title.localeCompare(b.title));
-    title.innerHTML = `${CATS.monthly.name} 업무 <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(${fmtYMLabel(selectedMonth)} · 처리 일자 순 · ${items.length}건)</span>`;
+    title.innerHTML = `${CATS.monthly.name} <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(${fmtYMLabel(selectedMonth)} · 처리 일자 순 · ${items.length}건)</span>`;
 
     const groups = [];
     items.forEach(t=>{
