@@ -1,0 +1,36 @@
+name: keepalive-teamchat-db
+
+# Team Chat 백엔드의 /health/db 를 주기적으로 호출해 Supabase 프로젝트가
+# 무료 플랜의 "7일 미사용 자동 정지"에 걸리지 않도록 깨워 둔다.
+# (/health/db 는 users 테이블에 쿼리를 날리므로 Supabase 활동으로 집계됨)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'        # 매일 03:00 UTC (한국시간 12:00)
+  workflow_dispatch: {}          # 필요 시 수동 실행
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping team-chat /health/db (retry for Render cold start)
+        run: |
+          URL="https://team-chat-1vew.onrender.com/health/db"
+          for i in 1 2 3 4; do
+            code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 90 "$URL" || echo "000")
+            echo "attempt $i -> HTTP $code"
+            cat /tmp/out.json 2>/dev/null || true
+            echo
+            if [ "$code" = "200" ]; then
+              echo "keepalive OK"
+              exit 0
+            fi
+            sleep 30
+          done
+          # 콜드스타트/일시 오류로 실패해도 워크플로 자체는 성공 처리한다.
+          # (정지 방지가 목적이며 다음 예약에 자동 재시도됨)
+          echo "keepalive did not receive 200 this run; will retry on next schedule"
+          exit 0

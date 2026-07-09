@@ -1019,7 +1019,7 @@ async function sendAiMsg(){
       method:'POST',
       headers:{'Content-Type':'application/json', 'Authorization':'Bearer ' + getGroqKey()},
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama-3.1-8b-instant',
         messages: [
           { role:'system', content: getSystemContext() },
           ...aiHistory
