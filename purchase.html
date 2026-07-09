@@ -1756,19 +1756,19 @@ function omPayTermSelChange() {
   if(v !== '기타') etc.value = '';
 }
 function omBondChange(key) {
-  const v = document.getElementById('omBond'+key).value;
+  const v = (document.getElementById('omBond'+key)||{value:'해당없음'}).value;
   const etc = document.getElementById('omBond'+key+'Etc');
   etc.style.display = v === '직접입력' ? 'block' : 'none';
   if(v !== '직접입력') etc.value = '';
 }
 function getOmPayTerm() {
-  const sel = document.getElementById('omPayTermSel').value;
-  if(sel === '기타') return document.getElementById('omPayTermEtc').value.trim();
+  const sel = (document.getElementById('omPayTermSel')||{value:''}).value;
+  if(sel === '기타') return (document.getElementById('omPayTermEtc')||{value:''}).value.trim();
   return sel;
 }
 function getOmBond(key) {
-  const v = document.getElementById('omBond'+key).value;
-  if(v === '직접입력') return document.getElementById('omBond'+key+'Etc').value.trim();
+  const v = (document.getElementById('omBond'+key)||{value:'해당없음'}).value;
+  if(v === '직접입력') return (document.getElementById('omBond'+key+'Etc')||{value:''}).value.trim();
   return v;
 }
 
@@ -1787,7 +1787,7 @@ async function generateOrderPDF() {
     const { PDFDocument } = PDFLib;
     const orderInfo = {
       caseName: c.name,
-      specNo: document.getElementById('omSpecNo').value.trim(),
+      specNo: (document.getElementById('omSpecNo')||{value:''}).value.trim(),
       payTerm: getOmPayTerm(),
       bondAdv: getOmBond('Adv'),
       bondPerf: getOmBond('Perf'),
@@ -1887,7 +1887,7 @@ async function generateOrderExcel() {
   if(!c) return;
 
   const orderInfo = {
-    specNo: document.getElementById('omSpecNo').value.trim(),
+    specNo: (document.getElementById('omSpecNo')||{value:''}).value.trim(),
     payTerm: getOmPayTerm(),
     bondAdv: getOmBond('Adv'),
     bondPerf: getOmBond('Perf'),
