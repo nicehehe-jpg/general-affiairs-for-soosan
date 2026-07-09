@@ -108,6 +108,43 @@
   }
 </script>
 
+<!-- ===== 암호 입력 모달 (적용률/사원명부 암호화 전용, 입력값 마스킹) ===== -->
+<div id="pwModal" style="position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:18px;padding:28px 26px;width:320px;max-width:88vw;box-shadow:0 8px 30px rgba(0,0,0,.15);">
+    <div id="pwModalMsg" style="font-size:13px;color:#4E5968;margin-bottom:14px;white-space:pre-line;line-height:1.5;"></div>
+    <input id="pwModalInput" type="password" placeholder="암호 입력" style="width:100%;padding:11px 12px;border:1.5px solid #E5E8EB;border-radius:10px;font-size:14px;font-family:inherit;box-sizing:border-box;outline:none;margin-bottom:12px;" onfocus="this.style.borderColor='#3182F6'" onblur="this.style.borderColor='#E5E8EB'">
+    <div style="display:flex;gap:8px;">
+      <button type="button" onclick="_pwModalCancel()" style="flex:1;padding:10px;background:#F2F4F6;color:#4E5968;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">취소</button>
+      <button type="button" onclick="_pwModalConfirm()" style="flex:1;padding:10px;background:#3182F6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">확인</button>
+    </div>
+  </div>
+</div>
+<script>
+  let _pwModalResolve = null;
+  function askPassword(message){
+    return new Promise(resolve=>{
+      _pwModalResolve = resolve;
+      document.getElementById('pwModalMsg').textContent = message;
+      const input = document.getElementById('pwModalInput');
+      input.value = '';
+      document.getElementById('pwModal').style.display = 'flex';
+      setTimeout(()=>input.focus(), 50);
+    });
+  }
+  function _pwModalDone(value){
+    document.getElementById('pwModal').style.display = 'none';
+    const resolve = _pwModalResolve;
+    _pwModalResolve = null;
+    if(resolve) resolve(value);
+  }
+  function _pwModalConfirm(){ _pwModalDone(document.getElementById('pwModalInput').value); }
+  function _pwModalCancel(){ _pwModalDone(null); }
+  document.getElementById('pwModalInput').addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); _pwModalConfirm(); }
+    else if(e.key==='Escape'){ _pwModalCancel(); }
+  });
+</script>
+
 <h1>🧾 수산이앤에스 전표생성기</h1>
 
 <div class="card">
@@ -451,17 +488,17 @@ async function sbGet(key){ try{ const r=await fetch(`${SB_REST}?key=eq.${encodeU
 async function sbSet(key,val){ try{ const r=await fetch(SB_REST,{method:'POST',headers:{...SB_H,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify({key,value:val,updated_at:new Date().toISOString()})}); return r.ok; }catch(e){ return false; } }
 async function sbDel(key){ try{ await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}`,{method:'DELETE',headers:SB_H}); return true; }catch(e){ return false; } }
 
-function ratePass(){
+async function ratePass(){
   let p = (localStorage.getItem(RATE_PASS_LS)||'').trim();
   if(!p){
-    p = (prompt('적용률 암호를 입력하세요.\n(적용률 데이터 암호화/복호화 전용 암호 — 집·회사 PC에서 동일하게 입력)')||'').trim();
+    p = ((await askPassword('적용률 암호를 입력하세요.\n(적용률 데이터 암호화/복호화 전용 암호 — 집·회사 PC에서 동일하게 입력)'))||'').trim();
     if(p) localStorage.setItem(RATE_PASS_LS, p);
   }
   return p;
 }
-function resetRatePass(){
+async function resetRatePass(){
   localStorage.removeItem(RATE_PASS_LS);
-  const p = (prompt('새 적용률 암호를 입력하세요. (집·회사 PC 동일하게)')||'').trim();
+  const p = ((await askPassword('새 적용률 암호를 입력하세요. (집·회사 PC 동일하게)'))||'').trim();
   if(p){ localStorage.setItem(RATE_PASS_LS, p); loadStoredRates().then(()=>loadStoredEmps()); }
 }
 
@@ -487,7 +524,7 @@ async function decryptJSON(blob, pass){
 async function saveRatesEncrypted(statusEl, rows){
   const count  = Object.keys(rateMaster).length;
   const months = [...new Set([].concat(...Object.values(rateMaster)).map(e=>e.ym).filter(Boolean))];
-  const pass   = ratePass();
+  const pass   = await ratePass();
   if(!pass){ statusEl.textContent = `적용률 로드됨 · 사원 ${count}명 · ⚠️ 암호 미입력 → 이번 세션만 적용(저장 안 함)`; return; }
   statusEl.textContent = '🔒 암호화하여 저장 중…';
   try{
@@ -510,7 +547,7 @@ async function loadStoredRates(){
   let blob = null;
   try{ blob = await sbGet(RATE_KEY); }catch(e){}
   if(!blob || !blob.ct) return;  // 저장된 적용률 없음 → 기존 안내 유지
-  const pass = ratePass();
+  const pass = await ratePass();
   if(!pass){ statusEl.textContent = '🔒 저장된 적용률 있음 — 암호를 입력하면 자동 적용됩니다. [🔑 암호 재설정]'; return; }
   try{
     const data = await decryptJSON(blob, pass);
@@ -575,7 +612,7 @@ async function handleEmpMasterUpload(ev){
 
 async function saveEmpsEncrypted(statusEl, rows){
   const count = Object.keys(empMaster).length;
-  const pass  = ratePass();
+  const pass  = await ratePass();
   if(!pass){ statusEl.textContent = `사원명부 로드됨 · ${count}명 · ⚠️ 암호 미입력 → 이번 세션만 적용(저장 안 함)`; return; }
   statusEl.textContent = '🔒 암호화하여 저장 중…';
   try{
@@ -598,7 +635,7 @@ async function loadStoredEmps(){
   let blob = null;
   try{ blob = await sbGet(EMP_KEY); }catch(e){}
   if(!blob || !blob.ct) return;  // 저장된 사원명부 없음 → 기존 안내 유지
-  const pass = ratePass();
+  const pass = await ratePass();
   if(!pass){ statusEl.textContent = '🔒 저장된 사원명부 있음 — 암호를 입력하면 자동 적용됩니다.'; return; }
   try{
     const data = await decryptJSON(blob, pass);
