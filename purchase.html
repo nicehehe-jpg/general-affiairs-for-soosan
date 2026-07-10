@@ -624,6 +624,16 @@ function renderTabs(){
     wrap.appendChild(b);
   });
 }
+function overdueDays(c){
+  if(!c || !c.dueDate) return 0;
+  const pay = (c.stages && c.stages.payment) || 'todo';
+  if(pay==='done' || pay==='na') return 0;
+  const d = new Date(c.dueDate + 'T00:00:00');
+  if(isNaN(d.getTime())) return 0;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.floor((today - d)/86400000);
+  return diff > 0 ? diff : 0;
+}
 function renderCases(){
   const grid = document.getElementById('caseGrid');
   const list = visibleCases();
@@ -637,6 +647,7 @@ function renderCases(){
     const t = PTYPES[c.type];
     const p = progressOf(c);
     const st = statusOf(c);
+    const od = overdueDays(c);
     const amount = (c.supply||0)+(c.vat||0);
     const period = `${c.contractDate||'-'}${c.dueDate? ' ~ '+c.dueDate : ''}`;
     const chips = STAGES.map(s=>{
@@ -654,6 +665,7 @@ function renderCases(){
             <span class="type-badge" style="background:${t.bg}; color:${t.color};">${t.name}</span>
             ${c.costType?`<span class="type-badge" style="background:var(--orange-bg); color:var(--orange);">${esc(c.costType)}</span>`:''}
             <span class="status-badge st-${st}">${STATUS_LABEL[st]}</span>
+            ${od>0?`<span class="type-badge" style="background:var(--red-bg);color:var(--red);font-weight:800;">⚠️ 계약종료일 초과 +${od}일</span>`:''}
           </div>
           ${c.project?`<div class="case-meta"><span class="k">📁 과제</span> ${esc(c.project)}</div>`:''}
           <div class="case-meta"><span class="k">🏢</span> <b>${esc(c.vendor||'-')}</b>${c.bizNo?` <span class="k">(${esc(c.bizNo)})</span>`:''}${c.vendorEmail?` &nbsp;·&nbsp; <span class="k">사업자</span> ${esc(c.vendorEmail)}`:''}</div>
