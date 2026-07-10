@@ -858,7 +858,10 @@
 <div class="ai-chat-box" id="aiChatBox">
   <div class="ai-chat-header">
     <span>🤖 AI 어시스턴트</span>
-    <button onclick="toggleAiChat()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">✕</button>
+    <span style="display:flex;gap:8px;align-items:center;">
+      <button onclick="resetGroqKey()" title="AI API 키 재설정" style="background:none;border:none;color:#fff;font-size:15px;cursor:pointer;line-height:1;">🔑</button>
+      <button onclick="toggleAiChat()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1;">✕</button>
+    </span>
   </div>
   <div class="ai-chat-messages" id="aiMessages">
     <div class="ai-msg ai">안녕하세요! 업무 관련해서 무엇이든 물어보세요 😊</div>
@@ -916,6 +919,15 @@
 <script>
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 function getGroqKey(){ return localStorage.getItem('groq_api_key') || ''; }
+function resetGroqKey(){
+  const cur = getGroqKey();
+  const key = prompt('Groq API 키를 입력하세요:\n(console.groq.com → API Keys 에서 발급, gsk_ 로 시작)', cur);
+  if(key===null) return;
+  const k = key.trim();
+  if(!k){ localStorage.removeItem('groq_api_key'); alert('API 키를 지웠습니다.'); return; }
+  localStorage.setItem('groq_api_key', k);
+  alert('API 키가 저장되었습니다. 다시 질문해 보세요.');
+}
 let aiHistory = [];
 
 function toggleAiChat(){
@@ -1029,7 +1041,9 @@ async function sendAiMsg(){
       })
     });
     const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content || (data.error ? '오류: ' + data.error.message : '응답을 받지 못했습니다.');
+    const errMsg = data.error ? (data.error.message || '') : '';
+    if(res.status===401 || /api key/i.test(errMsg)){ localStorage.removeItem('groq_api_key'); aiHistory.pop(); loading.remove(); msgs.innerHTML += `<div class="ai-msg ai">⚠️ API 키가 유효하지 않아 저장된 키를 지웠습니다. 새 키를 입력해 주세요.</div>`; msgs.scrollTop = msgs.scrollHeight; resetGroqKey(); return; }
+    const reply = data.choices?.[0]?.message?.content || (data.error ? '오류: ' + errMsg : '응답을 받지 못했습니다.');
     aiHistory.push({ role:'assistant', content: reply });
     loading.remove();
     msgs.innerHTML += `<div class="ai-msg ai">${reply.replace(/\n/g,'<br>')}</div>`;
