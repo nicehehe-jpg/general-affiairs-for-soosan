@@ -283,6 +283,7 @@
     <option value="all">특이조건 없음</option>
     <option value="bondMissing">보증증권 미비</option>
     <option value="unpaid">미지급(잔여)</option>
+    <option value="overdue">종료일 초과 미지급</option>
   </select>
   <button class="all-btn" id="fClear" onclick="clearFilters()">필터 초기화</button>
   <span class="filter-count" id="fCount"></span>
@@ -594,6 +595,7 @@ function visibleCases(){
   if(fDept!=='all') list = list.filter(c=> (c.dept||'')===fDept);
   if(fFlag==='bondMissing') list = list.filter(c=> ['advanceBond','performBond','defectBond'].some(k=> (c.stages[k]||'todo')==='todo'));
   else if(fFlag==='unpaid') list = list.filter(c=> (c.stages.payment||'todo')!=='done');
+  else if(fFlag==='overdue') list = list.filter(c=> overdueDays(c) > 0);
   list.sort((a,b)=> (b.contractDate||'').localeCompare(a.contractDate||''));
   return list;
 }
