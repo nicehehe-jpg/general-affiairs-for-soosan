@@ -1354,8 +1354,9 @@ function importExcel(input){
         }
       });
       if(!parsed.length){ alert('가져올 데이터가 없습니다. (계약명이 있는 행이 없습니다)'); input.value=''; return; }
-      const replace=confirm(`${yearSheets.join(', ')} 시트에서 총 ${parsed.length}건을 찾았습니다.\n\n[확인] 기존 데이터를 모두 지우고 교체\n[취소] 기존 목록에 추가`);
-      CASES = replace ? parsed : CASES.concat(parsed);
+      const go=confirm(`${yearSheets.join(', ')} 시트에서 총 ${parsed.length}건을 찾았습니다.\n\n기존 목록은 그대로 두고 선택한 건들을 추가합니다.\n[확인] 추가 / [취소] 취소`);
+      if(!go){ input.value=''; return; }
+      CASES = CASES.concat(parsed);
       updateVendorDir(parsed);
       saveCases();
       allPeriod=true; if(typeof syncMonthUI==='function') syncMonthUI();
