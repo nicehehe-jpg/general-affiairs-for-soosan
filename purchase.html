@@ -224,6 +224,7 @@
   <div class="head-btns">
     <button class="btn" onclick="openCaseModal()">+ 구매 건 추가</button>
     <button class="btn line sm" onclick="downloadTemplate()">📋 입력양식 받기</button>
+    <button class="btn sm" onclick="downloadImportTemplate()">📋 양식 다운로드</button>
     <button class="btn purple sm" onclick="document.getElementById('importFile').click()">📥 엑셀 가져오기</button>
     <input type="file" id="importFile" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this)">
     <button class="btn green sm" onclick="exportCases()">📊 진행현황 엑셀</button>
@@ -1293,6 +1294,47 @@ function rowToCase(r){
     },
   };
 }
+function downloadImportTemplate(){
+  const yr = new Date().getFullYear();
+  const heads = ['순번','부서','담당자','종류(구매/용역)','비용구분','프로젝트','건명 ★필수','거래처','사업자등록번호',
+    '계약시작일(YYYY-MM-DD)','계약종료일(YYYY-MM-DD)','공급가액','선급금액','선급율(%)','선급예정일',
+    '중도금액','중도율(%)','중도예정일','잔금액','잔금율(%)','잔금예정일',
+    '선급보증(O)','계약이행보증(O)','하자보증(O)','진행','계약조건'];
+  const NC = heads.length;
+  const m = [];
+  m.push([{v:`구매업무 일괄등록 양식 (${yr}년)`, s:ST.title}].concat(Array(NC-1).fill({v:'',s:ST.title})));
+  m.push([{v:"※ 4번째 행부터 한 건씩 입력 · '건명'은 필수(비면 무시) · 보증칸은 해당 시 O · 날짜 YYYY-MM-DD · 작성 후 '엑셀 가져오기'로 업로드", s:ST.sub}].concat(Array(NC-1).fill({v:'',s:ST.sub})));
+  m.push(heads.map(h=>({v:h, s:ST.header})));
+  for(let i=0;i<8;i++){
+    const alt=i%2===1; const base=alt?ST.cellAlt:ST.cell;
+    m.push(heads.map((h,c)=>({v:'', s:(c>=4&&c<=8)?leftify(base):base})));
+  }
+  const ws = buildSheet(m);
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:NC-1}},{s:{r:1,c:0},e:{r:1,c:NC-1}}];
+  ws['!cols'] = heads.map((h,i)=> i===0?{wch:6} : i===6?{wch:26} : i===5?{wch:20} : {wch:14});
+  ws['!rows'] = [{hpt:26},{hpt:20},{hpt:30}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, yr+'년');
+
+  const guide = [
+    ['구매업무 일괄등록 — 작성 방법'],
+    [''],
+    ['1) "'+yr+'년" 시트의 4번째 행부터 한 건씩 입력합니다.'],
+    ['2) 건명은 반드시 입력(비어 있으면 그 행은 무시됩니다).'],
+    ['3) 종류: "구매" 또는 "용역"(용역이 포함되면 외주용역계약으로 분류).'],
+    ['4) 보증칸(선급/계약이행/하자): 해당되면 O, 아니면 비움.'],
+    ['5) 날짜는 2026-07-10 형식, 금액은 숫자만, 율은 % 숫자(예: 30).'],
+    ['6) 작성 후 상단 "엑셀 가져오기"로 이 파일을 업로드하세요.'],
+    [''],
+    ['[예시] 부서=경영지원팀 · 담당자=허창영 · 종류=구매 · 건명=계측기 검교정 · 거래처=OO상사 · 공급가액=1000000 · 계약조건=납품 후 30일 이내 현금지급'],
+  ];
+  const gws = XLSX.utils.aoa_to_sheet(guide);
+  gws['!cols'] = [{wch:96}];
+  XLSX.utils.book_append_sheet(wb, gws, '작성방법');
+
+  XLSX.writeFile(wb, `구매업무_일괄등록_양식_${yr}.xlsx`);
+}
+
 function importExcel(input){
   const file=input.files[0]; if(!file) return;
   const reader=new FileReader();
