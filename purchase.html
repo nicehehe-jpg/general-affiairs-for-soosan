@@ -396,7 +396,7 @@
     </div>
 
     <div class="pm-section">📂 관련 문서 (경로 또는 링크)</div>
-    <div class="pm-field"><label>문서 기본 폴더 <span style="color:var(--t3); font-weight:500;">('찾기'로 고른 파일명 앞에 자동으로 붙습니다)</span></label>
+    <div class="pm-field"><label>문서 기본 폴더 <span style="color:var(--t3); font-weight:500;">(참고용 · 이제는 '찾기'에서 전체 경로를 붙여넣습니다)</span></label>
       <input type="text" id="cmDocBase" placeholder="예: D:\구매문서\" oninput="try{localStorage.setItem('purchase_doc_base', this.value.trim())}catch(e){}"></div>
     <div class="pm-field"><label>계약서</label>
       <div class="doc-input"><input type="text" id="cmDocContract" placeholder="예: D:\구매문서\계약서.pdf"><button type="button" class="browse-btn" onclick="browseDoc('cmDocContract')">📁 찾기</button></div></div>
@@ -413,7 +413,7 @@
         <div class="doc-input"><input type="text" id="cmDocEtc" placeholder="품의서 등 기타"><button type="button" class="browse-btn" onclick="browseDoc('cmDocEtc')">📁 찾기</button></div></div>
     </div>
     <input type="file" id="docFilePicker" style="display:none" onchange="onDocFilePicked(this)">
-    <div style="font-size:11.5px; color:var(--t3); margin:-4px 0 4px; line-height:1.5;">'📁 찾기'로 파일을 고르면 <b>기본 폴더 + 파일명</b>이 자동으로 채워집니다. (브라우저 보안상 전체 경로는 받아올 수 없어, 기본 폴더를 기준으로 조합합니다. 폴더가 다르면 칸에서 직접 수정하세요.) 그룹웨어 웹주소(http…)를 직접 붙여넣으면 카드에서 클릭 시 바로 열립니다.</div>
+    <div style="font-size:11.5px; color:var(--t3); margin:-4px 0 4px; line-height:1.5;">'📁 찾기'를 눌러 경로를 붙여넣으세요. <b>[정확한 방법]</b> 파일 탐색기에서 파일을 <b>우클릭 → '경로로 복사'</b>(안 보이면 Shift+우클릭) 후 붙여넣기 → 하위 폴더까지 정확히 들어갑니다. 그룹웨어 웹주소(http…)도 가능하며, 카드에서 클릭하면 경로가 복사됩니다.</div>
 
     <div class="pm-field" style="margin-top:8px;"><label>비고</label><input type="text" id="cmNote" placeholder="추가 메모"></div>
 
@@ -712,7 +712,7 @@ function payScheduleLine(c){
 /* 관련 문서 열기: 웹주소(http)면 새 탭, 그 외(D:\ 경로 등)는 클립보드 복사 후 안내 */
 function openDoc(id, key){
   const c = CASES.find(x=>x.id===id); if(!c || !c.docs) return;
-  const v = (c.docs[key]||'').trim(); if(!v) return;
+  const v = (c.docs[key]||'').trim().replace(/^"+|"+$/g,''); if(!v) return;
   if(/^https?:\/\//i.test(v)){
     window.open(v, '_blank');
     return;
@@ -733,11 +733,11 @@ function getDocBase(){
   return b;
 }
 function browseDoc(fieldId){
-  _docTargetField = fieldId;
-  try{ localStorage.setItem('purchase_doc_base', (document.getElementById('cmDocBase').value||'').trim()); }catch(e){}
-  const picker = document.getElementById('docFilePicker');
-  picker.value = '';
-  picker.click();
+  const cur = document.getElementById(fieldId).value || '';
+  const p = prompt('경로를 붙여넣으세요.\n\n[정확한 방법] 파일 탐색기에서 파일 우클릭 → \'경로로 복사\' (안 보이면 Shift+우클릭) → 여기에 붙여넣기(Ctrl+V)\n(그룹웨어 웹주소 http... 도 가능)', cur);
+  if(p===null) return;
+  const v = p.trim().replace(/^"+|"+$/g,'').trim();
+  document.getElementById(fieldId).value = v;
 }
 function onDocFilePicked(input){
   const f = input.files && input.files[0];
