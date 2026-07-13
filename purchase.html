@@ -133,6 +133,14 @@
   .doc-input input{flex:1; min-width:0;}
   .browse-btn{flex-shrink:0; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:0 13px; font-size:12.5px; font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit; white-space:nowrap;}
   .browse-btn:hover{background:var(--blue-bg); border-color:#BBD5FF; color:var(--blue);}
+  .cm-doc-block{margin-bottom:14px;}
+  .cm-doc-rows{display:flex; flex-direction:column; gap:6px;}
+  .doc-row-item{display:flex; gap:6px; align-items:center;}
+  .doc-row-item input{flex:1; min-width:0;}
+  .doc-del-btn{flex-shrink:0; width:34px; background:var(--bg); border:1px solid var(--line); border-radius:12px; font-size:13px; font-weight:800; color:var(--t3); cursor:pointer; font-family:inherit;}
+  .doc-del-btn:hover{background:var(--red-bg); border-color:#F5C2C2; color:var(--red);}
+  .doc-add-btn{margin-top:6px; background:transparent; border:1px dashed var(--line); border-radius:10px; padding:6px 12px; font-size:12px; font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit;}
+  .doc-add-btn:hover{background:var(--blue-bg); border-color:#BBD5FF; color:var(--blue);}
   .modal-actions{display:flex; gap:10px; margin-top:24px;}
   .modal-actions .btn{flex:1; padding:13px; font-size:14px; border-radius:13px;}
 
@@ -398,20 +406,7 @@
     <div class="pm-section">📂 관련 문서 (경로 또는 링크)</div>
     <div class="pm-field"><label>문서 기본 폴더 <span style="color:var(--t3); font-weight:500;">(참고용 · 이제는 '찾기'에서 전체 경로를 붙여넣습니다)</span></label>
       <input type="text" id="cmDocBase" placeholder="예: D:\구매문서\" oninput="try{localStorage.setItem('purchase_doc_base', this.value.trim())}catch(e){}"></div>
-    <div class="pm-field"><label>계약서</label>
-      <div class="doc-input"><input type="text" id="cmDocContract" placeholder="예: D:\구매문서\계약서.pdf"><button type="button" class="browse-btn" onclick="browseDoc('cmDocContract')">📁 찾기</button></div></div>
-    <div class="pm-grid c2" style="margin-bottom:14px;">
-      <div class="pm-field"><label>선급보증증권</label>
-        <div class="doc-input"><input type="text" id="cmDocAdvance" placeholder="파일 또는 폴더 경로"><button type="button" class="browse-btn" onclick="browseDoc('cmDocAdvance')">📁 찾기</button></div></div>
-      <div class="pm-field"><label>계약이행보증증권</label>
-        <div class="doc-input"><input type="text" id="cmDocPerform" placeholder="파일 또는 폴더 경로"><button type="button" class="browse-btn" onclick="browseDoc('cmDocPerform')">📁 찾기</button></div></div>
-    </div>
-    <div class="pm-grid c2" style="margin-bottom:14px;">
-      <div class="pm-field"><label>하자보증증권</label>
-        <div class="doc-input"><input type="text" id="cmDocDefect" placeholder="파일 또는 폴더 경로"><button type="button" class="browse-btn" onclick="browseDoc('cmDocDefect')">📁 찾기</button></div></div>
-      <div class="pm-field"><label>기타 문서</label>
-        <div class="doc-input"><input type="text" id="cmDocEtc" placeholder="품의서 등 기타"><button type="button" class="browse-btn" onclick="browseDoc('cmDocEtc')">📁 찾기</button></div></div>
-    </div>
+    <div id="cmDocFields"></div>
     <input type="file" id="docFilePicker" style="display:none" onchange="onDocFilePicked(this)">
     <div style="font-size:11.5px; color:var(--t3); margin:-4px 0 4px; line-height:1.5;">'📁 찾기'를 눌러 경로를 붙여넣으세요. <b>[정확한 방법]</b> 파일 탐색기에서 파일을 <b>우클릭 → '경로로 복사'</b>(안 보이면 Shift+우클릭) 후 붙여넣기 → 하위 폴더까지 정확히 들어갑니다. 그룹웨어 웹주소(http…)도 가능하며, 카드에서 클릭하면 경로가 복사됩니다.</div>
 
@@ -441,12 +436,31 @@ const STAGES = [
 const STATE_LABEL = { todo:'대기', done:'완료', na:'해당없음' };
 const STATUS_LABEL = { wait:'대기', doing:'진행중', done:'완료' };
 const DOC_TYPES = [
-  { key:'contract',    label:'계약서',          icon:'📄' },
-  { key:'advanceBond', label:'선급보증증권',     icon:'🔖' },
-  { key:'performBond', label:'계약이행보증증권', icon:'🔖' },
-  { key:'defectBond',  label:'하자보증증권',     icon:'🔖' },
+  { key:'contract',    label:'계약서',          icon:'📄', stage:'contract' },
+  { key:'advanceBond', label:'선급보증증권',     icon:'🔖', stage:'advanceBond' },
+  { key:'performBond', label:'계약이행보증증권', icon:'🔖', stage:'performBond' },
+  { key:'defectBond',  label:'하자보증증권',     icon:'🔖', stage:'defectBond' },
+  { key:'taxInvoice',  label:'전자세금계산서',   icon:'🧾', stage:'payment' },
   { key:'etc',         label:'기타 문서',        icon:'📎' },
 ];
+/* docs[key]는 경로 배열(신) 또는 문자열(구버전) 모두 지원 → 항상 배열로 정규화 */
+function docFiles(c, key){
+  const v = (c && c.docs) ? c.docs[key] : null;
+  if(Array.isArray(v)) return v.map(x=>String(x==null?'':x).trim()).filter(Boolean);
+  if(typeof v==='string' && v.trim()) return [v.trim()];
+  return [];
+}
+/* 문서 업로드 상태를 결재 진행 단계에 반영: 파일이 1개 이상이면 매칭 단계를 완료로.
+   (해당없음(na)은 유지, 파일 삭제 시 자동 되돌리지 않음 — 수동 토글 존중) */
+function applyDocStages(c){
+  if(!c || !c.stages) return;
+  DOC_TYPES.forEach(d=>{
+    if(!d.stage) return;
+    if(docFiles(c, d.key).length && c.stages[d.stage] !== 'na'){
+      c.stages[d.stage] = 'done';
+    }
+  });
+}
 const PAY_TERMS = {
   '30d': '30일 이내 계약금액의 100% 현금지급',
   '60d': '60일 이내 계약금액의 100% 현금지급',
@@ -686,9 +700,13 @@ function renderCases(){
         <div class="prog-label">${p.done}/${p.total} 단계 · ${p.pct}%</div>
       </div>
       <div class="stage-row">${chips}</div>
-      ${(c.docs && DOC_TYPES.some(d=>c.docs[d.key])) ? `<div class="doc-row"><span class="doc-label">📂 관련 문서</span>${
-        DOC_TYPES.filter(d=>c.docs[d.key]).map(d=>`<button class="doc-chip" onclick="openDoc('${c.id}','${d.key}')" title="${esc(c.docs[d.key])}">${d.icon} ${d.label}</button>`).join('')
-      }</div>` : ''}
+      ${(()=>{
+        const rows = DOC_TYPES.flatMap(d=> docFiles(c,d.key).map((f,i,arr)=>({d,f,i,multi:arr.length>1})));
+        if(!rows.length) return '';
+        return `<div class="doc-row"><span class="doc-label">📂 관련 문서</span>${
+          rows.map(({d,f,i,multi})=>`<button class="doc-chip" onclick="openDoc('${c.id}','${d.key}',${i})" title="${esc(f)}">${d.icon} ${d.label}${multi?` <span style="opacity:.55;font-weight:800;">${i+1}</span>`:''}</button>`).join('')
+        }</div>`;
+      })()}
       ${c.note ? `<div class="case-note"><span class="k">📝 비고</span>${esc(c.note)}</div>` : ''}
       <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--line);">
         <button onclick="openOrderModal('${c.id}')" style="width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;">
@@ -710,9 +728,10 @@ function payScheduleLine(c){
 }
 
 /* 관련 문서 열기: 웹주소(http)면 새 탭, 그 외(D:\ 경로 등)는 클립보드 복사 후 안내 */
-function openDoc(id, key){
+function openDoc(id, key, idx){
   const c = CASES.find(x=>x.id===id); if(!c || !c.docs) return;
-  const v = (c.docs[key]||'').trim().replace(/^"+|"+$/g,''); if(!v) return;
+  const files = docFiles(c, key);
+  const v = (files[idx||0]||'').replace(/^"+|"+$/g,''); if(!v) return;
   if(/^https?:\/\//i.test(v)){
     window.open(v, '_blank');
     return;
@@ -729,6 +748,57 @@ function copyDocPath(v){
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(v).then(()=>alert(msg)).catch(()=>{ prompt('아래 경로를 복사해 탐색기 주소창에 붙여넣으세요:', v); });
   } else { prompt('아래 경로를 복사해 탐색기 주소창에 붙여넣으세요:', v); }
+}
+
+/* ===== 관련 문서: 종류별 여러 경로 입력 UI ===== */
+function docRowHtml(key, val){
+  return `<div class="doc-row-item">`
+    + `<input type="text" class="cmDocInput" data-key="${key}" value="${esc(val||'')}" placeholder="파일 또는 폴더 경로 · 웹주소(http…)">`
+    + `<button type="button" class="browse-btn" onclick="browseDocRow(this)">📁 찾기</button>`
+    + `<button type="button" class="doc-del-btn" onclick="removeDocRow(this)" title="이 경로 삭제">✕</button>`
+    + `</div>`;
+}
+function renderDocFields(docs){
+  docs = docs || {};
+  const host = document.getElementById('cmDocFields');
+  host.innerHTML = DOC_TYPES.map(d=>{
+    const files = docFiles({docs}, d.key);
+    const rows = (files.length ? files : ['']).map(f=>docRowHtml(d.key, f)).join('');
+    return `<div class="pm-field cm-doc-block" data-key="${d.key}">`
+      + `<label>${d.icon} ${d.label}</label>`
+      + `<div class="cm-doc-rows">${rows}</div>`
+      + `<button type="button" class="doc-add-btn" onclick="addDocRow('${d.key}')">+ 경로 추가</button>`
+      + `</div>`;
+  }).join('');
+}
+function addDocRow(key){
+  const rows = document.querySelector('.cm-doc-block[data-key="'+key+'"] .cm-doc-rows');
+  if(!rows) return;
+  rows.insertAdjacentHTML('beforeend', docRowHtml(key, ''));
+  const inputs = rows.querySelectorAll('.cmDocInput');
+  if(inputs.length) inputs[inputs.length-1].focus();
+}
+function removeDocRow(btn){
+  const rows = btn.closest('.cm-doc-rows');
+  btn.closest('.doc-row-item').remove();
+  if(rows && !rows.querySelector('.doc-row-item')){
+    rows.insertAdjacentHTML('beforeend', docRowHtml(rows.parentElement.dataset.key, ''));
+  }
+}
+function browseDocRow(btn){
+  const input = btn.closest('.doc-row-item').querySelector('.cmDocInput');
+  const p = prompt('경로를 붙여넣으세요.\n\n[정확한 방법] 파일 탐색기에서 파일 우클릭 → \'경로로 복사\' (안 보이면 Shift+우클릭) → 여기에 붙여넣기(Ctrl+V)\n(그룹웨어 웹주소 http... 도 가능)', input.value||'');
+  if(p===null) return;
+  input.value = p.trim().replace(/^"+|"+$/g,'').trim();
+}
+function collectDocs(){
+  const docs = {};
+  DOC_TYPES.forEach(d=>{ docs[d.key] = []; });
+  document.querySelectorAll('#cmDocFields .cmDocInput').forEach(inp=>{
+    const v = inp.value.trim().replace(/^"+|"+$/g,'').trim();
+    if(v && docs[inp.dataset.key]) docs[inp.dataset.key].push(v);
+  });
+  return docs;
 }
 
 let _docTargetField = null;
@@ -826,12 +896,7 @@ function openCaseModal(id){
   document.getElementById('cmBalRate').value = pay.balRate || '';
   document.getElementById('cmBalDate').value = pay.balDate || '';
   document.getElementById('cmNote').value = c ? c.note : '';
-  const docs = (c && c.docs) ? c.docs : {};
-  document.getElementById('cmDocContract').value = docs.contract || '';
-  document.getElementById('cmDocAdvance').value = docs.advanceBond || '';
-  document.getElementById('cmDocPerform').value = docs.performBond || '';
-  document.getElementById('cmDocDefect').value = docs.defectBond || '';
-  document.getElementById('cmDocEtc').value = docs.etc || '';
+  renderDocFields((c && c.docs) ? c.docs : {});
   try{ document.getElementById('cmDocBase').value = localStorage.getItem('purchase_doc_base') || 'D:\\구매문서\\'; }catch(e){ document.getElementById('cmDocBase').value = 'D:\\구매문서\\'; }
   document.getElementById('caseModal').classList.add('show');
   setTimeout(()=> document.getElementById('cmName').focus(), 50);
@@ -869,24 +934,21 @@ function saveCaseModal(){
       balDate: document.getElementById('cmBalDate').value,
     },
     note: document.getElementById('cmNote').value.trim(),
-    docs: {
-      contract: document.getElementById('cmDocContract').value.trim(),
-      advanceBond: document.getElementById('cmDocAdvance').value.trim(),
-      performBond: document.getElementById('cmDocPerform').value.trim(),
-      defectBond: document.getElementById('cmDocDefect').value.trim(),
-      etc: document.getElementById('cmDocEtc').value.trim(),
-    },
+    docs: collectDocs(),
   };
   if(editingCaseId){
     const c = CASES.find(x=>x.id===editingCaseId);
     Object.assign(c, data);
+    applyDocStages(c); // 업로드된 문서에 따라 진행 단계 자동 완료
   } else {
     const stages = {approval:'todo',contract:'todo',advanceBond:'todo',performBond:'todo',defectBond:'todo',payment:'todo'};
     // 발주서 자동입력으로 읽은 보증증권 상태를 단계에 반영 (해당없음→na, 해당→todo)
     if(_cmAutoBonds){
       ['advanceBond','performBond','defectBond'].forEach(k => { if(_cmAutoBonds[k]) stages[k] = _cmAutoBonds[k]; });
     }
-    CASES.push({ id:'c'+Date.now(), ...data, stages });
+    const nc = { id:'c'+Date.now(), ...data, stages };
+    applyDocStages(nc); // 업로드된 문서에 따라 진행 단계 자동 완료
+    CASES.push(nc);
     if(!allPeriod && data.contractDate) selMonth = data.contractDate.slice(0,7);
     syncMonthUI();
   }
@@ -1302,7 +1364,7 @@ function rowToCase(r){
       balAmt:_num(r[18]), balRate:_rate(r[19]), balDate:_xdate(r[20]),
     },
     note: progress ? ('계약진행: '+progress) : '',
-    docs:{contract:'',advanceBond:'',performBond:'',defectBond:'',etc:''},
+    docs:{contract:[],advanceBond:[],performBond:[],defectBond:[],taxInvoice:[],etc:[]},
     stages:{
       approval:'done', contract:'done',
       advanceBond: adv?'done':(prepayAmt>0?'todo':'na'),
