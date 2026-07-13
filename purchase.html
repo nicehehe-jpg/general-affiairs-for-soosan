@@ -717,15 +717,20 @@ function openDoc(id, key){
     window.open(v, '_blank');
     return;
   }
-  const done = ()=> alert('문서 경로가 복사되었습니다.\n\n' + v + '\n\n파일 탐색기를 열고 주소창에 붙여넣기(Ctrl+V) 후 Enter 하면 열립니다.');
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(v).then(done).catch(()=>{ prompt('아래 경로를 복사해 탐색기 주소창에 붙여넣으세요:', v); });
-  } else {
-    prompt('아래 경로를 복사해 탐색기 주소창에 붙여넣으세요:', v);
-  }
+  // 로컬 '파일열기도우미'로 자동 열기 시도 → 실패 시 경로 복사로 전환
+  const _h='http://127.0.0.1:17321/open?path='+encodeURIComponent(v);
+  const _ac=new AbortController(); const _to=setTimeout(()=>_ac.abort(),2500);
+  fetch(_h,{signal:_ac.signal}).then(r=>r.json()).then(d=>{ clearTimeout(_to); if(!d||!d.ok) throw 0; }).catch(()=>{ clearTimeout(_to); copyDocPath(v); });
 }
 
 /* 찾아보기: 파일 선택 시 '기본 폴더 + 파일명'을 칸에 채움 (브라우저는 파일명만 제공) */
+function copyDocPath(v){
+  const msg='문서 경로가 복사되었습니다.\n\n'+v+'\n\n파일 탐색기 주소창에 붙여넣기(Ctrl+V) 후 Enter 하면 열립니다.\n(클릭 한 번에 자동으로 열려면 \'파일열기도우미\'를 실행해 두세요.)';
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(v).then(()=>alert(msg)).catch(()=>{ prompt('아래 경로를 복사해 탐색기 주소창에 붙여넣으세요:', v); });
+  } else { prompt('아래 경로를 복사해 탐색기 주소창에 붙여넣으세요:', v); }
+}
+
 let _docTargetField = null;
 function getDocBase(){
   let b = (document.getElementById('cmDocBase').value || '').trim();
