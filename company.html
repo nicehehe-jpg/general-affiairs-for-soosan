@@ -489,6 +489,24 @@
   .recruit .wrap{position:relative;z-index:2}
   .recruit h2{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em}
   .recruit p{color:rgba(255,255,255,.85);font-size:18px;margin:18px auto 36px;max-width:560px}
+  /* 채용 애니메이션(돋보기 인재 탐색) */
+  .recruit-anim{width:min(210px,56vw);margin:0 auto 14px;display:block}
+  .recruit-anim svg{width:100%;height:auto;overflow:visible}
+  .recruit-anim .person{fill:rgba(255,255,255,.42)}
+  .recruit-anim .p-found{fill:rgba(255,255,255,.42);transform-box:fill-box;transform-origin:center;animation:rc-pop 4s ease-in-out infinite}
+  .recruit-anim .p-found *{animation:rc-found 4s ease-in-out infinite}
+  .recruit-anim .glass{animation:rc-glass 4s ease-in-out infinite;filter:drop-shadow(0 2px 6px rgba(0,0,0,.35))}
+  .recruit-anim .ring{transform-box:fill-box;transform-origin:center;opacity:0;animation:rc-ring 4s ease-in-out infinite}
+  @keyframes rc-glass{0%,8%{transform:translateX(0)}40%,62%{transform:translateX(140px)}94%,100%{transform:translateX(0)}}
+  @keyframes rc-pop{0%,36%{transform:scale(1)}47%,60%{transform:scale(1.16)}72%,100%{transform:scale(1)}}
+  @keyframes rc-found{0%,36%{fill:rgba(255,255,255,.42)}47%,60%{fill:var(--green)}72%,100%{fill:rgba(255,255,255,.42)}}
+  @keyframes rc-ring{0%,38%{opacity:0;transform:scale(.5)}49%{opacity:.9;transform:scale(1)}66%{opacity:0;transform:scale(1.7)}100%{opacity:0}}
+  @media(prefers-reduced-motion:reduce){
+    .recruit-anim .glass{transform:translateX(140px);animation:none}
+    .recruit-anim .p-found,.recruit-anim .p-found *{animation:none}
+    .recruit-anim .p-found *{fill:var(--green)}
+    .recruit-anim .ring{animation:none;opacity:.55;transform:scale(1)}
+  }
 
   /* ===== News ===== */
   .news{background:var(--bg-soft)}
@@ -1285,6 +1303,21 @@
 <!-- RECRUIT -->
 <section class="recruit" id="recruit">
   <div class="wrap">
+    <div class="recruit-anim reveal" aria-hidden="true">
+      <svg viewBox="0 0 330 92" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="인재 탐색 애니메이션">
+        <g class="person" transform="translate(55,24)"><circle cx="0" cy="0" r="11"/><rect x="-16" y="15" width="32" height="26" rx="13"/></g>
+        <g class="person" transform="translate(125,24)"><circle cx="0" cy="0" r="11"/><rect x="-16" y="15" width="32" height="26" rx="13"/></g>
+        <g transform="translate(195,24)">
+          <circle class="ring" cx="0" cy="16" r="30" fill="none" stroke="#c4d700" stroke-width="3"/>
+          <g class="p-found"><circle cx="0" cy="0" r="11"/><rect x="-16" y="15" width="32" height="26" rx="13"/></g>
+        </g>
+        <g class="person" transform="translate(265,24)"><circle cx="0" cy="0" r="11"/><rect x="-16" y="15" width="32" height="26" rx="13"/></g>
+        <g class="glass">
+          <circle cx="55" cy="30" r="27" fill="rgba(255,255,255,.06)" stroke="#fff" stroke-width="3.5"/>
+          <line x1="74" y1="49" x2="90" y2="65" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+        </g>
+      </svg>
+    </div>
     <span class="eyebrow reveal" style="color:#7ad9cf">Recruit</span>
     <h2 class="reveal">함께 땀 흘릴 인재를 찾습니다</h2>
     <p class="reveal">기술로 세상을 안전하게 만드는 일. 수산이앤에스와 함께 성장할 여러분을 기다립니다.</p>
