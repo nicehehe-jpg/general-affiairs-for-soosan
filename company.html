@@ -26,11 +26,12 @@
     --brand-grad:linear-gradient(120deg,var(--blue) 0%,var(--sky) 45%,var(--green) 100%);
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
+  html{scroll-behavior:smooth;scroll-padding-top:118px}
   body{
-    font-family:"Pretendard","Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-    color:var(--ink);background:var(--bg);line-height:1.6;
-    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","SF Pro KR","Apple SD Gothic Neo","Pretendard","Pretendard Variable","Malgun Gothic",sans-serif;
+    letter-spacing:-0.01em;
+    color:var(--ink);background:var(--bg);line-height:1.65;font-size:16.5px;
+    -webkit-font-smoothing:antialiased;overflow-x:clip;
   }
   a{color:inherit;text-decoration:none}
   img{max-width:100%;display:block}
@@ -40,7 +41,7 @@
     color:var(--blue);text-transform:uppercase;margin-bottom:14px;
   }
   .sec-title{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.25}
-  .sec-desc{color:var(--muted);font-size:17px;margin-top:14px;max-width:640px}
+  .sec-desc{color:var(--muted);font-size:18px;margin-top:14px;max-width:680px}
   section{padding:110px 0}
 
   /* ===== Nav ===== */
@@ -126,6 +127,253 @@
   .about p.body{color:var(--muted);margin-top:16px}
   .pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
   .pill{background:var(--bg-soft);border:1px solid var(--line);color:var(--navy-2);font-weight:600;font-size:14px;padding:9px 16px;border-radius:999px}
+  .about h2 .en{display:block;font-size:.62em;font-weight:800;color:var(--blue);letter-spacing:-.01em;margin-bottom:8px}
+  /* 회사소개 - 지표 */
+  .about-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:30px}
+  .amet{background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:20px 14px;text-align:center}
+  .amet .n{font-size:30px;font-weight:800;color:var(--blue);line-height:1;letter-spacing:-.02em}
+  .amet .n .u{font-size:.5em;font-weight:700;margin-left:3px;color:var(--muted)}
+  .amet .l{font-size:13.5px;color:var(--muted);margin-top:9px}
+  /* 회사소개 - 핵심가치 */
+  .about-block{margin-top:96px;text-align:center}
+  .about-block .sec-title .en{display:block;font-size:.55em;font-weight:800;color:var(--blue);margin-bottom:8px;letter-spacing:.02em}
+  .about-block p.body{color:var(--muted);margin:16px auto 0;max-width:660px}
+  .cval-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:44px}
+  .cval{background:#fff;border:1px solid var(--line);border-radius:14px;padding:30px 12px;transition:transform .2s,box-shadow .2s,border-color .2s}
+  .cval:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:var(--sky)}
+  .cval .ci{width:58px;height:58px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:var(--brand-grad);color:#fff}
+  .cval h4{font-size:16.5px;font-weight:700;color:var(--ink)}
+  /* 회사소개 - 사업 소개 */
+  .bi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-top:44px;text-align:left}
+  .bicard{background:var(--navy);color:#fff;border-radius:16px;padding:30px 24px;position:relative;overflow:hidden}
+  .bicard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand-grad)}
+  .bicard .bi-ico{font-size:30px;margin-bottom:16px}
+  .bicard h4{font-size:17px;font-weight:700;margin-bottom:8px}
+  .bicard p{font-size:14px;color:rgba(255,255,255,.72);line-height:1.55}
+
+  /* ===== 인사말 ===== */
+  .greeting{background:var(--bg-soft)}
+  .greet-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:56px;align-items:center;margin-top:52px}
+  .greet-vis{border-radius:20px;overflow:hidden;box-shadow:var(--shadow);aspect-ratio:3/4;background:linear-gradient(135deg,var(--navy),var(--navy-2))}
+  .greet-vis img{width:100%;height:100%;object-fit:cover}
+  .greet-tit{font-size:clamp(21px,2.5vw,28px);font-weight:800;line-height:1.4;letter-spacing:-.02em;margin-bottom:24px}
+  .greet-tit .accent{color:var(--blue)}
+  .greeting p{color:var(--muted);margin-bottom:14px;font-size:16.5px;line-height:1.75}
+  .greeting p b{color:var(--ink);font-weight:700}
+  .greet-sign{margin-top:28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .greet-sign .who{color:var(--muted);font-size:15px}
+  .greet-sign .who b{color:var(--ink);font-weight:800;font-size:18px;margin-left:6px}
+  .greet-sign img{height:46px;width:auto}
+  /* ===== 연혁 ===== */
+  .tl{max-width:840px;margin:52px auto 0;position:relative}
+  .tl::before{content:"";position:absolute;left:118px;top:10px;bottom:10px;width:2px;background:var(--line)}
+  .tl-era{display:flex;align-items:center;gap:18px;margin:40px 0 8px}
+  .tl-era .yr{width:100px;text-align:right;font-size:12.5px;font-weight:700;color:var(--muted);flex-shrink:0}
+  .tl-era h3{background:var(--brand-grad);color:#fff;padding:8px 22px;border-radius:999px;font-size:15px;font-weight:800;letter-spacing:.05em}
+  .tl-row{display:flex;gap:18px;padding:9px 0}
+  .tl-row .date{width:100px;text-align:right;font-weight:700;color:var(--blue);font-size:14px;flex-shrink:0;padding-top:1px}
+  .tl-row .txt{flex:1;color:var(--ink);font-size:14.5px;position:relative;padding-left:28px;line-height:1.55}
+  .tl-row .txt::before{content:"";position:absolute;left:-5.5px;top:6px;width:11px;height:11px;border-radius:50%;background:#fff;border:3px solid var(--sky)}
+  /* ===== 글로벌 네트워크 ===== */
+  .global{background:var(--navy);color:#fff;text-align:center}
+  .global .sec-title,.global .eyebrow{color:#fff}
+  .global .eyebrow{color:var(--sky)}
+  .global p{color:rgba(255,255,255,.82);max-width:780px;margin:16px auto 0;font-size:16px}
+  .global .map{margin-top:46px;border-radius:16px;background:rgba(255,255,255,.05);padding:34px 20px}
+  .global .map img{margin:0 auto;max-height:380px;filter:brightness(0) invert(1);opacity:.92}
+  /* ===== 오시는길 ===== */
+  .direction{background:var(--bg-soft)}
+  .dir-map{display:block;position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#fff;margin-top:52px;box-shadow:var(--shadow);aspect-ratio:1400/460}
+  .dir-map img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s}
+  .dir-map:hover img{transform:scale(1.03)}
+  .dir-map .maptip{position:absolute;right:18px;bottom:18px;background:var(--blue);color:#fff;font-size:13.5px;font-weight:700;padding:10px 18px;border-radius:999px;box-shadow:0 8px 22px rgba(0,83,131,.45);display:inline-flex;align-items:center;gap:7px}
+  .dir-tablewrap{overflow-x:auto;margin-top:36px}
+  .dir-table{width:100%;border-collapse:collapse;min-width:700px}
+  .dir-table th{text-align:left;font-size:13px;font-weight:700;color:var(--blue);letter-spacing:.02em;padding:14px 18px;border-top:2px solid var(--blue);border-bottom:1px solid var(--line);white-space:nowrap}
+  .dir-table td{font-size:14px;color:var(--ink);padding:16px 18px;border-bottom:1px solid var(--line);vertical-align:top}
+  .dir-table td.est{font-weight:800;color:var(--navy);white-space:nowrap}
+  .dir-table td.addr{color:var(--muted)}
+  .dir-ways{margin-top:40px}
+  .dir-ways .way{border-top:1px solid var(--line);padding:15px 0;display:grid;grid-template-columns:110px 1fr;gap:16px;align-items:start}
+  .dir-ways .way b{color:var(--blue);font-size:14.5px}
+  .dir-ways .way span{color:var(--muted);font-size:14px;line-height:1.7}
+  /* ===== 번호형 레이아웃 (공통) ===== */
+  .grp-wrap{margin-top:48px}
+  .grp-wrap+.grp-wrap{margin-top:64px}
+  .grp-head{display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:2px solid var(--navy)}
+  .grp-head .gi{width:26px;height:26px;border-radius:7px;background:var(--brand-grad);flex-shrink:0}
+  .grp-head h3{font-size:21px;font-weight:800;color:var(--navy);letter-spacing:-.01em}
+  .numgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:44px 34px;margin-top:44px}
+  .numgrid.c2{grid-template-columns:repeat(2,1fr);gap:40px 48px}
+  .numgrid.c3{grid-template-columns:repeat(3,1fr)}
+  .numgrid.c5{grid-template-columns:repeat(5,1fr);gap:40px 26px}
+  .numcard{text-align:left}
+  .numcard .no{font-size:40px;font-weight:800;color:#cfd8e6;line-height:1;display:block;margin-bottom:16px;letter-spacing:.01em}
+  .numcard .en{display:block;font-size:12.5px;font-weight:700;color:var(--sky);letter-spacing:.12em;margin-bottom:6px}
+  .numcard h4{font-size:18.5px;font-weight:800;color:var(--navy);margin-bottom:12px;line-height:1.4}
+  .numcard p{font-size:15px;color:var(--muted);line-height:1.68}
+  .numcard .tags{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .numcard .tags li{background:var(--bg-soft);border:1px solid var(--line);color:var(--navy-2);font-size:13px;font-weight:600;padding:7px 13px;border-radius:8px}
+  /* ===== ESG ===== */
+  .esg-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:52px}
+  .esg-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px 30px;transition:transform .2s,box-shadow .2s}
+  .esg-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+  .esg-card .eico{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;font-size:26px;background:var(--brand-grad);color:#fff;margin-bottom:16px}
+  .esg-card h3{font-size:20px;font-weight:800;color:var(--navy);margin-bottom:10px}
+  .esg-card>p{color:var(--muted);font-size:14.5px;line-height:1.6;margin-bottom:16px}
+  .esg-card ul{list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+  .esg-card li{background:var(--bg-soft);border:1px solid var(--line);color:var(--navy-2);font-size:13px;font-weight:600;padding:7px 13px;border-radius:8px}
+  /* ===== 인재상 ===== */
+  .talent-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:52px}
+  .talent-card{text-align:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:44px 24px;transition:transform .2s,box-shadow .2s}
+  .talent-card:hover{transform:translateY(-5px);box-shadow:var(--shadow)}
+  .talent-card .tno{font-size:13px;font-weight:800;color:var(--sky);letter-spacing:.14em}
+  .talent-card .tic{font-size:40px;margin:14px 0 6px}
+  .talent-card h3{font-size:22px;font-weight:800;margin:4px 0 12px;color:var(--navy)}
+  .talent-card p{color:var(--muted);font-size:14.5px;line-height:1.6}
+  /* ===== 복리후생 ===== */
+  .welfare{background:var(--bg-soft)}
+  .wel-legal{display:flex;flex-wrap:wrap;gap:10px;margin:44px 0 10px;justify-content:center}
+  .wel-legal span{background:var(--navy);color:#fff;font-weight:600;font-size:14px;padding:10px 20px;border-radius:999px}
+  .wel-group{margin-top:36px}
+  .wel-group>h3{font-size:15px;font-weight:800;color:var(--blue);letter-spacing:.08em;margin-bottom:18px}
+  .wel-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .wel-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px 18px}
+  .wel-card .wico{font-size:24px;margin-bottom:10px}
+  .wel-card h4{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px}
+  .wel-card p{font-size:12.5px;color:var(--muted);line-height:1.5}
+  /* ===== 채용공고 ===== */
+  .jobs{background:var(--bg)}
+  .job-list{max-width:920px;margin:52px auto 0}
+  .job-row{display:grid;grid-template-columns:1fr auto auto;gap:18px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px 26px;margin-bottom:12px;transition:border-color .2s,box-shadow .2s}
+  .job-row:hover{border-color:var(--sky);box-shadow:0 8px 22px rgba(0,83,131,.08)}
+  .job-row h4{font-size:16.5px;font-weight:700;color:var(--ink)}
+  .job-row .jm{font-size:13px;color:var(--muted);white-space:nowrap}
+  .job-row .jtag{font-size:12.5px;font-weight:700;padding:6px 13px;border-radius:6px;background:var(--blue);color:#fff;white-space:nowrap}
+  .job-note{max-width:920px;margin:22px auto 0;text-align:center;color:var(--muted);font-size:14px}
+  .job-note a{color:var(--blue);font-weight:700}
+  /* ===== 사이버신문고 폼 ===== */
+  .voice{background:var(--bg-soft)}
+  .form-wrap{max-width:720px;margin:48px auto 0;background:#fff;border:1px solid var(--line);border-radius:16px;padding:38px;box-shadow:var(--shadow)}
+  .form-row{margin-bottom:20px}
+  .form-row.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .form-row label{display:block;font-size:13.5px;font-weight:700;color:var(--navy);margin-bottom:8px}
+  .form-row input,.form-row textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:13px 15px;font:inherit;font-size:15px;color:var(--ink);background:var(--bg-soft);transition:border-color .2s,background .2s}
+  .form-row textarea{min-height:150px;resize:vertical}
+  .form-row input:focus,.form-row textarea:focus{outline:none;border-color:var(--sky);background:#fff}
+  .form-agree{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--muted);margin-bottom:22px}
+  .form-agree input{width:16px;height:16px;accent-color:var(--blue)}
+  .form-submit{text-align:center}
+
+  /* ===== 카테고리 배너 + 서브 내비게이션(LNB) ===== */
+  .cat{position:relative}
+  .cat-banner{height:240px;display:grid;place-items:center;text-align:center;color:#fff;position:relative;overflow:hidden;background:var(--navy)}
+  .cat-banner .bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+  .cat-banner::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(10,24,48,.5) 0%,rgba(10,24,48,.66) 100%)}
+  .cat-banner .cb{position:relative;z-index:2;padding-top:40px}
+  .cat-banner .en{display:block;font-size:clamp(19px,2.4vw,28px);font-weight:500;letter-spacing:.08em;opacity:.92}
+  .cat-banner h2{font-size:clamp(27px,3.6vw,40px);font-weight:800;letter-spacing:-.01em;margin-top:4px}
+  .subnav{position:sticky;top:58px;z-index:60;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 6px 16px rgba(11,34,64,.06)}
+  .subnav-inner{max-width:var(--maxw);margin:0 auto;padding:0 24px;display:flex;justify-content:center;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .subnav-inner::-webkit-scrollbar{display:none}
+  .subnav a{padding:19px 24px;font-size:15.5px;font-weight:600;color:var(--muted);white-space:nowrap;position:relative;cursor:pointer;transition:color .2s}
+  .subnav a:hover{color:var(--blue)}
+  .subnav a.on{color:var(--blue)}
+  .subnav a.on::after{content:"";position:absolute;left:22px;right:22px;bottom:-1px;height:3px;background:var(--blue);border-radius:3px 3px 0 0}
+  .esg-card{scroll-margin-top:130px}
+
+  /* ===== 사업분야 상세 ===== */
+  .bizd{border-top:1px solid var(--line);padding-top:0;overflow:hidden}
+  .bizd.alt{background:var(--bg-soft)}
+  /* 사업별 배경 히어로 밴드 */
+  .bd-hero{position:relative;background-size:cover;background-position:center;padding:96px 0 108px;margin-bottom:8px;clip-path:polygon(0 0,100% 0,100% 100%,0 calc(100% - 46px))}
+  .bd-hero::before{content:"";position:absolute;inset:0;z-index:0;background:linear-gradient(180deg,rgba(10,24,48,.82) 0%,rgba(0,83,131,.72) 100%)}
+  .bd-hero>.wrap{position:relative;z-index:1}
+  .bd-hero .bd-head h3{color:#fff}
+  .bd-hero .bd-head .ic{filter:drop-shadow(0 2px 8px rgba(0,0,0,.4))}
+  .bd-hero .bd-head .en{color:var(--sky)}
+  .bd-hero .bd-lead{color:rgba(255,255,255,.92)}
+  .bd-hero .svc{background:rgba(12,26,54,.42);border:1px solid rgba(255,255,255,.22)}
+  .bd-hero .svc:hover{background:rgba(12,26,54,.58);border-color:rgba(89,189,237,.6);box-shadow:0 14px 34px rgba(0,0,0,.32)}
+  .bd-hero .svc h4{color:#fff}
+  .bd-hero .svc p{color:rgba(255,255,255,.8)}
+  /* 심볼(이모지) 정리 — 신뢰감 위주 타이포 중심 */
+  .bd-head .ic,.bicard .bi-ico,.talent-card .tic,.wel-card .wico,.ftab .fi{display:none}
+  .ftab{min-height:auto;padding:20px 8px}
+  .wel-card{padding-top:20px}
+  .bicard{padding-top:26px}
+  .talent-card{padding-top:40px}
+  /* 번호 배지형(핵심가치/ESG) */
+  .cval .ci,.esg-card .eico{font-size:0}
+  .cval .ci::after{content:attr(data-no);font-size:22px;font-weight:800;letter-spacing:.02em}
+  .esg-card .eico::after{content:attr(data-no);font-size:20px;font-weight:800;letter-spacing:.02em}
+  .bd-head{text-align:center;margin-bottom:8px}
+  .bd-head .ic{font-size:34px;line-height:1}
+  .bd-head .en{display:block;font-size:14px;font-weight:700;color:var(--blue);letter-spacing:.08em;margin:10px 0 4px}
+  .bd-head h3{font-size:clamp(23px,3vw,32px);font-weight:800;letter-spacing:-.01em}
+  .bd-lead{max-width:860px;margin:16px auto 0;text-align:center;color:var(--muted);font-size:17px;line-height:1.75}
+  .svc-grid{display:grid;gap:18px;margin-top:46px}
+  .svc-grid.c2{grid-template-columns:repeat(2,1fr)}
+  .svc-grid.c3{grid-template-columns:repeat(3,1fr)}
+  .svc-grid.c4{grid-template-columns:repeat(4,1fr)}
+  .svc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 22px;transition:transform .2s,box-shadow .2s,border-color .2s}
+  .svc:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--sky)}
+  .svc h4{font-size:16.5px;font-weight:800;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:9px;line-height:1.35}
+  .svc h4 .d{width:8px;height:8px;border-radius:50%;background:var(--sky);flex-shrink:0}
+  .svc p{font-size:14.5px;color:var(--muted);line-height:1.65}
+  .speclist{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:26px 30px;margin-top:20px}
+  .bizd.alt .speclist{background:#fff}
+  .speclist>h4{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:16px;padding-bottom:11px;border-bottom:2px solid var(--sky);display:inline-block}
+  .speclist ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:9px 30px}
+  .speclist ul.one{grid-template-columns:1fr}
+  .speclist li{position:relative;padding-left:15px;color:var(--ink);font-size:15px;line-height:1.65}
+  .speclist li::before{content:"";position:absolute;left:2px;top:9px;width:5px;height:5px;border-radius:50%;background:var(--blue)}
+  .speclist li b{color:var(--navy);font-weight:700}
+  .spec-wrap{max-width:960px;margin:46px auto 0}
+  /* 우주항공 */
+  .aero-hero{position:relative;border-radius:18px;overflow:hidden;margin-top:46px;min-height:360px;display:grid;place-items:center;text-align:center;color:#fff}
+  .aero-hero video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+  .aero-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,24,48,.4) 0%,rgba(10,24,48,.72) 100%);z-index:1}
+  .aero-hero .ah{position:relative;z-index:2;padding:44px 24px;max-width:780px}
+  .aero-hero .ah .en{color:var(--sky);font-weight:700;letter-spacing:.08em;font-size:15px}
+  .aero-hero .ah p{font-size:16.5px;line-height:1.75;color:#fff;margin-top:12px}
+  .rep-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:44px}
+  .rep-card .rt{border-radius:6px;overflow:hidden;aspect-ratio:16/11;border:1px solid var(--line);background:var(--bg-soft)}
+  .rep-card .rt img{width:100%;height:100%;object-fit:cover}
+  .rep-card h4{font-size:16px;font-weight:600;margin-top:14px;line-height:1.5;color:var(--ink)}
+  .rep-card .rt{background:#fff}
+  .rep-card .rt img{object-fit:contain;padding:6px}
+  .rep-card .rd{font-size:14px;color:var(--muted);margin-top:7px;font-weight:600}
+  /* 기술이전 체결 */
+  .tech-transfer{display:grid;grid-template-columns:1.05fr 1fr;gap:34px;align-items:center;background:var(--bg-soft);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:16px;padding:30px;margin-top:24px}
+  .tech-transfer .tt-img{border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 8px 22px rgba(11,34,64,.08)}
+  .tech-transfer .tt-img img{width:100%;height:100%;object-fit:cover;display:block}
+  .tech-transfer .tt-tag{display:inline-block;background:var(--blue);color:#fff;font-size:13px;font-weight:700;padding:6px 15px;border-radius:999px;margin-bottom:14px}
+  .tech-transfer .tt-body h4{font-size:18.5px;font-weight:800;color:var(--navy);margin-bottom:8px;line-height:1.45}
+  .tech-transfer .tt-body .tt-meta{color:var(--blue);font-weight:700;font-size:14.5px;margin-bottom:12px}
+  .tech-transfer .tt-body p{color:var(--muted);font-size:15px;line-height:1.7}
+  /* 노형별 실적 (오각형 꼭짓점 정렬) */
+  .noheong{margin-top:64px}
+  .noheong .nh-cap{text-align:center;font-size:clamp(19px,2.4vw,24px);font-weight:800;color:var(--navy);margin-bottom:4px}
+  .noheong .nh-sub{text-align:center;color:var(--muted);font-size:14px}
+  .nh-radial{position:relative;max-width:1080px;margin:26px auto 0}
+  .nh-pent2{text-align:center;margin:8px auto 26px;max-width:420px}
+  .nh-pent2 svg{width:100%;height:auto;filter:drop-shadow(0 10px 26px rgba(0,83,131,.16))}
+  .nh-node{margin-bottom:26px}
+  .nh-node .nt{font-size:19px;font-weight:800;color:var(--blue);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--sky);display:inline-block}
+  .nh-node ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+  .nh-node li{font-size:13px;font-weight:700;color:var(--navy);line-height:1.4}
+  .nh-node li span{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
+  @media(min-width:1000px){
+    .nh-radial{height:824px}
+    .nh-pent2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:452px;margin:0}
+    .nh-node{position:absolute;margin:0;width:272px}
+    .n-wh{top:14px;left:50%;transform:translateX(-50%);text-align:center;width:auto}
+    .n-fra{top:150px;left:0;text-align:right}
+    .n-candu{top:150px;right:0;text-align:left}
+    .n-opr{top:432px;left:0;text-align:right}
+    .n-apr{top:356px;right:0;width:288px;text-align:left}
+  }
 
   /* ===== Business (Our business 영상 패널) ===== */
   .biz{background:var(--navy)}
@@ -230,6 +478,23 @@
     .mega{display:none}
     .filterbar{grid-template-columns:repeat(3,1fr)}
     .pgrid{grid-template-columns:repeat(2,1fr)}
+    .cval-grid{grid-template-columns:repeat(3,1fr)}
+    .bi-grid{grid-template-columns:repeat(2,1fr)}
+    .about-block{margin-top:72px}
+    .greet-grid,.dir-grid{grid-template-columns:1fr;gap:32px}
+    .esg-grid{grid-template-columns:1fr}
+    .wel-grid{grid-template-columns:repeat(3,1fr)}
+    .tl::before{left:80px}.tl-era .yr,.tl-row .date{width:70px}
+    .subnav-inner{justify-content:flex-start}
+    .subnav a{padding:16px 16px;font-size:14.5px}
+    .subnav a.on::after{left:16px;right:16px}
+    .cat-banner{height:190px}
+    .svc-grid.c3,.svc-grid.c4{grid-template-columns:repeat(2,1fr)}
+    .speclist ul{grid-template-columns:1fr}
+    .rep-grid{grid-template-columns:1fr}
+    .tech-transfer{grid-template-columns:1fr;gap:22px}
+    .nh-grid{grid-template-columns:repeat(2,1fr)}
+    .numgrid,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:repeat(2,1fr);gap:36px 30px}
   }
   @media(max-width:640px){
     section{padding:80px 0}
@@ -238,6 +503,18 @@
     .bpanel:hover{flex:1 1 100%}
     .filterbar{grid-template-columns:repeat(2,1fr)}
     .pgrid{grid-template-columns:1fr}
+    .about-metrics{grid-template-columns:repeat(3,1fr);gap:8px}
+    .cval-grid{grid-template-columns:repeat(2,1fr)}
+    .bi-grid{grid-template-columns:1fr}
+    .talent-grid{grid-template-columns:1fr}
+    .wel-grid{grid-template-columns:repeat(2,1fr)}
+    .form-row.two{grid-template-columns:1fr}
+    .svc-grid.c2,.svc-grid.c3,.svc-grid.c4{grid-template-columns:1fr}
+    .rep-grid{grid-template-columns:1fr}
+    .nh-grid{grid-template-columns:1fr}
+    .numgrid,.numgrid.c2,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:1fr;gap:32px}
+    .job-row{grid-template-columns:1fr;gap:8px}
+    .dir-ways .way{grid-template-columns:1fr;gap:4px}
     .foot-top{grid-template-columns:1fr}
     .hero-actions{flex-direction:column;align-items:stretch}
     .btn{justify-content:center}
@@ -249,18 +526,18 @@
 <header id="header">
   <div class="wrap nav">
     <a href="#top" class="logo" aria-label="수산이앤에스 홈">
-      <img class="logo-white" src="company_assets/common/logo.png" alt="수산이앤에스">
-      <img class="logo-color" src="company_assets/common/f_logo.png" alt="수산이앤에스">
+      <img class="logo-white" src="company_assets/common/f_logo.png" alt="수산이앤에스">
+      <img class="logo-color" src="company_assets/common/logo.png" alt="수산이앤에스">
     </a>
     <nav class="gnb" id="menu" aria-label="주메뉴">
       <ul class="gnb-top">
         <li><a href="#about">회사소개</a></li>
         <li><a href="#business">사업분야</a></li>
         <li><a href="#works">사업실적</a></li>
-        <li><a href="#about">ESG경영</a></li>
+        <li><a href="#esg">ESG경영</a></li>
         <li><a href="#recruit">인재채용</a></li>
         <li><a href="#news">뉴스</a></li>
-        <li><a href="#contact">고객센터</a></li>
+        <li><a href="#voice">고객센터</a></li>
       </ul>
     </nav>
     <button class="hamb" id="hamb" aria-label="메뉴 열기"><span></span><span></span><span></span></button>
@@ -268,25 +545,25 @@
   <div class="mega">
     <div class="wrap mega-inner">
       <div class="mcol">
-        <a href="#about">기업정보</a><a href="#about">인사말</a><a href="#about">연혁</a><a href="#about">글로벌 네트워크</a><a href="#contact">오시는길</a>
+        <a href="#about">기업정보</a><a href="#greeting">인사말</a><a href="#history">연혁</a><a href="#global">글로벌 네트워크</a><a href="#direction">오시는길</a>
       </div>
       <div class="mcol">
-        <a href="#business">원자력사업</a><a href="#business">화력사업</a><a href="#business">수력사업</a><a href="#business">플랜트</a><a href="#business">방위사업</a><a href="#business">R&amp;BD</a>
+        <a href="#biz-nuc">원자력사업</a><a href="#biz-the">화력사업</a><a href="#biz-hyd">수력사업</a><a href="#biz-pla">플랜트</a><a href="#biz-def">방위사업</a><a href="#biz-rbd">R&amp;BD</a><a href="#biz-aero">우주항공사업</a>
       </div>
       <div class="mcol">
         <a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a>
       </div>
       <div class="mcol">
-        <a href="#about">품질환경</a><a href="#about">안전경영</a><a href="#about">인권정도경영</a><a href="#about">상생경영</a>
+        <a href="#esg">품질환경</a><a href="#esg">안전경영</a><a href="#esg">인권정도경영</a><a href="#esg">상생경영</a>
       </div>
       <div class="mcol">
-        <a href="#recruit">조직문화</a><a href="#recruit">인재상</a><a href="#recruit">복리후생</a><a href="#recruit">채용공고</a><a href="#recruit">합격여부확인</a>
+        <a href="#culture">조직문화</a><a href="#talent">인재상</a><a href="#welfare">복리후생</a><a href="#jobs">채용공고</a><a href="#jobs">합격여부확인</a>
       </div>
       <div class="mcol">
         <a href="#news">새소식</a><a href="#news">홍보자료실</a><a href="#news">공고자료실</a>
       </div>
       <div class="mcol">
-        <a href="#contact">사이버신문고</a>
+        <a href="#voice">사이버신문고</a>
       </div>
     </div>
   </div>
@@ -319,27 +596,174 @@
   </div>
 </section>
 
-<!-- ABOUT -->
+<!-- ===== 회사소개 그룹 ===== -->
+<div class="cat" id="cat-company">
+  <div class="cat-banner"><img class="bg" src="company_assets/banner/company.jpg" alt=""><div class="cb"><span class="en">Company</span><h2>회사소개</h2></div></div>
+  <nav class="subnav"><div class="subnav-inner">
+    <a href="#about" class="on">기업정보</a><a href="#greeting">인사말</a><a href="#history">연혁</a><a href="#global">글로벌 네트워크</a><a href="#direction">오시는길</a>
+  </div></nav>
+
+<!-- ABOUT / 회사소개(기업정보) -->
 <section class="about" id="about">
   <div class="wrap about-grid">
     <div class="about-visual reveal">
-      <img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="원자력 발전소 전경" loading="lazy">
+      <img src="company_assets/company/com.jpg" alt="수산이앤에스 회사 전경" loading="lazy">
     </div>
     <div class="reveal">
-      <span class="eyebrow">About Us</span>
-      <h2 class="sec-title">반세기의 기술,<br>흔들림 없는 신뢰</h2>
-      <p class="lead">수산이앤에스는 1974년 설립 이래 대한민국 발전설비의 안전과 신뢰도를 지켜온 에너지 관리 전문기업입니다.</p>
-      <p class="body">원자력 발전설비 예방정비와 계측제어시스템(MMIS) 개발을 중심으로 화력·수력·플랜트·방위 산업까지 사업 영역을 확장하며, 지속적인 R&D 투자로 친환경 에너지 시대를 선도하고 있습니다.</p>
-      <div class="pill-row">
-        <span class="pill">원전 예방정비</span>
-        <span class="pill">MMIS 계측제어</span>
-        <span class="pill">플랜트 시운전</span>
-        <span class="pill">국방 방호 솔루션</span>
-        <span class="pill">신기술 R&D</span>
+      <span class="eyebrow">Company · 회사소개</span>
+      <h2 class="sec-title"><span class="en">Global NO.1 I&amp;C<br>Total Solution Provider!</span>기술의 미래를 계측하며 정비하는<br>최고의 발전정비 전문 기업</h2>
+      <p class="body">㈜수산이앤에스는 1974년 창사 이래로 기술로 세상을 풍요롭게 하고 고객의 꿈을 실현한다는 원대한 목표를 이루고자 최선을 다해 노력해 왔습니다.</p>
+      <div class="about-metrics">
+        <div class="amet"><div class="n">624<span class="u">명</span></div><div class="l">임직원 수</div></div>
+        <div class="amet"><div class="n">780<span class="u">건</span></div><div class="l">기술자격</div></div>
+        <div class="amet"><div class="n">494<span class="u">명</span></div><div class="l">기술등급자</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 핵심가치 -->
+  <div class="wrap about-block reveal">
+    <h2 class="sec-title"><span class="en">CORE VALUE</span>세상을 풍요롭게 만드는 기술!</h2>
+    <p class="body">수산이앤에스는 기술 선도형 기업으로 고객만족, 더 나아가 국가와 사회에 기여하고자 하는 선한 기업입니다.</p>
+    <div class="numgrid c5">
+      <div class="numcard"><span class="no">01</span><h4>기술 중심</h4><p>기술 선도형 기업으로서 핵심 경쟁력을 강화합니다.</p></div>
+      <div class="numcard"><span class="no">02</span><h4>고객만족</h4><p>고객의 가치를 최우선으로 하는 서비스를 제공합니다.</p></div>
+      <div class="numcard"><span class="no">03</span><h4>혁신추구</h4><p>끊임없는 변화와 도전으로 새로운 가치를 창출합니다.</p></div>
+      <div class="numcard"><span class="no">04</span><h4>인재양성</h4><p>함께 성장하는 인재를 육성하고 존중합니다.</p></div>
+      <div class="numcard"><span class="no">05</span><h4>정도경영</h4><p>원칙과 윤리를 지키는 투명한 경영을 실천합니다.</p></div>
+    </div>
+  </div>
+
+  <!-- 사업 소개 -->
+  <div class="wrap about-block reveal">
+    <h2 class="sec-title"><span class="en">BUSINESS</span>수산이앤에스는</h2>
+    <p class="body">시대가 요구하는 기술과 혁신으로 새로운 가치를 창출하기 위해 더욱 더 성장하겠습니다.</p>
+    <div class="bi-grid">
+      <div class="bicard"><div class="bi-ico">⚛</div><h4>원자력</h4><p>국내 원전 계측제어설비 정비사업을 수행합니다.</p></div>
+      <div class="bicard"><div class="bi-ico">🔥</div><h4>화력</h4><p>화력발전설비에 대한 완벽한 예방정비를 시행합니다.</p></div>
+      <div class="bicard"><div class="bi-ico">🛡</div><h4>방위산업</h4><p>항공기를 통한 전자전, 감시정찰 시스템, 드론방호 분야로 확장하고 있습니다.</p></div>
+      <div class="bicard"><div class="bi-ico">🖥</div><h4>R&amp;BD</h4><p>원자력 발전소 MMIS 개발·공급 및 중소형 원자로 MMIS를 공급합니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 인사말 -->
+<section class="greeting" id="greeting">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Company · 인사말</span>
+      <h2 class="sec-title">검증된 기술과 신뢰받는 경영으로</h2>
+      <p class="sec-desc">Total Engineering Service Provider · 글로벌 정비시장을 선도하겠습니다!</p>
+    </div>
+    <div class="greet-grid">
+      <div class="greet-vis reveal"><img src="company_assets/company/com.jpg" alt="수산이앤에스" loading="lazy"></div>
+      <div class="reveal">
+        <p class="greet-tit">안녕하십니까?<br>글로벌 기업으로 역할과 소망을 다하고 있는<br><span class="accent">저희 수산ENS</span>를 찾아주신 여러분 환영합니다.</p>
+        <p>수산이앤에스는 <b>MMIS 및 발전 정비 전문기업</b>으로, 1974년부터 기존 삼창기업이 수행해온 국내 원전 계측제어설비 정비사업과 포스코ICT의 MMIS 사업을 기반으로 한 ㈜포뉴텍으로 시작하여, 수산그룹으로 편입되어 '수산ENS'라는 사명으로 새롭게 출발하였습니다.</p>
+        <p>국내외 시장 변화와 경쟁이 심화되는 경영환경 속에서 기존 사업의 경쟁력 강화와 신시장 진출 인프라를 구축하여 업계 선두 기업으로서 입지를 확고히 하고, 원전 및 화력 정비부문의 시장점유율을 지속적으로 높여 종합정비 회사로 성장하였습니다. 앞으로도 글로벌 리더로서 역할과 소명을 다하기 위해 전 임직원이 더욱 더 최선을 다하겠습니다.</p>
+        <p>나날이 발전하는 모습으로 여러분의 성원에 보답하겠습니다.</p>
+        <div class="greet-sign">
+          <span class="who">㈜수산ENS 대표이사<b>한봉섭</b></span>
+          <img src="company_assets/company/sign.png" alt="대표이사 서명" loading="lazy">
+        </div>
       </div>
     </div>
   </div>
 </section>
+
+<!-- 연혁 -->
+<section id="history">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Company · 연혁</span>
+      <h2 class="sec-title">수산이앤에스의 발자취</h2>
+      <p class="sec-desc">1974년 창립 이래 반세기, 국내 NO.1을 넘어 글로벌 정비 기업으로.</p>
+    </div>
+    <div class="tl reveal">
+      <div class="tl-era"><span class="yr">2010's ~</span><h3>Globalization</h3></div>
+      <div class="tl-row"><span class="date">2024. 02</span><span class="txt">원전기업 인증서 취득</span></div>
+      <div class="tl-row"><span class="date">2022. 12</span><span class="txt">동탑산업훈장 수상</span></div>
+      <div class="tl-row"><span class="date">2021. 05</span><span class="txt">한국노사협력대상 수상 (중견중소기업부문 우수상)</span></div>
+      <div class="tl-row"><span class="date">2021. 01</span><span class="txt">필리핀 Malaya Power Plant O&amp;M 수주</span></div>
+      <div class="tl-row"><span class="date">2020. 12</span><span class="txt">가족친화기업 인증 획득 (여성가족부)</span></div>
+      <div class="tl-row"><span class="date">2019. 12</span><span class="txt">고용노동부 '1천만불 수출의 탑' 대통령상 수상</span></div>
+      <div class="tl-row"><span class="date">2019. 01</span><span class="txt">필리핀 지사 설립 · 필리핀 말라야발전소 종합시운전(O&amp;M) 수주</span></div>
+      <div class="tl-row"><span class="date">2015. 12</span><span class="txt">수산그룹 편입 및 사명 변경 · 자본금 증자(700억원)</span></div>
+      <div class="tl-row"><span class="date">2014. 09</span><span class="txt">UAE 아부다비 지사 설립</span></div>
+      <div class="tl-row"><span class="date">2014. 07</span><span class="txt">UAE BNPP #1~4호기 전기/계측 시운전 지원공사 수주 (USD 6,210만)</span></div>
+      <div class="tl-row"><span class="date">2013. 12</span><span class="txt">OHSAS 18001 인증 취득 (업계 최초)</span></div>
+      <div class="tl-row"><span class="date">2012. 02</span><span class="txt">㈜포뉴텍 출범</span></div>
+
+      <div class="tl-era"><span class="yr">2000 ~ 09</span><h3>Expansion</h3></div>
+      <div class="tl-row"><span class="date">2004. 07</span><span class="txt">원자력연구소와 MMIS 공동연구개발센터 설립</span></div>
+      <div class="tl-row"><span class="date">2003. 07</span><span class="txt">원자력 안전마크 획득 (과학기술부)</span></div>
+      <div class="tl-row"><span class="date">2002. 05</span><span class="txt">원자력발전소 우수기자재 공급업체 선정 (한수원)</span></div>
+      <div class="tl-row"><span class="date">2001. 05</span><span class="txt">10MW 인텔리전트 디지털조속기 국산화 개발</span></div>
+
+      <div class="tl-era"><span class="yr">1990 ~ 99</span><h3>Establish</h3></div>
+      <div class="tl-row"><span class="date">1999. 02</span><span class="txt">원전 계측제어 설비 정비업체 선정 (한전)</span></div>
+      <div class="tl-row"><span class="date">1998. 01</span><span class="txt">ISO 9001 인증 획득 (BVQI)</span></div>
+      <div class="tl-row"><span class="date">1992. 05</span><span class="txt">부설연구소 설립 · 원자력발전소(가동원전 9개호기) 계측제어설비 정비용역 장기계약 체결</span></div>
+
+      <div class="tl-era"><span class="yr">1970 ~ 89</span><h3>Challenge</h3></div>
+      <div class="tl-row"><span class="date">1989. 09</span><span class="txt">고리 원자력 1발전소 계측제어분야 경상정비 시범수행 실시</span></div>
+      <div class="tl-row"><span class="date">1974. 05</span><span class="txt">삼창기업 창립</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 글로벌 네트워크 -->
+<section class="global" id="global">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Company · Global Network</span>
+      <h2 class="sec-title">글로벌 수산ENS!</h2>
+      <p>수산이앤에스는 국내 NO.1에서 세계 NO.1의 자리로 나아가기 위해 동남아시아, 중동, 북아프리카 등 세계 각지 여러 나라에 원자력·화력·지열 발전소 정비 및 운전/운영 사업으로 사세를 끊임없이 확장하고 있습니다. 풍부한 경험과 최고의 기술력을 바탕으로 세계로부터 인정받는 대한민국의 자랑스러운 일류 정비 기업이 되겠습니다.</p>
+    </div>
+    <div class="map reveal"><img src="company_assets/company/map01.png" alt="글로벌 네트워크 지도" loading="lazy"></div>
+  </div>
+</section>
+
+<!-- 오시는길 -->
+<section class="direction" id="direction">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Company · Direction</span>
+      <h2 class="sec-title">오시는 길</h2>
+      <p class="sec-desc">수산이앤에스 본사 및 연구소·공장 위치를 안내합니다.</p>
+    </div>
+    <a class="dir-map reveal" href="https://map.naver.com/p/entry/address/3ATIKc,2ztECa,%EC%9A%B8%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C%20%EB%B6%81%EA%B5%AC%20%EB%A7%A4%EA%B3%A1%EC%82%B0%EC%97%85%EB%A1%9C%2021?c=16.00,0,0,0,dh&amp;isCorrectAnswer=true&amp;placePath=/home?from=map&amp;fromPanelNum=1&amp;additionalHeight=76&amp;timestamp=202604211616&amp;locale=ko&amp;svcName=map_pcv5&amp;searchText=%EC%9A%B8%EC%82%B0%EA%B4%91%EC%97%AD%EC%8B%9C%20%EB%B6%81%EA%B5%AC%20%EB%A7%A4%EA%B3%A1%EC%82%B0%EC%97%85%EB%A1%9C%2021,%20%EC%9E%90%EB%8F%99%EC%B0%A8%EC%A1%B0%EC%84%A0%EA%B8%B0%EC%88%A0%EA%B4%80%203%EC%B8%B5" target="_blank" rel="noopener" aria-label="네이버 지도에서 본사 위치 보기">
+      <img src="company_assets/company/dir.png" alt="본사 약도 — 울산광역시 북구 매곡산업로 21, 자동차조선기술관 3층">
+      <span class="maptip">네이버 지도에서 보기 →</span>
+    </a>
+    <div class="dir-tablewrap reveal">
+      <table class="dir-table">
+        <thead><tr><th>Establishment.</th><th>Address.</th><th>Tel.</th><th>Fax.</th></tr></thead>
+        <tbody>
+          <tr><td class="est">본사</td><td class="addr">[44222] 울산광역시 북구 매곡산업로 21, 자동차조선기술관 3층</td><td>052-258-3860</td><td>052-258-3865</td></tr>
+          <tr><td class="est">시스템연구소</td><td class="addr">[06349] 서울특별시 강남구 밤고개로1길 10(수서동) 현대벤처빌 3층 304호</td><td>02-2184-0900</td><td>02-2226-0988</td></tr>
+          <tr><td class="est">기술연구소</td><td class="addr">[06367] 서울특별시 강남구 밤고개로5길 13(수서동) 수산빌딩 2층</td><td>–</td><td>–</td></tr>
+          <tr><td class="est">수원공장</td><td class="addr">[16648] 경기도 수원시 권선구 산업로155번길 280-36</td><td>–</td><td>–</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="dir-ways reveal">
+      <div class="way"><b>항공 이용 시</b><span>울산공항 → 호계방향 버스(122, 402, 216, 1402번 등) → 신천 정류장 하차 → 마을버스 940번 → 자동차조선기술관 앞 하차</span></div>
+      <div class="way"><b>열차 이용 시</b><span>울산역(KTX/SRT) → 급행버스 5003번 → 신천 정류장 하차 → 마을버스 940번 → 자동차조선기술관 앞 하차</span></div>
+      <div class="way"><b>버스 이용 시</b><span>시외/고속버스터미널 → 롯데백화점 앞 → 호계방향 버스(1402번) → 신천 정류장 하차 → 마을버스 940번 → 자동차조선기술관 앞 하차</span></div>
+      <div class="way"><b>승용차 이용 시</b><span>울산 IC → 신복로터리 → 남부순환도로 → 북부순환도로 → 서동삼거리에서 상안교 방면 좌회전 → 매곡동 방면 → 매곡산업단지 입구 우회전 → 자동차조선기술관 도착</span></div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /회사소개 그룹 -->
+
+<!-- ===== 사업분야 그룹 ===== -->
+<div class="cat" id="cat-business">
+  <div class="cat-banner"><img class="bg" src="company_assets/banner/business.jpg" alt=""><div class="cb"><span class="en">Business</span><h2>사업분야</h2></div></div>
+  <nav class="subnav"><div class="subnav-inner">
+    <a href="#biz-nuc" class="on">원자력사업</a><a href="#biz-the">화력사업</a><a href="#biz-hyd">수력사업</a><a href="#biz-pla">플랜트</a><a href="#biz-def">방위사업</a><a href="#biz-rbd">R&amp;BD</a><a href="#biz-aero">우주항공사업</a>
+  </div></nav>
 
 <!-- BUSINESS -->
 <section class="biz" id="business">
@@ -350,15 +774,247 @@
       <p class="sec-desc">원자력발전소의 계측제어설비 정비 및 원자력 발전의 핵심기술인 원전계측제어시스템(MMIS)의 개발 전문 기업, 수산이앤에스</p>
     </div>
     <div class="biz-panels reveal">
-      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="원자력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Nuclear Power</span><h3>원자력 사업</h3></div></a>
-      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="화력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Thermal Plant Power</span><h3>화력 사업</h3></div></a>
-      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="수력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Hydro</span><h3>수력 사업</h3></div></a>
-      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="플랜트%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Construction &amp; Commissioning</span><h3>플랜트</h3></div></a>
-      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="방위%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">ANTI-UAV Defence System</span><h3>방위 사업</h3></div></a>
-      <a href="#works" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="R&BD.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Research &amp; Development</span><h3>R&amp;BD</h3></div></a>
+      <a href="#biz-nuc" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="원자력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Nuclear Power</span><h3>원자력 사업</h3></div></a>
+      <a href="#biz-the" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="화력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Thermal Plant Power</span><h3>화력 사업</h3></div></a>
+      <a href="#biz-hyd" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="수력%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Hydro</span><h3>수력 사업</h3></div></a>
+      <a href="#biz-pla" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="플랜트%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Construction &amp; Commissioning</span><h3>플랜트</h3></div></a>
+      <a href="#biz-def" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="방위%20사업.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">ANTI-UAV Defence System</span><h3>방위 사업</h3></div></a>
+      <a href="#biz-rbd" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="R&BD.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Research &amp; Development</span><h3>R&amp;BD</h3></div></a>
+      <a href="#biz-aero" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="company_assets/aero/aero.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Aerospace &amp; Engineering</span><h3>우주항공 사업</h3></div></a>
     </div>
   </div>
 </section>
+
+<!-- 원자력 사업 상세 -->
+<section class="bizd" id="biz-nuc">
+  <div class="bd-hero" style="background-image:url('company_assets/result/nuc-shinhanul.png')">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">⚛</span><span class="en">Nuclear</span><h3>원자력 사업</h3></div>
+    <p class="bd-lead reveal">수산ENS는 원자력 발전소의 안전하고 정상적인 운영을 위하여 원자로·터빈 및 부속 기기의 계측제어설비를 유지·관리 및 정비하고, 전기회로기판 정비에 있어 세척·코팅제거, 정밀검사, ICT(In Circuit Test), 고장부품 교체, 품질관리(Q.C) 공정을 거쳐 통합적인 정비체계를 구축하였습니다.</p>
+    <div class="svc-grid c4 reveal">
+      <div class="svc"><h4><span class="d"></span>계측제어(I&amp;C) 정비 전문</h4><p>국내 전 노형 계측정비 수행 — WEC, 프라마톰, CANDU, OPR-1000, APR-1400</p></div>
+      <div class="svc"><h4><span class="d"></span>원자로 제어설비</h4><p>제어봉제어설비, 노내·외 핵계측 감시계통, CPC, 원자로 감시계통(NIMS) 등</p></div>
+      <div class="svc"><h4><span class="d"></span>터빈 제어설비</h4><p>주터빈 제어계통(TCS), 주증기·주급수 차단 밸브, 주급수 펌프 및 제어밸브 등</p></div>
+      <div class="svc"><h4><span class="d"></span>제어전산설비</h4><p>공학적안전계통(ESFAS), 원자로보호계통(PPS), 방사선감시계통(RMS) 등</p></div>
+      <div class="svc"><h4><span class="d"></span>MMIS</h4><p>Man-Machine Interface System — 안전·비안전 제어계통, 주제어실 운전제어반 및 LDP 등</p></div>
+      <div class="svc"><h4><span class="d"></span>ILRT</h4><p>Integrated Leakage Rate Test — 원전 격납건물 누설률 시험</p></div>
+      <div class="svc"><h4><span class="d"></span>PIMS</h4><p>PCB Integrated Maintenance Service — PCB 종합 정비 시스템</p></div>
+      <div class="svc"><h4><span class="d"></span>SFIS</h4><p>사용후 핵연료 검사장비 — 원자력 발전소 핵연료 집합체 검사 시스템</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="wrap">
+
+    <!-- 국내 원전 계측정비용역 실적 (노형별) -->
+    <div class="noheong reveal">
+      <p class="nh-cap">국내 원전 계측정비용역 실적</p>
+      <p class="nh-sub">노형(Reactor Type)별 주요 실적</p>
+      <div class="nh-radial">
+        <div class="nh-pent2">
+          <svg viewBox="-22 -16 444 406" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="국내 원전 계측정비용역 실적 노형별 오각형">
+            <defs>
+              <linearGradient id="pentGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#005383"/><stop offset=".5" stop-color="#59bded"/><stop offset="1" stop-color="#c4d700"/>
+              </linearGradient>
+            </defs>
+            <circle cx="200" cy="188" r="150" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+            <g stroke="url(#pentGrad)" stroke-width="4" stroke-linecap="round">
+              <line x1="200" y1="42" x2="200" y2="14"/>
+              <line x1="342.6" y1="145.6" x2="368" y2="138"/>
+              <line x1="288.2" y1="313.4" x2="303" y2="335"/>
+              <line x1="111.8" y1="313.4" x2="97" y2="335"/>
+              <line x1="57.4" y1="145.6" x2="32" y2="138"/>
+            </g>
+            <polygon points="200,42 342.6,145.6 288.2,313.4 111.8,313.4 57.4,145.6" fill="rgba(89,189,237,.07)" stroke="url(#pentGrad)" stroke-width="8" stroke-linejoin="round"/>
+            <g fill="url(#pentGrad)">
+              <circle cx="200" cy="42" r="8"/><circle cx="342.6" cy="145.6" r="8"/><circle cx="288.2" cy="313.4" r="8"/><circle cx="111.8" cy="313.4" r="8"/><circle cx="57.4" cy="145.6" r="8"/>
+            </g>
+            <g fill="#fff" stroke="url(#pentGrad)" stroke-width="2.5">
+              <circle cx="200" cy="14" r="4.5"/><circle cx="368" cy="138" r="4.5"/><circle cx="303" cy="335" r="4.5"/><circle cx="97" cy="335" r="4.5"/><circle cx="32" cy="138" r="4.5"/>
+            </g>
+            <g text-anchor="middle" font-family="inherit" fill="var(--navy)" font-weight="800">
+              <text x="200" y="180" font-size="19">국내 원전</text>
+              <text x="200" y="206" font-size="19">계측정비용역 실적</text>
+              <text x="200" y="231" font-size="13" fill="var(--muted)" font-weight="600">(노형별)</text>
+            </g>
+          </svg>
+        </div>
+        <div class="nh-node n-wh"><div class="nt">WH</div><ul><li>고리발전소 1,2호기<span>1989.10~2011.11 , 2020.12~현재</span></li></ul></div>
+        <div class="nh-node n-fra"><div class="nt">FRA 950</div><ul><li>한울발전소 1,2호기 RMS<span>2014.12~현재</span></li></ul></div>
+        <div class="nh-node n-candu"><div class="nt">CANDU 700</div><ul><li>월성발전소 1,2호기<span>1990.12~현재</span></li></ul></div>
+        <div class="nh-node n-opr"><div class="nt">OPR 1000</div><ul>
+          <li>신고리발전소 1,2호기<span>2010.12~2014.02 , 2020.08~현재</span></li>
+          <li>한울발전소 3,4호기 RMS<span>2014.12~현재</span></li>
+          <li>한울발전소 5,6호기 RMS<span>2014.12~현재</span></li>
+          <li>신월성발전소 1,2호기 RMS<span>2021.08~현재</span></li>
+          <li>신고리발전소 1,2호기 RMS<span>2016.10~현재</span></li>
+        </ul></div>
+        <div class="nh-node n-apr"><div class="nt">APR 1400</div><ul>
+          <li>BNPP 1,2,3,4호기 시운전<span>2014.11~2024.03</span></li>
+          <li>BNPP 3,4호기<span>2024.03~2025.06</span></li>
+          <li>새울발전소 1,2호기 MMIS<span>2017.11~현재</span></li>
+          <li>새울발전소 1,2호기 RMS<span>2022.08~현재</span></li>
+          <li>새울발전소 3,4호기 MMIS<span>2026.10~현재</span></li>
+          <li>신한울발전소 1,2호기 시운전<span>2014.10~2020.09</span></li>
+          <li>신한울발전소 1,2호기<span>2024.06~현재</span></li>
+          <li>신한울발전소 1,2호기 MMIS<span>2026.03~현재</span></li>
+          <li>신한울발전소 1,2호기 RMS<span>2025.01~현재</span></li>
+        </ul></div>
+      </div>
+    </div>
+
+    <div class="spec-wrap">
+      <div class="speclist reveal"><h4>SFIS 사업실적</h4><ul class="one"><li><b>개선</b> : 한빛1발전소</li><li><b>신규</b> : 고리1·한울2·한울3·한빛3·월성3·신고리1발전소, BNPP 1~4호기, NPIC, KNF(한전원자력연료)</li></ul></div>
+      <div class="speclist reveal"><h4>RMS(방사선감시시스템) 사업실적</h4><ul><li>신고리 1,2호기 RMS 전체시스템</li><li>신월성 1,2호기 RMS 전체시스템</li><li>고리 3,4호기 RMS 전산기 공급 및 설치</li><li>각종 핵관련시설 방사선감시설비 정비</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 화력 사업 상세 -->
+<section class="bizd alt" id="biz-the">
+  <div class="bd-hero" style="background-image:url('company_assets/result/the-goseong.png')">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">🔥</span><span class="en">Thermal</span><h3>화력 사업</h3></div>
+    <p class="bd-lead reveal">수산ENS는 민자 및 발전사 화력발전소의 계측제어정비와 경상 계측제어정비 용역, 계획예방정비공사 및 간이공사를 전문적으로 수행합니다.</p>
+    <div class="svc-grid c3 reveal">
+      <div class="svc"><h4><span class="d"></span>계측제어설비 경상정비 용역</h4><p>기술 고도화에 따른 정비인력의 효율적 운영, 정비기술 전문화로 설비신뢰도 확보 및 안정적 전력공급, 철저한 정비관리를 통한 발전소 가동률 향상</p></div>
+      <div class="svc"><h4><span class="d"></span>OH공사</h4><p>발전설비에 대한 완벽한 예방정비 시행으로 설비 신뢰도 제고 및 성능 유지, 발전소 장주기 무고장 운전 달성과 안정운전 도모</p></div>
+      <div class="svc"><h4><span class="d"></span>간이공사</h4><p>설계서에 명시된 설비 및 계측기에 대한 교정·점검·시운전 작업 수행, 정비지침서에 의거한 설치 후 시운전 작업 수행</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="wrap">
+    <div class="spec-wrap">
+      <div class="speclist reveal"><h4>계측제어설비 경상정비용역</h4><ul><li>당진화력 1~4호기</li><li>하동화력 5~8호기</li><li>보령화력 6호기</li><li>인천화력 1~4호기</li><li>서천화력 1~2호기</li><li>삼천포화력 1~6호기</li><li>여수화력 1~2호기</li><li>영흥화력 5~6호기</li><li>춘천에너지 경상정비 및 수폐수 처리설비 운전용역(계측분야)</li></ul></div>
+      <div class="speclist reveal"><h4>전기/계장 및 시운전</h4><ul><li>POSCO 포항부생발전 전기/계장부분 유지보수 용역</li><li>POSCO 광양LNG 5Tank 신설 시운전 용역</li></ul></div>
+      <div class="speclist reveal"><h4>계획예방정비공사</h4><ul><li>하동화력 #1~6호기</li><li>보령화력 #1~8호기</li><li>인천화력 #1~4호기</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 수력 사업 상세 -->
+<section class="bizd" id="biz-hyd">
+  <div class="bd-hero" style="background-image:url('company_assets/result/hyd-casecnan.png')">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">💧</span><span class="en">Hydro</span><h3>수력 사업</h3></div>
+    <p class="bd-lead reveal">수산ENS는 수력발전소 O&amp;M 및 설비 공급, 간이공사용역을 전문적으로 수행하고 있습니다.</p>
+    <div class="svc-grid c3 reveal">
+      <div class="svc"><h4><span class="d"></span>O&amp;M</h4><p>발전소 운영, 유지관리</p></div>
+      <div class="svc"><h4><span class="d"></span>설비공급</h4><p>조속기 공급, 기술지원, 시운전 작업 수행</p></div>
+      <div class="svc"><h4><span class="d"></span>간이공사</h4><p>설계서에 명시된 설비에 대한 정밀점검 작업 수행</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="wrap">
+    <div class="spec-wrap">
+      <div class="speclist reveal"><h4>O&amp;M</h4><ul class="one"><li>필리핀 카섹난 수력발전소 O&amp;M 용역</li></ul></div>
+      <div class="speclist reveal"><h4>설비공급</h4><ul><li>주암수력 제1,2호기 조속기 공급</li><li>이포보·합천보 소수력 발전제어 설비 납품 및 시운전</li><li>임하수력 발전 예비품 제작 납품</li><li>남강수력 디지털 조속기 제어시스템 공급</li><li>임하수력 MLDT 예비품 공급</li><li>소양강수력 1,2호기 조속기 공급 / 용담1수력 조속기 철거·설치공사</li></ul></div>
+      <div class="speclist reveal"><h4>기술지원</h4><ul><li>안동수력 조속기 기술지원</li><li>주암수력 및 합천수력발전소 디지털 조속기 기술지원</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 플랜트 상세 -->
+<section class="bizd alt" id="biz-pla">
+  <div class="bd-hero" style="background-image:url('company_assets/result/pla-incheon-bhs.png')">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">🏗</span><span class="en">Plant</span><h3>국내외 플랜트</h3></div>
+    <p class="bd-lead reveal">수산ENS는 국내뿐만 아니라 해외 여러 나라의 PLANT PROJECT에 참여하고 있으며, 특히 APR1400 모델의 국내외 원자력 발전소 시운전 및 시운전정비와 해외 플랜트 O&amp;M 사업을 수행하고 있습니다.</p>
+    <div class="svc-grid c3 reveal">
+      <div class="svc"><h4><span class="d"></span>시공 및 시운전</h4><p>원자력 및 화력발전소 전기·계측 시공·시운전, 산업 플랜트 전기·계측 시공·시운전</p></div>
+      <div class="svc"><h4><span class="d"></span>종합 시운전</h4><p>석탄·복합화력·신재생에너지 분야의 기계·전기·계측·화학분야 통합 시운전</p></div>
+      <div class="svc"><h4><span class="d"></span>O&amp;M</h4><p>교정 및 성능시험, 예측·정기 정비, 계획예방정비, DCS·FIELD 운전, 보안·환경관리, 가스시설 공급설비 경정비</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="wrap">
+    <div class="spec-wrap">
+      <div class="speclist reveal"><h4>국내 주요 시공 / 시운전</h4><ul><li><b>화력</b> 태안 1,2 / 울산복합 1,2 / 인천복합 5~9</li><li><b>화력</b> 하동 1~3 / 보령 1,2 / 부산 RDF / 수원열병합 1,2</li><li><b>원자력</b> 월성 2,4 / 신고리 1,2 / 한울 1~6</li><li><b>원자력</b> 신월성 1,2 / 한빛 3~6</li></ul></div>
+      <div class="speclist reveal"><h4>해외 시공 / 시운전</h4><ul><li>요르단 JRTR 연구용 원자로 – 전기·계측 시운전</li><li>사우디아라비아 화력(900MW) – I&amp;C 시운전</li><li>인도네시아 살룰라 지열발전(300MW) – 종합시운전</li><li>알제리 아인아르낫 복합화력(1,200MW) – 종합시운전</li><li>모로코 화력(700MW) – 시운전 &amp; 시운전정비</li><li>말라야 화력발전(600MW, 2UNIT) – 운영/정비</li></ul></div>
+      <div class="speclist reveal"><h4>건설 · 운영</h4><ul><li>UAE BNPP 계측제어 시운전 S1·S2 (4,800MW, 4UNIT)</li><li>신한울 원자력발전 계측제어 시운전 S1</li><li>인천공항 3 / 3.5 / 4단계 BHS 전기·통신 공사</li><li>부산~울산 복선전철 신호설비 신설공사</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 방위 사업 상세 -->
+<section class="bizd" id="biz-def">
+  <div class="bd-hero" style="background-image:url('company_assets/result/def-drone.png')">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">🛡</span><span class="en">ANTI-UAV Defence System</span><h3>방위 사업</h3></div>
+    <p class="bd-lead reveal">수산ENS는 각종 장비들의 고유기능을 하나의 시스템으로 통합한 드론 방호시스템을 제공하고 있습니다. 수요처에서 요구되는 사양 및 장비에 대하여 맞춤형 제작이 가능합니다.</p>
+    <div class="svc-grid c3 reveal">
+      <div class="svc"><h4><span class="d"></span>통합 체계 분야</h4><p>국내 최고 통합 운영체계 설계·구현. 2D/3D Radar, RF Scanner, EO/IR Camera 등 탐지·식별 장비와 Jammer·Spoofer 등 대응 장비를 적용한 고객 맞춤형 솔루션 공급</p></div>
+      <div class="svc"><h4><span class="d"></span>RF Scanner</h4><p>멀티 방향 탐지로 다중 드론 추적. 탐지범위 2km 이상 전방향, 2.4·5.8GHz / 400·900MHz 대역, 조종자 위치 방향 탐지, IP66 WeatherProof</p></div>
+      <div class="svc"><h4><span class="d"></span>전자전 · PHM · 감시정찰</h4><p>MRO(수리·정비·개조), PBL(성과기반군수), 항공기 건전성 관리(PHM), 육상·해상·해안·대공 감시시스템 및 고층빌딩 대공감시 시스템 공급</p></div>
+    </div>
+  </div>
+  </div>
+  <div class="wrap">
+    <div class="spec-wrap">
+      <div class="speclist reveal"><h4>사업실적</h4><ul><li>드론방호 통합제어 시스템 개발 (2020.12~2022.07)</li><li>위성방탐 RF스캐너 개발 (2023.06~)</li><li>000체계 기술용역 유지보수 외주용역 (2021·2022)</li><li>00-II 체계 주임무장비 PBL 기술용역 (2023.03~2026.12)</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- R&BD 상세 -->
+<section class="bizd alt" id="biz-rbd">
+  <div class="bd-hero" style="background-image:url('company_assets/company/com.jpg')">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">🔬</span><span class="en">Research &amp; Business Development</span><h3>R&amp;BD</h3></div>
+    <p class="bd-lead reveal">수산ENS는 시대가 요구하는 기술과 혁신으로 새로운 가치를 창출하기 위해 노력하며, 독자적인 사업수행능력을 갖추고 Total 서비스를 제공하기 위해 최선을 다하고 있습니다.</p>
+    <div class="svc-grid c4 reveal">
+      <div class="svc"><h4><span class="d"></span>원전 MMIS(POSAFE-Q)</h4><p>국내 최초 원전 안전등급제어기기 국산화, KINS 인허가 획득. 신한울 1,2 / 새울 3,4 / 신한울 3,4 MMIS 안전계통 PLC 공급</p></div>
+      <div class="svc"><h4><span class="d"></span>연구·훈련용 원자로</h4><p>요르단 연구로 제어설비 공급(2015), 수출형 기장연구로 원자로 제어설비 제작 공급</p></div>
+      <div class="svc"><h4><span class="d"></span>차세대 안전계통 플랫폼</h4><p>FPGA 기반 안전계통 플랫폼 개발, 가상화 플랫폼 및 교육훈련용 시뮬레이터. SMR·부유식 원전·동력로 적용</p></div>
+      <div class="svc"><h4><span class="d"></span>ERMS 환경방사선</h4><p>환경방사선 감시시스템 — 고리·한빛·한울 원자력본부, 방폐장, 영광군 민간감시센터, 중이온가속기(대전)</p></div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- 우주항공 사업 상세 -->
+<section class="bizd" id="biz-aero">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">🚀</span><span class="en">Aerospace &amp; Engineering</span><h3>우주항공 사업</h3></div>
+    <p class="bd-lead reveal">정부출연연구소 시험설비 및 시험설비 인프라 구축 분야로의 고도화를 준비하고 있습니다.</p>
+    <div class="aero-hero reveal">
+      <video autoplay muted loop playsinline preload="metadata"><source src="company_assets/aero/aero.mp4" type="video/mp4"></video>
+      <div class="ah"><span class="en">Aerospace &amp; Engineering</span><p>우주 발사체 시험설비 구축 사업 전 과정에 참여하여 설계부터 제작·시공·품질관리·시운전·기술지원까지 통합 엔지니어링 서비스를 제공합니다.</p></div>
+    </div>
+    <p class="nh-cap reveal" style="margin-top:56px">대표 사업실적</p>
+    <div class="rep-grid reveal" style="margin-top:28px">
+      <div class="rep-card"><div class="rt"><img src="company_assets/aero/aero-rep1.png" alt="차세대발사체 엔진 연소시험설비" loading="lazy"></div><h4>차세대발사체 엔진 연소시험설비 구축을 위한 기본계획 수립 및 기본설계 용역</h4><p class="rd">2025. 09 ~ 2026. 03</p></div>
+      <div class="rep-card"><div class="rt"><img src="company_assets/aero/aero-rep2.png" alt="유공압 판넬 및 가스배관" loading="lazy"></div><h4>차세대 발사체 엔진 시험을 위한 유공압 판넬 및 가스배관 설계 및 부품 납품</h4><p class="rd">2025. 12 ~ 진행중</p></div>
+      <div class="rep-card"><div class="rt"><img src="company_assets/aero/aero-rep3.png" alt="유공압 판넬 및 가스배관" loading="lazy"></div><h4>차세대 발사체 엔진 시험을 위한 유공압 판넬 및 가스배관 설계 및 부품 납품</h4><p class="rd">2025. 12 ~ 진행중</p></div>
+    </div>
+    <div class="spec-wrap">
+      <div class="svc-grid c2 reveal" style="margin-top:0">
+        <div class="svc"><h4><span class="d"></span>시험설비 설계</h4><p>수산그룹의 전문 기술 역량과 시험설비 설계 경험을 바탕으로 발사체 엔진 연소 시험설비의 설계·구축·시운전·운영지원까지 전 주기 솔루션을 제공합니다. AS9100 인증을 통해 국제표준 수준의 품질보증 관리 체계를 운영합니다.</p></div>
+        <div class="svc"><h4><span class="d"></span>부품 설계 및 제작</h4><p>엔진 연소시험설비 관련된 유공압 판넬, 고압 저장용기 등 설계 및 제작을 수행하며 인프라 구축 사업을 확장하고 있습니다.</p></div>
+      </div>
+      <div class="tech-transfer reveal">
+        <div class="tt-img"><img src="company_assets/aero/aero-ceremony.png" alt="한국항공우주연구원(KARI) 기술이전 계약 체결식"></div>
+        <div class="tt-body">
+          <span class="tt-tag">기술이전 체결</span>
+          <h4>『우주발사체용 로켓 엔진 연소 시험설비 개발 기술』</h4>
+          <p class="tt-meta">한국항공우주연구원(KARI) · 2025. 09</p>
+          <p>발사체 시험설비 설계 기술력의 고도화를 위한 기술이전 계약을 체결하고, AS9100 인증 기반의 국제표준 품질보증 체계로 안전성과 신뢰성 높은 서비스를 제공합니다.</p>
+        </div>
+      </div>
+      <div class="speclist reveal"><h4>시험설비 설계 · 사업실적</h4><ul class="one"><li>차세대발사체 엔진 연소시험설비 구축을 위한 기본계획 수립 및 기본설계 용역</li></ul></div>
+      <div class="speclist reveal"><h4>부품 설계 및 제작 · 사업실적</h4><ul><li>차세대 엔진 연소시험용 고압가스 저장 용기 제작 관련 설계 및 부품 납품</li><li>차세대 발사체 엔진 시험을 위한 유공압 판넬 및 가스배관 설계 및 부품 납품</li><li>능동 제어 위성 추진기관 지상 지원 장비(FGSE) 제작</li></ul></div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /사업분야 그룹 -->
+
+<!-- ===== 사업실적 그룹 ===== -->
+<div class="cat" id="cat-result">
+  <div class="cat-banner"><img class="bg" src="company_assets/banner/result.jpg" alt=""><div class="cb"><span class="en">Achievement</span><h2>사업실적</h2></div></div>
+  <nav class="subnav"><div class="subnav-inner">
+    <a href="#works" class="on" data-filter="all">전체</a><a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a>
+  </div></nav>
 
 <!-- WORKS -->
 <section class="works" id="works">
@@ -379,23 +1035,92 @@
     </div>
 
     <div class="pgrid reveal" id="pgrid">
-      <article class="pcard" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="신한울발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>신한울발전소 계측제어 설비 정비 용역</h4></article>
-      <article class="pcard" data-cat="def"><div class="pthumb"><img src="company_assets/result/81724e620e2bb00a25b5a829aefaba0a.png" alt="드론방호 통합제어 시스템" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">방위사업</span></div><h4>드론방호 통합제어 시스템 개발</h4></article>
-      <article class="pcard" data-cat="def"><div class="pthumb"><img src="company_assets/result/ca54df8385c76dd5b9686b22f9f907ee.png" alt="위성방탐 RF스캐너" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">방위사업</span></div><h4>위성방탐 RF스캐너 개발</h4></article>
-      <article class="pcard" data-cat="the"><div class="pthumb"><img src="company_assets/result/cb4df3ce20fb2bce45ae19a1cf3291d5.png" alt="하동화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>하동화력 계측제어설비 경상정비 용역</h4></article>
-      <article class="pcard" data-cat="the"><div class="pthumb"><img src="company_assets/result/583e5bb609c5f23febdd8dc6c2eed9e5.png" alt="고성하이화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>고성하이화력 계측제어설비 경상정비용역</h4></article>
-      <article class="pcard" data-cat="hyd"><div class="pthumb"><img src="company_assets/result/7040562cbf62e6a769fa95b9d23c7334.png" alt="필리핀 카섹난 수력발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국외</span><span class="badge cat">수력사업</span></div><h4>필리핀 카섹난 수력발전소 O&amp;M 용역</h4></article>
+      <!-- 대표 6건 (ALL 초기 노출) -->
+      <article class="pcard" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/nuc-shinhanul.png" alt="신한울발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>신한울발전소 계측제어 설비 정비 용역</h4></article>
+      <article class="pcard" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/nuc-uae-bnpp.png" alt="UAE BNPP" loading="lazy"></div><div class="pmeta"><span class="badge loc">국외</span><span class="badge cat">원자력사업</span></div><h4>UAE BNPP 1~4호기 전기·계측 시운전공사</h4></article>
+      <article class="pcard" data-cat="the"><div class="pthumb"><img src="company_assets/result/the-dangjin.png" alt="당진화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>당진화력 #1~4 계측제어설비 경상정비 용역</h4></article>
+      <article class="pcard" data-cat="hyd"><div class="pthumb"><img src="company_assets/result/hyd-casecnan.png" alt="필리핀 카섹난 수력발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국외</span><span class="badge cat">수력사업</span></div><h4>필리핀 카섹난 수력발전소 O&amp;M 용역</h4></article>
+      <article class="pcard" data-cat="pla"><div class="pthumb"><img src="company_assets/result/pla-incheon-bhs.png" alt="인천공항 4단계 BHS" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">플랜트</span></div><h4>인천공항 4단계 BHS 구축 시운전 용역</h4></article>
+      <article class="pcard" data-cat="def"><div class="pthumb"><img src="company_assets/result/def-drone.png" alt="드론방호 통합제어 시스템" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">방위사업</span></div><h4>드론방호 통합제어 시스템 개발</h4></article>
 
-      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="한울 1발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>한울 1발전소 계측제어 정비</h4></article>
-      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png" alt="UAE BNPP" loading="lazy"></div><div class="pmeta"><span class="badge loc">국외</span><span class="badge cat">원자력사업</span></div><h4>UAE BNPP 1~4호기 전기·계측 시운전공사</h4></article>
-      <article class="pcard more hide" data-cat="the"><div class="pthumb"><img src="company_assets/result/cb4df3ce20fb2bce45ae19a1cf3291d5.png" alt="당진화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>당진화력 #1~4 계측제어 경상정비 용역</h4></article>
-      <article class="pcard more hide" data-cat="pla"><div class="pthumb"><img src="company_assets/result/583e5bb609c5f23febdd8dc6c2eed9e5.png" alt="인천공항 BHS" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">플랜트</span></div><h4>인천공항 4단계 BHS 시운전 용역</h4></article>
-      <article class="pcard more hide" data-cat="hyd"><div class="pthumb"><img src="company_assets/result/7040562cbf62e6a769fa95b9d23c7334.png" alt="주암수력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">수력사업</span></div><h4>주암수력 1·2호기 조속기 공급</h4></article>
+      <!-- 원자력 추가 -->
+      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/nuc-hanul1.png" alt="한울 1발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>한울 1발전소 계측제어 설비 정비 용역</h4></article>
+      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/nuc-saeul1.png" alt="새울 1발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>새울 1발전소 MMIS 설비 정비 용역</h4></article>
+      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/nuc-wolseong1.png" alt="월성 1발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>월성 1발전소 계측제어 설비 정비 용역</h4></article>
+      <article class="pcard more hide" data-cat="nuc"><div class="pthumb"><img src="company_assets/result/nuc-kori1.png" alt="고리 1발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">원자력사업</span></div><h4>고리 1발전소 계측제어 설비 정비 용역</h4></article>
+
+      <!-- 화력 추가 -->
+      <article class="pcard more hide" data-cat="the"><div class="pthumb"><img src="company_assets/result/the-hadong.png" alt="하동화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>하동화력 계측제어설비 경상정비 용역</h4></article>
+      <article class="pcard more hide" data-cat="the"><div class="pthumb"><img src="company_assets/result/the-goseong.png" alt="고성하이화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>고성하이화력 계측제어설비 경상정비용역</h4></article>
+      <article class="pcard more hide" data-cat="the"><div class="pthumb"><img src="company_assets/result/the-yeosu.png" alt="여수화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>여수화력 계측제어설비 경상정비용역</h4></article>
+      <article class="pcard more hide" data-cat="the"><div class="pthumb"><img src="company_assets/result/the-samcheonpo.png" alt="삼천포화력" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">화력사업</span></div><h4>삼천포화력 계측제어설비 경상정비용역</h4></article>
+      <article class="pcard more hide" data-cat="the"><div class="pthumb"><img src="company_assets/result/the-malaya.png" alt="필리핀 말라야 화력발전소" loading="lazy"></div><div class="pmeta"><span class="badge loc">국외</span><span class="badge cat">화력사업</span></div><h4>필리핀 말라야 화력발전소 O&amp;M 용역</h4></article>
+
+      <!-- 플랜트 추가 -->
+      <article class="pcard more hide" data-cat="pla"><div class="pthumb"><img src="company_assets/result/pla-tongyeong.png" alt="통영지사 천연가스 생산설비" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">플랜트</span></div><h4>통영지사 천연가스 생산설비 경정비 공사</h4></article>
+
+      <!-- 방위 추가 -->
+      <article class="pcard more hide" data-cat="def"><div class="pthumb"><img src="company_assets/result/def-rf-scanner.png" alt="위성방탐 RF스캐너" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">방위사업</span></div><h4>위성방탐 RF스캐너 개발</h4></article>
     </div>
 
     <div class="more-wrap reveal"><button class="btn-more" id="moreBtn">더 많은 실적보기 <span>›</span></button></div>
   </div>
 </section>
+
+</div><!-- /사업실적 그룹 -->
+
+<!-- ===== ESG 그룹 ===== -->
+<div class="cat" id="cat-esg">
+  <div class="cat-banner"><img class="bg" src="company_assets/banner/esg.jpg" alt=""><div class="cb"><span class="en">ESG management</span><h2>ESG 경영</h2></div></div>
+  <nav class="subnav"><div class="subnav-inner">
+    <a href="#esg-quality" class="on">품질환경</a><a href="#esg-safety">안전경영</a><a href="#esg-human">인권정도경영</a><a href="#esg-win">상생경영</a>
+  </div></nav>
+
+<!-- ESG 경영 -->
+<section id="esg">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">ESG Management</span>
+      <h2 class="sec-title">ESG 경영</h2>
+      <p class="sec-desc">품질·환경, 안전, 인권·정도, 상생. 지속가능한 가치를 실천합니다.</p>
+    </div>
+    <div class="numgrid c2">
+      <div class="numcard reveal" id="esg-quality">
+        <span class="no">01</span>
+        <h4>품질환경</h4>
+        <p>친환경적이고 안정적인 고품질의 제품·서비스를 공급하기 위해 체계적이고 효율적인 품질·환경 활동을 수행하며, 법규와 규정을 준수합니다.</p>
+        <ul class="tags"><li>KEPIC 자격인증(EN-081·EN-733)</li><li>품질경영시스템(ISO 9001)</li><li>환경경영시스템</li><li>항공우주경영시스템(AS9100)</li></ul>
+      </div>
+      <div class="numcard reveal" id="esg-safety">
+        <span class="no">02</span>
+        <h4>안전경영</h4>
+        <p>임직원 및 협력사 종사자의 안전과 보건을 최우선 핵심가치로 인식하고, 재해 없는 안전하고 쾌적한 근무환경 조성을 위해 안전보건경영을 실천합니다.</p>
+        <ul class="tags"><li>ISO 45001 (KFQ)</li><li>KOSHA-MS (산업안전보건공단)</li><li>사전 예방 활동</li><li>협력사 상생 협력</li></ul>
+      </div>
+      <div class="numcard reveal" id="esg-human">
+        <span class="no">03</span>
+        <h4>인권정도경영</h4>
+        <p>인권을 존중하고 국제 기준을 지지하는 글로벌 기업으로서, 기본에 철저하고 원칙을 지키는 경영활동을 통해 법과 윤리를 준수하는 문화를 정착시켰습니다.</p>
+        <ul class="tags"><li>적법·인간적 고용조건 보장</li><li>존중과 평등 문화</li><li>인권 실사의무(Due Diligence)</li><li>공정한 거래질서 준수</li></ul>
+      </div>
+      <div class="numcard reveal" id="esg-win">
+        <span class="no">04</span>
+        <h4>상생경영</h4>
+        <p>상호 신뢰를 기반으로 공정한 거래 질서를 확립하고, 이해관계자와의 동반 성장을 통해 함께 공존하는 기업 생태계를 구축합니다.</p>
+        <ul class="tags"><li>상호신뢰·동등한 관계</li><li>성과 공유·동반성장</li><li>기술·금융 지원</li><li>안정적 공급망 구축</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /ESG 그룹 -->
+
+<!-- ===== 인재채용 그룹 ===== -->
+<div class="cat" id="cat-recruit">
+  <div class="cat-banner"><img class="bg" src="company_assets/banner/recruit.jpg" alt=""><div class="cb"><span class="en">Recruit</span><h2>인재채용</h2></div></div>
+  <nav class="subnav"><div class="subnav-inner">
+    <a href="#culture" class="on">조직문화</a><a href="#talent">인재상</a><a href="#welfare">복리후생</a><a href="#jobs">채용공고</a><a href="#jobs">합격여부확인</a>
+  </div></nav>
 
 <!-- RECRUIT -->
 <section class="recruit" id="recruit">
@@ -403,9 +1128,96 @@
     <span class="eyebrow reveal" style="color:#7ad9cf">Recruit</span>
     <h2 class="reveal">함께 땀 흘릴 인재를 찾습니다</h2>
     <p class="reveal">기술로 세상을 안전하게 만드는 일. 수산이앤에스와 함께 성장할 여러분을 기다립니다.</p>
-    <a href="#contact" class="btn btn-primary reveal">채용 정보 보기 →</a>
+    <a href="#jobs" class="btn btn-primary reveal">채용 공고 보기 →</a>
   </div>
 </section>
+
+<!-- 조직문화 -->
+<section id="culture">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Recruit · 조직문화</span>
+      <h2 class="sec-title">배려와 상생의 기업 문화</h2>
+    </div>
+    <div class="greet-grid">
+      <div class="greet-vis reveal" style="aspect-ratio:4/3"><img src="company_assets/company/culture01.png" alt="수산 조직문화" loading="lazy"></div>
+      <div class="reveal">
+        <p class="greet-tit">우리 수산 가족은 땀 흘리고 수고스러운 일은 <span class="accent">'내가 먼저'</span> 솔선하며, <span class="accent">'당신의 지혜'</span>를 구하는 배려와 상생의 기업 문화를 추구합니다.</p>
+        <p>나의 땀과 너의 슬기가 곧 우리의 보람으로 이어지는 모습들이 바로 수산그룹이 지향하는 일류 기업의 문화입니다. 수산그룹 임직원은 모두 서로가 서로에게 땀과 슬기, 그리고 보람을 선사하길 꿈꿉니다.</p>
+        <p><b>배려와 상생이 함께여서 오늘도 뜻 깊은 이곳! 여기는 수산이앤에스입니다.</b></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 인재상 -->
+<section id="talent" style="background:var(--bg-soft)">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Recruit · 인재상</span>
+      <h2 class="sec-title">함께 나아갈 인재, 바로 당신</h2>
+      <p class="sec-desc">어느 누구에게도 부끄럽지 않게 한길만 걸어온 수산이앤에스와 함께 성공할 인재를 찾습니다.</p>
+    </div>
+    <div class="numgrid c3">
+      <div class="numcard reveal"><span class="no">01</span><span class="en">PASSION</span><h4>열정</h4><p>일에 대한 열정과 지속적인 자기개발을 위해 노력하는 인재</p></div>
+      <div class="numcard reveal"><span class="no">02</span><span class="en">CREATION</span><h4>창조</h4><p>끊임없는 변화에 적극 도전하고 새로운 것을 찾으려는 혁신을 추구하는 인재</p></div>
+      <div class="numcard reveal"><span class="no">03</span><span class="en">FUTURE</span><h4>미래지향</h4><p>부끄럽지 않게 한길을 걸으며 함께 더 크게 성장해 나갈 인재</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 복리후생 -->
+<section class="welfare" id="welfare">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Recruit · 복리후생</span>
+      <h2 class="sec-title">임직원과 함께 성장합니다</h2>
+    </div>
+    <div class="wel-legal reveal">
+      <span>국민연금</span><span>건강보험</span><span>고용보험</span><span>산재보험</span>
+    </div>
+    <div class="grp-wrap reveal">
+      <div class="grp-head"><span class="gi"></span><h3>업무 지원</h3></div>
+      <div class="numgrid c5">
+        <div class="numcard"><span class="no">01</span><h4>상해보험 가입</h4><p>임직원(배우자 포함) 실비 상해보험 및 근로자 재해보상 보험 가입</p></div>
+        <div class="numcard"><span class="no">02</span><h4>숙소 지원</h4><p>현장 근무 직원 숙소 제공 및 가족 동반 이동 시 이사비 지원</p></div>
+        <div class="numcard"><span class="no">03</span><h4>피복 지원</h4><p>현장 근무에 필요한 근무복·안전화 제공</p></div>
+        <div class="numcard"><span class="no">04</span><h4>교육 훈련</h4><p>인재개발원 운영, 사내 직무교육 및 위탁교육 지원</p></div>
+        <div class="numcard"><span class="no">05</span><h4>사내동호회</h4><p>자기 개발 및 여가생활을 위한 사내 동호회 지원</p></div>
+      </div>
+    </div>
+    <div class="grp-wrap reveal">
+      <div class="grp-head"><span class="gi"></span><h3>생활 지원</h3></div>
+      <div class="numgrid c5">
+        <div class="numcard"><span class="no">01</span><h4>학자금 지원</h4><p>임직원 자녀 중 고등학생·대학생 학자금 지원</p></div>
+        <div class="numcard"><span class="no">02</span><h4>종합검진</h4><p>전 직원 대상 지정병원 종합검진 실시</p></div>
+        <div class="numcard"><span class="no">03</span><h4>경조사 지원</h4><p>경조금·경조화환 및 경조 휴가 실시</p></div>
+        <div class="numcard"><span class="no">04</span><h4>자녀 적성검사</h4><p>매년 임직원 자녀의 진로·적성 파악을 위한 적성검사 실시</p></div>
+        <div class="numcard"><span class="no">05</span><h4>명절·기념일</h4><p>명절 선물, 창립기념일·어버이날 등 기념일 선물 제공</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 채용공고 -->
+<section class="jobs" id="jobs">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Recruit · 채용공고</span>
+      <h2 class="sec-title">채용 공고</h2>
+      <p class="sec-desc">수산이앤에스의 채용 소식을 확인하세요.</p>
+    </div>
+    <div class="job-list reveal">
+      <div class="job-row"><h4>계측제어 정비 엔지니어 (원자력·화력)</h4><span class="jm">울산·현장</span><span class="jtag">채용중</span></div>
+      <div class="job-row"><h4>MMIS 소프트웨어 개발/검증</h4><span class="jm">서울(수서)</span><span class="jtag">채용중</span></div>
+      <div class="job-row"><h4>플랜트 시운전 전기·계측 담당</h4><span class="jm">국내외 현장</span><span class="jtag">채용중</span></div>
+      <div class="job-row"><h4>방위산업 시스템 연구원</h4><span class="jm">수원</span><span class="jtag">상시</span></div>
+    </div>
+    <p class="job-note reveal">지원 및 합격 여부 확인은 <a href="https://www.soosanens.co.kr/" target="_blank" rel="noopener">공식 채용 페이지</a>에서 진행됩니다. · 합격여부확인은 지원 시 등록한 이름·생년월일로 조회할 수 있습니다.</p>
+  </div>
+</section>
+
+</div><!-- /인재채용 그룹 -->
 
 <!-- NEWS -->
 <section class="news" id="news">
@@ -416,10 +1228,31 @@
       <p class="sec-desc">수산이앤에스의 최신 수상 내역과 활동 소식을 전합니다.</p>
     </div>
     <div class="news-grid">
-      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/37299edb913cd872bbca55ee059693df.png" alt="대한민국엔지니어링대상 수상" loading="lazy"></div><div class="body"><span class="date">NEWS</span><h4>대한민국엔지니어링대상 수상</h4><p>기술력과 사업 성과를 인정받아 엔지니어링대상을 수상했습니다.</p></div></div>
-      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/8f0772e73742705725ca6272149be463.png" alt="해군작전사령부 위문금 전달" loading="lazy"></div><div class="body"><span class="date">NEWS</span><h4>해군작전사령부 위문금 전달</h4><p>국가 안보에 헌신하는 장병들을 위해 위문금을 전달했습니다.</p></div></div>
-      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/644fcec0f351eb2d642c209aaed1e7c8.png" alt="한국수력원자력 표창장 수상" loading="lazy"></div><div class="body"><span class="date">NEWS</span><h4>한국수력원자력 표창장 수상</h4><p>안전 최우선 발전소 운영에 기여한 공로로 표창장을 받았습니다.</p></div></div>
+      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/37299edb913cd872bbca55ee059693df.png" alt="제4회 대한민국 엔지니어링 대상 우수상 수상" loading="lazy"></div><div class="body"><span class="date">2025-12-19</span><h4>제4회 대한민국 엔지니어링 대상 시상식 '우수상' 수상</h4><p>기술력과 사업 성과를 인정받아 대한민국 엔지니어링 대상에서 우수상을 수상했습니다.</p></div></div>
+      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/8f0772e73742705725ca6272149be463.png" alt="해군 작전사령부 방문 및 관함식 참석" loading="lazy"></div><div class="body"><span class="date">2025-10-16</span><h4>한봉섭 부회장, 해군 작전사령부 방문 및 창설 80주년 관함식 참석</h4><p>해군 창설 80주년 기념 관함식에 참석하여 국가 안보에 대한 지지를 전했습니다.</p></div></div>
+      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/644fcec0f351eb2d642c209aaed1e7c8.png" alt="한빛1발전소 이달의 발전소인 수상" loading="lazy"></div><div class="body"><span class="date">2025-10-02</span><h4>[한빛1사업소] 김현승 팀장, 한빛1발전소 '이달의 발전소인' 수상</h4><p>발전소 안전 운영에 기여한 공로로 이달의 발전소인에 선정되었습니다.</p></div></div>
     </div>
+  </div>
+</section>
+
+<!-- 사이버신문고 -->
+<section class="voice" id="voice">
+  <div class="wrap">
+    <div class="biz-head reveal">
+      <span class="eyebrow">Customer · 사이버신문고</span>
+      <h2 class="sec-title">사이버신문고</h2>
+      <p class="sec-desc">부패·부조리 신고 및 고충·건의사항을 접수합니다. 접수된 내용은 비공개로 안전하게 처리됩니다.</p>
+    </div>
+    <form class="form-wrap reveal" onsubmit="return submitVoice(event)">
+      <div class="form-row two">
+        <div><label for="v-name">성명</label><input id="v-name" type="text" placeholder="이름을 입력하세요"></div>
+        <div><label for="v-contact">연락처 / 이메일</label><input id="v-contact" type="text" placeholder="회신 받을 연락처"></div>
+      </div>
+      <div class="form-row"><label for="v-title">제목</label><input id="v-title" type="text" placeholder="제목을 입력하세요"></div>
+      <div class="form-row"><label for="v-body">내용</label><textarea id="v-body" placeholder="신고 또는 건의 내용을 입력하세요"></textarea></div>
+      <label class="form-agree"><input type="checkbox" id="v-agree"> 개인정보 수집 및 이용에 동의합니다.</label>
+      <div class="form-submit"><button type="submit" class="btn btn-primary">접수하기 →</button></div>
+    </form>
   </div>
 </section>
 
@@ -428,7 +1261,7 @@
   <div class="wrap">
     <div class="foot-top">
       <div>
-        <div class="foot-logo"><img src="company_assets/common/logo.png" alt="수산이앤에스"></div>
+        <div class="foot-logo"><img src="company_assets/common/f_logo.png" alt="수산이앤에스"></div>
         <p>함께 만드는 깨끗하고 안전한 세상.<br>친환경 원자력에너지 관리 전문기업.</p>
       </div>
       <div class="foot-col">
@@ -440,8 +1273,8 @@
       </div>
       <div class="foot-col">
         <h5>문의</h5>
-        <a href="tel:000-0000-0000">대표전화 000-0000-0000</a>
-        <a href="mailto:info@soosanens.co.kr">info@soosanens.co.kr</a>
+        <a href="tel:052-258-3860">대표전화 052-258-3860</a>
+        <a href="tel:052-258-3865">FAX 052-258-3865</a>
         <a href="https://www.soosanens.co.kr/" target="_blank" rel="noopener">공식 홈페이지</a>
       </div>
     </div>
@@ -494,6 +1327,36 @@
     a.addEventListener('click', () => { setCat(a.dataset.filter); header.classList.remove('nav-open'); });
   });
 
+  // ===== 서브 내비게이션(LNB) =====
+  // 필터형 탭(사업분야·사업실적): 클릭 시 실적 필터 적용 + 활성 표시
+  document.querySelectorAll('.subnav [data-filter]').forEach(a => {
+    a.addEventListener('click', () => {
+      setCat(a.dataset.filter);
+      const nav = a.closest('.subnav');
+      nav.querySelectorAll('a').forEach(x => x.classList.remove('on'));
+      a.classList.add('on');
+    });
+  });
+  // 섹션형 탭(회사소개·ESG·인재채용): 스크롤 위치에 따라 활성 표시
+  const secLinks = document.querySelectorAll('.subnav a[href^="#"]:not([data-filter])');
+  const secMap = {};
+  secLinks.forEach(a => { const id = a.getAttribute('href').slice(1); (secMap[id] = secMap[id] || []).push(a); });
+  const secTargets = Object.keys(secMap).map(id => document.getElementById(id)).filter(Boolean);
+  if(secTargets.length){
+    const secObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if(!e.isIntersecting) return;
+        const links = secMap[e.target.id]; if(!links) return;
+        links.forEach(link => {
+          const nav = link.closest('.subnav');
+          nav.querySelectorAll('a').forEach(x => x.classList.remove('on'));
+          link.classList.add('on');
+        });
+      });
+    }, {rootMargin:'-124px 0px -55% 0px', threshold:0});
+    secTargets.forEach(t => secObs.observe(t));
+  }
+
   // 배경 영상 자동재생 (뷰포트에 보일 때만 재생 → 성능/배터리 절약)
   const videos = document.querySelectorAll('video[autoplay]');
   const tryPlay = (v) => { v.muted = true; const p = v.play(); if(p && p.catch) p.catch(()=>{}); };
@@ -542,6 +1405,19 @@
     });
   }, {threshold:.5});
   countEls.forEach(el => countIO.observe(el));
+
+  // 사이버신문고 폼 제출 (데모 — 실제 접수 연동 없음)
+  function submitVoice(e){
+    e.preventDefault();
+    const name = document.getElementById('v-name').value.trim();
+    const title = document.getElementById('v-title').value.trim();
+    const agree = document.getElementById('v-agree').checked;
+    if(!name || !title){ alert('성명과 제목을 입력해 주세요.'); return false; }
+    if(!agree){ alert('개인정보 수집 및 이용에 동의해 주세요.'); return false; }
+    alert('접수되었습니다. 소중한 의견 감사합니다.');
+    e.target.reset();
+    return false;
+  }
 </script>
 </body>
 </html>
