@@ -639,7 +639,7 @@
 
 <!-- HERO -->
 <section class="hero" id="top">
-  <video class="hero-video" autoplay muted loop playsinline preload="auto" poster="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png">
+  <video class="hero-video" autoplay muted playsinline preload="auto" poster="company_assets/result/2c9eefdc7cac6647a6b01ee00d5f0866.png">
     <source src="main_230405.mp4" type="video/mp4">
   </video>
   <div class="wrap">
@@ -1597,6 +1597,23 @@
   }
   // 일부 브라우저에서 선언적 autoplay가 지연될 때 대비
   window.addEventListener('load', () => videos.forEach(v => { if(v.getBoundingClientRect().top < innerHeight && v.paused) tryPlay(v); }));
+
+  // 히어로 배경 영상 플레이리스트 (메인 → 우주항공 5초 → 반복)
+  const heroVid = document.querySelector('.hero-video');
+  if(heroVid){
+    const heroList = ['main_230405.mp4', 'company_assets/aero/aero-5s.mp4'];
+    let hIdx = 0;
+    heroVid.addEventListener('ended', () => {
+      hIdx = (hIdx + 1) % heroList.length;
+      heroVid.src = heroList[hIdx];
+      heroVid.load();
+      tryPlay(heroVid);
+    });
+    // 다음 영상 미리 받아두기(첫 전환 지연 최소화)
+    const pre = document.createElement('link');
+    pre.rel = 'prefetch'; pre.as = 'video'; pre.href = 'company_assets/aero/aero-5s.mp4';
+    document.head.appendChild(pre);
+  }
 
   // 스크롤 등장 애니메이션
   const reveals = document.querySelectorAll('.reveal');
