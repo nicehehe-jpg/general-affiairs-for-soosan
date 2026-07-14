@@ -127,6 +127,12 @@ tbody tr.done-row .tag{opacity:.5}
 
 /* 면허 섹션 구분 */
 .section-sep td{background:var(--bg);font-size:11px;font-weight:700;color:var(--t3);padding:6px 12px;letter-spacing:.5px}
+/* 실적신고 문서 입력/칩 */
+.rep-doc-item{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.rep-doc-item input{flex:1;min-width:0}
+.rep-doc-item .btn{flex-shrink:0}
+.doc-chip{display:inline-block;font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--t2);cursor:pointer;font-family:inherit;margin:2px 3px 2px 0}
+.doc-chip:hover{background:var(--blue-bg,#eaf2ff);border-color:#bbd5ff;color:var(--blue)}
 
 @media(max-width:900px){.stats{grid-template-columns:1fr 1fr}.container{padding:16px}.pm-row{grid-template-columns:1fr}}
 </style>
@@ -185,6 +191,7 @@ tbody tr.done-row .tag{opacity:.5}
   <div class="tabs">
     <button class="tab active" data-panel="schedule" onclick="switchTab(this)">📅 납부 일정</button>
     <button class="tab" data-panel="license" onclick="switchTab(this)">📋 면허 등록 현황</button>
+    <button class="tab" data-panel="report" onclick="switchTab(this)">📈 실적신고</button>
     <button class="tab" data-panel="annual" onclick="switchTab(this)">📊 연간 현황</button>
   </div>
 
@@ -276,6 +283,43 @@ tbody tr.done-row .tag{opacity:.5}
     </div>
   </div>
 
+  <!-- ===== 실적신고 ===== -->
+  <div class="panel" id="panel-report">
+    <div class="stats" id="repStats"></div>
+    <div class="card">
+      <div class="card-title">
+        <div class="card-title-left">📈 실적신고 현황 <span class="badge" id="repBadge">-</span></div>
+        <button class="btn btn-primary btn-sm" onclick="openRepModal()">＋ 실적신고 추가</button>
+      </div>
+      <div class="filter-bar">
+        <select class="filter-select" id="repFilterAssoc" onchange="renderReport()"><option value="">전체 협회</option></select>
+        <select class="filter-select" id="repFilterYear" onchange="renderReport()"><option value="">전체 연도</option></select>
+        <select class="filter-select" id="repFilterStatus" onchange="renderReport()">
+          <option value="">전체 상태</option>
+          <option value="대기">⚪ 대기</option>
+          <option value="진행">🔵 진행</option>
+          <option value="완료">✅ 완료</option>
+        </select>
+        <input class="search-input" id="repSearch" placeholder="협회·업종·비고 검색" oninput="renderReport()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>협회 / 업종</th><th>신고연도</th><th>기준연도</th><th>유형</th>
+            <th style="text-align:right">신고 실적금액</th><th>제출기한</th><th>제출일</th>
+            <th>상태</th><th>시공능력평가</th><th>연동 회비</th><th>문서</th><th>관리</th>
+          </tr></thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11.5px;color:var(--t3);margin-top:10px;line-height:1.6">
+        · <b>실적금액</b>은 협회 신고 기준(전기공사·정보통신·소방공사 실적, 엔지니어링 매출)으로 직접 입력합니다.
+        · <b>연동 회비</b>는 같은 협회·연도의 <b>납부 일정</b> 항목 합계를 자동 표시합니다.
+        · <b>문서</b> 칩을 클릭하면 파일열기도우미로 해당 실적신고 폴더가 바로 열립니다(여러 경로 등록 가능).
+      </div>
+    </div>
+  </div>
+
   <!-- ===== 연간 현황 ===== -->
   <div class="panel" id="panel-annual">
     <div class="card">
@@ -353,6 +397,52 @@ tbody tr.done-row .tag{opacity:.5}
   </div>
 </div>
 
+<!-- ===== 실적신고 모달 ===== -->
+<div class="modal-overlay" id="repModal" onclick="if(event.target===this)closeRepModal()">
+  <div class="modal">
+    <h3 id="repModalTitle">실적신고 추가</h3>
+    <p class="modal-sub">협회별 연간 실적신고 정보를 입력하세요. 매년 반복되는 항목은 연도만 바꿔 계속 관리할 수 있습니다.</p>
+    <div class="pm-row">
+      <div class="pm-field"><label>협회명 *</label><input id="rAssoc" list="repAssocList" placeholder="예: 한국전기공사협회"><datalist id="repAssocList"></datalist></div>
+      <div class="pm-field"><label>업종</label><input id="rLicense" list="repLicList" placeholder="예: 전기공사업"><datalist id="repLicList"></datalist></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>신고연도 *</label><input id="rYear" type="number" min="2010" max="2100" placeholder="예: 2026"></div>
+      <div class="pm-field"><label>기준연도(실적)</label><input id="rBaseYear" placeholder="예: 2025"></div>
+      <div class="pm-field"><label>유형</label>
+        <select id="rType"><option value="실적신고">실적신고</option><option value="무실적신고">무실적신고</option><option value="결산제출">결산제출</option></select>
+      </div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>신고 실적금액 (원)</label><input id="rPerf" type="number" min="0" placeholder="0"></div>
+      <div class="pm-field"><label>상태</label>
+        <select id="rStatus"><option value="대기">대기</option><option value="진행">진행</option><option value="완료">완료</option></select>
+      </div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>제출기한</label><input id="rDue" type="date"></div>
+      <div class="pm-field"><label>제출일</label><input id="rSubmit" type="date"></div>
+      <div class="pm-field"><label>접수번호</label><input id="rReceipt" placeholder="예: 접수 제2026-...호"></div>
+    </div>
+    <div class="pm-row">
+      <div class="pm-field"><label>시공능력평가액 (원)</label><input id="rEvalAmt" type="number" min="0" placeholder="결과 수령 후"></div>
+      <div class="pm-field"><label>평가등급</label><input id="rEvalGrade" placeholder="예: A"></div>
+      <div class="pm-field"><label>순위</label><input id="rEvalRank" placeholder="예: 전국 000위"></div>
+    </div>
+    <div class="pm-field"><label>담당자</label><input id="rManager" placeholder="예: 홍길동"></div>
+    <div class="pm-field">
+      <label>관련 문서 (폴더 · 파일 · 웹주소, 여러 개 가능)</label>
+      <div id="repDocRows"></div>
+      <button type="button" class="btn btn-secondary btn-sm" style="margin-top:6px" onclick="addRepDocRow('')">＋ 경로 추가</button>
+    </div>
+    <div class="pm-field"><label>비고</label><textarea id="rNote" rows="2" placeholder="산정 방법, 특이사항 등"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeRepModal()">취소</button>
+      <button class="btn btn-primary" onclick="saveRepModal()">저장</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ── Supabase ─────────────────────────────────────────────────────────────── */
 const SB_URL='https://vvyqldyljajlmtydtqdf.supabase.co';
@@ -361,6 +451,7 @@ const SB_REST=SB_URL+'/rest/v1/app_store';
 const SB_HEADERS={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
 const STORE_SCH='assoc_schedules_v1';
 const STORE_LIC='assoc_licenses_v1';
+const STORE_REP='assoc_reports_v1';
 
 function setSyncStatus(s){
   const b=document.getElementById('syncBadge');if(!b)return;
@@ -382,6 +473,8 @@ async function sbSet(key,value){
 let _t1=null,_t2=null;
 function sbPushSch(){setSyncStatus('saving');clearTimeout(_t1);_t1=setTimeout(async()=>{const ok=await sbSet(STORE_SCH,SCHEDULES);setSyncStatus(ok?'online':'offline');},600);}
 function sbPushLic(){setSyncStatus('saving');clearTimeout(_t2);_t2=setTimeout(async()=>{const ok=await sbSet(STORE_LIC,LICENSES);setSyncStatus(ok?'online':'offline');},600);}
+let _t3=null;
+function sbPushRep(){setSyncStatus('saving');clearTimeout(_t3);_t3=setTimeout(async()=>{const ok=await sbSet(STORE_REP,REPORTS);setSyncStatus(ok?'online':'offline');},600);}
 
 /* ── 기본 데이터 (2025년 기준) ──────────────────────────────────────────── */
 const SEED_SCH=[
@@ -512,10 +605,25 @@ const SEED_LIC=[
    name:'최성훈',grade:'특급기술자',joinDate:'',regDate:'2011-10-22',issueNo:'',regYMD:'',expiry:'',role:'',note:'전문대학'},
 ];
 
+// report: assoc 협회, license 업종, reportYear 신고연도, baseYear 기준연도, type 유형
+// perfAmount 신고실적금액, dueDate/submitDate 제출기한/제출일, receiptNo 접수번호
+// status 대기|진행|완료, evalAmount/evalGrade/evalRank 시공능력평가, docs 관련문서(배열)
+const _RB='D:\\1. 업무중\\1_1. 상시 업무_기타\\3. 협회관리\\';
+const SEED_REP=[
+  {id:'r1', assoc:'한국전기공사협회', license:'전기공사업', reportYear:2026, baseYear:'2025', type:'실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'대기', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드(폴더 연결) — 실적금액·제출일·상태 확인 후 입력', docs:[_RB+'02. 한국전기공사협회\\실적신고\\26년 실적신고']},
+  {id:'r2', assoc:'한국전기공사협회', license:'전기공사업', reportYear:2025, baseYear:'2024', type:'실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'완료', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드(폴더 연결)', docs:[_RB+'02. 한국전기공사협회\\실적신고\\25년 실적신고']},
+  {id:'r3', assoc:'한국엔지니어링협회', license:'엔지니어링업', reportYear:2026, baseYear:'2025', type:'실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'대기', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드(폴더 연결) — 매출 실적 기준', docs:[_RB+'01. 엔지니어링협회\\실적신고\\26년 실적신고']},
+  {id:'r4', assoc:'한국엔지니어링협회', license:'엔지니어링업', reportYear:2025, baseYear:'2024', type:'실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'완료', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드(폴더 연결)', docs:[_RB+'01. 엔지니어링협회\\실적신고\\25년 실적신고']},
+  {id:'r5', assoc:'한국정보통신공사협회', license:'정보통신공사업', reportYear:2025, baseYear:'2024', type:'무실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'완료', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드 — 과거 무실적 신고 이력(확인)', docs:[_RB+'03. 한국정보통신공사협회\\25년 실적신고']},
+  {id:'r6', assoc:'한국정보통신공사협회', license:'정보통신공사업', reportYear:2024, baseYear:'2023', type:'무실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'완료', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드', docs:[_RB+'03. 한국정보통신공사협회\\24년 실적신고']},
+  {id:'r7', assoc:'한국소방시설협회', license:'전문소방시설공사업', reportYear:2025, baseYear:'2024', type:'무실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'완료', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드 — 과거 무실적 신고 이력(확인)', docs:[_RB+'05. 한국소방시설협회 및 소방안전원\\소방시설-25년 실적신고']},
+  {id:'r8', assoc:'한국소방시설협회', license:'전문소방시설공사업', reportYear:2024, baseYear:'2023', type:'무실적신고', perfAmount:0, dueDate:'', submitDate:'', receiptNo:'', status:'완료', evalAmount:0, evalGrade:'', evalRank:'', manager:'', note:'시드', docs:[_RB+'05. 한국소방시설협회 및 소방안전원\\소방시설-24년 실적신고']},
+];
+
 /* ── 상태 ──────────────────────────────────────────────────────────────────── */
-let SCHEDULES=[], LICENSES=[], doneSet=new Set();
+let SCHEDULES=[], LICENSES=[], REPORTS=[], doneSet=new Set();
 let selectedYear=new Date().getFullYear();
-let editingSchId=null, editingLicId=null;
+let editingSchId=null, editingLicId=null, editingRepId=null;
 
 function uid(){ return 'id'+Date.now()+Math.random().toString(36).slice(2,6); }
 
@@ -534,6 +642,8 @@ function loadDone(){
 function saveDone(){ localStorage.setItem('assoc_done',JSON.stringify([...doneSet])); sbPushSch(); }
 function saveSch(){ localStorage.setItem(STORE_SCH,JSON.stringify(SCHEDULES)); sbPushSch(); }
 function saveLic(){ localStorage.setItem(STORE_LIC,JSON.stringify(LICENSES)); sbPushLic(); }
+function saveRep(){ localStorage.setItem(STORE_REP,JSON.stringify(REPORTS)); sbPushRep(); }
+function loadLocalRep(){ try{ const s=localStorage.getItem(STORE_REP); if(s){const p=JSON.parse(s); if(Array.isArray(p))return p;} }catch(e){} return null; }
 
 /* ── 날짜 유틸 ─────────────────────────────────────────────────────────────── */
 const TODAY=new Date(); TODAY.setHours(0,0,0,0);
@@ -929,7 +1039,156 @@ function renderAnnual(){
   }).join('');
 }
 
-function renderAll(){ renderSchedule(); renderLicense(); renderAnnual(); }
+/* ── 실적신고 ─────────────────────────────────────────────────────────────── */
+function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtWon(n){ return (Number(n)||0).toLocaleString()+'원'; }
+function repDocFiles(r){
+  const v=r&&r.docs;
+  if(Array.isArray(v)) return v.map(x=>String(x==null?'':x).trim()).filter(Boolean);
+  if(typeof v==='string'&&v.trim()) return [v.trim()];
+  return [];
+}
+// 같은 협회·같은 신고연도의 납부일정 회비 합계(연동 표시)
+function linkedFee(r){
+  return SCHEDULES.filter(s=>s.assoc===r.assoc && s.date && s.date.startsWith(r.reportYear+'') && s.amount>0)
+    .reduce((a,s)=>a+s.amount,0);
+}
+function renderReport(){
+  const fA=document.getElementById('repFilterAssoc').value;
+  const fY=document.getElementById('repFilterYear').value;
+  const fS=document.getElementById('repFilterStatus').value;
+  const sq=(document.getElementById('repSearch').value||'').toLowerCase();
+
+  const assocs=[...new Set(REPORTS.map(r=>r.assoc))].sort();
+  const years=[...new Set(REPORTS.map(r=>r.reportYear))].sort((a,b)=>b-a);
+  document.getElementById('repFilterAssoc').innerHTML='<option value="">전체 협회</option>'+assocs.map(a=>`<option value="${a}" ${fA===a?'selected':''}>${a}</option>`).join('');
+  document.getElementById('repFilterYear').innerHTML='<option value="">전체 연도</option>'+years.map(y=>`<option value="${y}" ${String(fY)===String(y)?'selected':''}>${y}년</option>`).join('');
+
+  const total=REPORTS.length, done=REPORTS.filter(r=>r.status==='완료').length;
+  document.getElementById('repStats').innerHTML=`
+    <div class="stat"><div class="stat-label">전체 신고</div><div class="stat-value c-blue">${total}</div><div class="stat-sub">건</div></div>
+    <div class="stat"><div class="stat-label">완료</div><div class="stat-value c-green">${done}</div><div class="stat-sub">건</div></div>
+    <div class="stat"><div class="stat-label">진행/대기</div><div class="stat-value c-orange">${total-done}</div><div class="stat-sub">건</div></div>
+    <div class="stat"><div class="stat-label">관리 협회</div><div class="stat-value">${new Set(REPORTS.map(r=>r.assoc)).size}</div><div class="stat-sub">곳</div></div>`;
+
+  const filtered=REPORTS.filter(r=>{
+    if(fA&&r.assoc!==fA)return false;
+    if(fY&&String(r.reportYear)!==String(fY))return false;
+    if(fS&&r.status!==fS)return false;
+    if(sq&&![r.assoc,r.license,r.note,r.type].some(v=>(v||'').toLowerCase().includes(sq)))return false;
+    return true;
+  }).sort((a,b)=>(b.reportYear-a.reportYear)||(a.assoc>b.assoc?1:-1));
+
+  document.getElementById('repBadge').textContent=filtered.length+'건';
+  const tb=document.getElementById('reportBody');
+  if(!filtered.length){ tb.innerHTML='<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--t3)">해당 실적신고 없음</td></tr>'; return; }
+
+  tb.innerHTML=filtered.map(r=>{
+    const stTag=r.status==='완료'?'<span class="tag tag-green">완료</span>':r.status==='진행'?'<span class="tag tag-blue">진행</span>':'<span class="tag tag-gray">대기</span>';
+    const typeTag=r.type==='무실적신고'?'<span class="tag tag-gray">무실적</span>':r.type==='결산제출'?'<span class="tag tag-orange">결산</span>':'<span class="tag tag-blue">실적</span>';
+    const fee=linkedFee(r);
+    const evalTxt=(r.evalAmount>0||r.evalGrade||r.evalRank)?`${r.evalAmount>0?fmtWon(r.evalAmount):''}${r.evalGrade?` · ${r.evalGrade}`:''}${r.evalRank?` · ${r.evalRank}`:''}`:'<span style="color:var(--t4)">-</span>';
+    const files=repDocFiles(r);
+    const chips=files.length?files.map((f,i)=>`<span class="doc-chip" title="${escAttr(f)}" onclick="openRepDoc('${r.id}',${i})">📂 ${files.length>1?('폴더 '+(i+1)):'폴더 열기'}</span>`).join(''):'<span style="color:var(--t4)">-</span>';
+    return `<tr>
+      <td><div style="font-weight:700">${r.assoc}</div><div style="font-size:11px;color:var(--t3)">${r.license||''}</div></td>
+      <td style="font-weight:600">${r.reportYear}년</td>
+      <td style="color:var(--t2)">${r.baseYear?r.baseYear+' 실적':'-'}</td>
+      <td>${typeTag}</td>
+      <td style="text-align:right;font-family:monospace">${r.perfAmount>0?fmtWon(r.perfAmount):'<span style=\'color:var(--t4)\'>미입력</span>'}</td>
+      <td style="font-family:monospace;font-size:12px">${fmtDate(r.dueDate)}</td>
+      <td style="font-family:monospace;font-size:12px">${fmtDate(r.submitDate)}</td>
+      <td>${stTag}</td>
+      <td style="font-size:11px;color:var(--t2);max-width:150px">${evalTxt}</td>
+      <td style="text-align:right;font-family:monospace;font-size:12px;color:var(--blue)">${fee>0?fee.toLocaleString()+'원':'-'}</td>
+      <td>${chips}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-secondary btn-sm" onclick="openRepModal('${r.id}')">수정</button>
+        <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:none" onclick="deleteRep('${r.id}')">삭제</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* 실적신고 문서 열기: http면 새 탭, 그 외 경로는 파일열기도우미(127.0.0.1:17321) → 실패 시 복사 */
+function openRepDoc(id, idx){
+  const r=REPORTS.find(x=>x.id===id); if(!r)return;
+  const files=repDocFiles(r); const v=(files[idx||0]||'').replace(/^"+|"+$/g,''); if(!v)return;
+  if(/^https?:\/\//i.test(v)){ window.open(v,'_blank'); return; }
+  const h='http://127.0.0.1:17321/open?path='+encodeURIComponent(v);
+  const ac=new AbortController(); const to=setTimeout(()=>ac.abort(),2500);
+  fetch(h,{signal:ac.signal}).then(x=>x.json()).then(d=>{clearTimeout(to); if(!d||!d.ok)throw 0;}).catch(()=>{clearTimeout(to); repCopyPath(v);});
+}
+function repCopyPath(v){
+  const msg='문서 경로가 복사되었습니다.\n\n'+v+'\n\n파일 탐색기 주소창에 붙여넣기(Ctrl+V) 후 Enter 하면 열립니다.\n(클릭 한 번에 자동으로 열려면 \'파일열기도우미\'를 실행해 두세요.)';
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(v).then(()=>alert(msg)).catch(()=>prompt('아래 경로를 복사하세요:',v)); }
+  else prompt('아래 경로를 복사하세요:',v);
+}
+
+/* 실적신고 모달 문서 여러 경로 입력 */
+function repDocRowHtml(val){
+  return `<div class="rep-doc-item">`
+    +`<input type="text" class="repDocInput" value="${escAttr(val||'')}" placeholder="폴더/파일 경로 · 웹주소(http…)">`
+    +`<button type="button" class="btn btn-secondary btn-sm" onclick="repBrowseRow(this)">📁 찾기</button>`
+    +`<button type="button" class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:none" onclick="repDelRow(this)">✕</button>`
+    +`</div>`;
+}
+function addRepDocRow(val){ document.getElementById('repDocRows').insertAdjacentHTML('beforeend', repDocRowHtml(val)); }
+function repDelRow(btn){ const host=document.getElementById('repDocRows'); btn.closest('.rep-doc-item').remove(); if(!host.querySelector('.rep-doc-item')) addRepDocRow(''); }
+function repBrowseRow(btn){
+  const inp=btn.closest('.rep-doc-item').querySelector('.repDocInput');
+  const p=prompt('경로를 붙여넣으세요.\n\n[정확한 방법] 파일 탐색기에서 폴더/파일 우클릭 → \'경로로 복사\' → 붙여넣기(Ctrl+V)\n(그룹웨어 웹주소 http... 도 가능)', inp.value||'');
+  if(p===null)return; inp.value=p.trim().replace(/^"+|"+$/g,'').trim();
+}
+function collectRepDocs(){ const arr=[]; document.querySelectorAll('#repDocRows .repDocInput').forEach(i=>{ const v=i.value.trim().replace(/^"+|"+$/g,'').trim(); if(v)arr.push(v); }); return arr; }
+
+/* 실적신고 모달 */
+function openRepModal(id){
+  editingRepId=id||null;
+  document.getElementById('repModalTitle').textContent=id?'실적신고 수정':'실적신고 추가';
+  const assocs=[...new Set([...REPORTS.map(r=>r.assoc), ...SCHEDULES.map(s=>s.assoc)])].sort();
+  document.getElementById('repAssocList').innerHTML=assocs.map(a=>`<option value="${a}">`).join('');
+  const lics=[...new Set(REPORTS.map(r=>r.license).filter(Boolean))];
+  document.getElementById('repLicList').innerHTML=lics.map(l=>`<option value="${l}">`).join('');
+  const g=x=>document.getElementById(x);
+  g('repDocRows').innerHTML='';
+  if(id){
+    const r=REPORTS.find(x=>x.id===id); if(!r)return;
+    g('rAssoc').value=r.assoc||''; g('rLicense').value=r.license||'';
+    g('rYear').value=r.reportYear||''; g('rBaseYear').value=r.baseYear||''; g('rType').value=r.type||'실적신고';
+    g('rPerf').value=r.perfAmount||''; g('rStatus').value=r.status||'대기';
+    g('rDue').value=r.dueDate||''; g('rSubmit').value=r.submitDate||''; g('rReceipt').value=r.receiptNo||'';
+    g('rEvalAmt').value=r.evalAmount||''; g('rEvalGrade').value=r.evalGrade||''; g('rEvalRank').value=r.evalRank||'';
+    g('rManager').value=r.manager||''; g('rNote').value=r.note||'';
+    const files=repDocFiles(r); (files.length?files:['']).forEach(f=>addRepDocRow(f));
+  } else {
+    ['rAssoc','rLicense','rBaseYear','rReceipt','rEvalGrade','rEvalRank','rManager','rNote','rPerf','rEvalAmt','rDue','rSubmit'].forEach(k=>g(k).value='');
+    g('rYear').value=new Date().getFullYear(); g('rType').value='실적신고'; g('rStatus').value='대기';
+    addRepDocRow('');
+  }
+  document.getElementById('repModal').classList.add('show');
+  setTimeout(()=>document.getElementById('rAssoc').focus(),100);
+}
+function closeRepModal(){ document.getElementById('repModal').classList.remove('show'); editingRepId=null; }
+function saveRepModal(){
+  const g=x=>document.getElementById(x);
+  const assoc=g('rAssoc').value.trim();
+  const reportYear=parseInt(g('rYear').value,10);
+  if(!assoc||!reportYear){ alert('협회명, 신고연도는 필수입니다.'); return; }
+  const rec={
+    assoc, license:g('rLicense').value.trim(), reportYear, baseYear:g('rBaseYear').value.trim(),
+    type:g('rType').value, perfAmount:Number(g('rPerf').value)||0, status:g('rStatus').value,
+    dueDate:g('rDue').value||'', submitDate:g('rSubmit').value||'', receiptNo:g('rReceipt').value.trim(),
+    evalAmount:Number(g('rEvalAmt').value)||0, evalGrade:g('rEvalGrade').value.trim(), evalRank:g('rEvalRank').value.trim(),
+    manager:g('rManager').value.trim(), note:g('rNote').value.trim(), docs:collectRepDocs()
+  };
+  if(editingRepId){ const i=REPORTS.findIndex(r=>r.id===editingRepId); if(i>=0)REPORTS[i]={...REPORTS[i],...rec}; }
+  else REPORTS.push({id:uid(),...rec});
+  saveRep(); closeRepModal(); renderReport();
+}
+function deleteRep(id){ if(!confirm('이 실적신고 항목을 삭제할까요?'))return; REPORTS=REPORTS.filter(r=>r.id!==id); saveRep(); renderReport(); }
+
+function renderAll(){ renderSchedule(); renderLicense(); renderReport(); renderAnnual(); }
 
 /* ── Supabase 초기화 ────────────────────────────────────────────────────── */
 async function sbInit(){
@@ -950,6 +1209,14 @@ async function sbInit(){
     localStorage.setItem(STORE_LIC,JSON.stringify(LICENSES));
   } else {
     LICENSES=loadLocalLic()||SEED_LIC;
+  }
+  // 실적신고
+  const rRep=await sbGet(STORE_REP);
+  if(rRep!==undefined&&rRep!==null&&Array.isArray(rRep)){
+    REPORTS=rRep;
+    localStorage.setItem(STORE_REP,JSON.stringify(REPORTS));
+  } else {
+    REPORTS=loadLocalRep()||SEED_REP;
   }
   // 완료 상태
   const rDone=await sbGet('assoc_done');
