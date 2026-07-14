@@ -352,28 +352,21 @@
   .tech-transfer .tt-body h4{font-size:18.5px;font-weight:800;color:var(--navy);margin-bottom:8px;line-height:1.45}
   .tech-transfer .tt-body .tt-meta{color:var(--blue);font-weight:700;font-size:14.5px;margin-bottom:12px}
   .tech-transfer .tt-body p{color:var(--muted);font-size:15px;line-height:1.7}
-  /* 노형별 실적 (오각형 꼭짓점 정렬) */
+  /* 노형별 실적 (오각형 그래픽 + 균형 카드) */
   .noheong{margin-top:64px}
-  .noheong .nh-cap{text-align:center;font-size:clamp(19px,2.4vw,24px);font-weight:800;color:var(--navy);margin-bottom:4px}
-  .noheong .nh-sub{text-align:center;color:var(--muted);font-size:14px}
-  .nh-radial{position:relative;max-width:1080px;margin:26px auto 0}
-  .nh-pent2{text-align:center;margin:8px auto 26px;max-width:420px}
-  .nh-pent2 svg{width:100%;height:auto;filter:drop-shadow(0 10px 26px rgba(0,83,131,.16))}
-  .nh-node{margin-bottom:26px}
-  .nh-node .nt{font-size:19px;font-weight:800;color:var(--blue);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--sky);display:inline-block}
-  .nh-node ul{list-style:none;display:flex;flex-direction:column;gap:11px}
-  .nh-node li{font-size:13px;font-weight:700;color:var(--navy);line-height:1.4}
-  .nh-node li span{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:2px}
-  @media(min-width:1000px){
-    .nh-radial{height:824px}
-    .nh-pent2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:452px;margin:0}
-    .nh-node{position:absolute;margin:0;width:272px}
-    .n-wh{top:14px;left:50%;transform:translateX(-50%);text-align:center;width:auto}
-    .n-fra{top:150px;left:0;text-align:right}
-    .n-candu{top:150px;right:0;text-align:left}
-    .n-opr{top:432px;left:0;text-align:right}
-    .n-apr{top:356px;right:0;width:288px;text-align:left}
-  }
+  .noheong .nh-cap{text-align:center;font-size:clamp(20px,2.4vw,26px);font-weight:800;color:var(--navy);margin-bottom:4px}
+  .noheong .nh-sub{text-align:center;color:var(--muted);font-size:15px}
+  .nh-pent2{text-align:center;margin:24px auto 6px;max-width:380px}
+  .nh-pent2 svg{width:100%;height:auto;filter:drop-shadow(0 12px 30px rgba(0,83,131,.14))}
+  .nh-grid,.nh-grid2{display:grid;gap:20px;align-items:start;max-width:1000px;margin-left:auto;margin-right:auto}
+  .nh-grid{grid-template-columns:repeat(3,1fr);margin-top:30px}
+  .nh-grid2{grid-template-columns:repeat(2,1fr);margin-top:20px}
+  .nh-card{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px}
+  .nh-card .nt{font-size:18px;font-weight:800;color:var(--blue);text-align:center;padding-bottom:13px;margin-bottom:16px;border-bottom:2px solid var(--sky)}
+  .nh-card ul{list-style:none;display:flex;flex-direction:column;gap:14px}
+  .nh-card.two ul{display:grid;grid-template-columns:1fr 1fr;gap:14px 26px}
+  .nh-card li{font-size:14px;font-weight:700;color:var(--navy);line-height:1.45}
+  .nh-card li span{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:3px}
 
   /* ===== Business (Our business 영상 패널) ===== */
   .biz{background:var(--navy)}
@@ -493,7 +486,7 @@
     .speclist ul{grid-template-columns:1fr}
     .rep-grid{grid-template-columns:1fr}
     .tech-transfer{grid-template-columns:1fr;gap:22px}
-    .nh-grid{grid-template-columns:repeat(2,1fr)}
+    .nh-card.two ul{grid-template-columns:1fr}
     .numgrid,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:repeat(2,1fr);gap:36px 30px}
   }
   @media(max-width:640px){
@@ -511,7 +504,7 @@
     .form-row.two{grid-template-columns:1fr}
     .svc-grid.c2,.svc-grid.c3,.svc-grid.c4{grid-template-columns:1fr}
     .rep-grid{grid-template-columns:1fr}
-    .nh-grid{grid-template-columns:1fr}
+    .nh-grid,.nh-grid2{grid-template-columns:1fr}
     .numgrid,.numgrid.c2,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:1fr;gap:32px}
     .job-row{grid-template-columns:1fr;gap:8px}
     .dir-ways .way{grid-template-columns:1fr;gap:4px}
@@ -809,47 +802,46 @@
     <div class="noheong reveal">
       <p class="nh-cap">국내 원전 계측정비용역 실적</p>
       <p class="nh-sub">노형(Reactor Type)별 주요 실적</p>
-      <div class="nh-radial">
-        <div class="nh-pent2">
-          <svg viewBox="-22 -16 444 406" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="국내 원전 계측정비용역 실적 노형별 오각형">
-            <defs>
-              <linearGradient id="pentGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stop-color="#005383"/><stop offset=".5" stop-color="#59bded"/><stop offset="1" stop-color="#c4d700"/>
-              </linearGradient>
-            </defs>
-            <circle cx="200" cy="188" r="150" fill="none" stroke="var(--line)" stroke-width="1.5"/>
-            <g stroke="url(#pentGrad)" stroke-width="4" stroke-linecap="round">
-              <line x1="200" y1="42" x2="200" y2="14"/>
-              <line x1="342.6" y1="145.6" x2="368" y2="138"/>
-              <line x1="288.2" y1="313.4" x2="303" y2="335"/>
-              <line x1="111.8" y1="313.4" x2="97" y2="335"/>
-              <line x1="57.4" y1="145.6" x2="32" y2="138"/>
-            </g>
-            <polygon points="200,42 342.6,145.6 288.2,313.4 111.8,313.4 57.4,145.6" fill="rgba(89,189,237,.07)" stroke="url(#pentGrad)" stroke-width="8" stroke-linejoin="round"/>
-            <g fill="url(#pentGrad)">
-              <circle cx="200" cy="42" r="8"/><circle cx="342.6" cy="145.6" r="8"/><circle cx="288.2" cy="313.4" r="8"/><circle cx="111.8" cy="313.4" r="8"/><circle cx="57.4" cy="145.6" r="8"/>
-            </g>
-            <g fill="#fff" stroke="url(#pentGrad)" stroke-width="2.5">
-              <circle cx="200" cy="14" r="4.5"/><circle cx="368" cy="138" r="4.5"/><circle cx="303" cy="335" r="4.5"/><circle cx="97" cy="335" r="4.5"/><circle cx="32" cy="138" r="4.5"/>
-            </g>
-            <g text-anchor="middle" font-family="inherit" fill="var(--navy)" font-weight="800">
-              <text x="200" y="180" font-size="19">국내 원전</text>
-              <text x="200" y="206" font-size="19">계측정비용역 실적</text>
-              <text x="200" y="231" font-size="13" fill="var(--muted)" font-weight="600">(노형별)</text>
-            </g>
-          </svg>
-        </div>
-        <div class="nh-node n-wh"><div class="nt">WH</div><ul><li>고리발전소 1,2호기<span>1989.10~2011.11 , 2020.12~현재</span></li></ul></div>
-        <div class="nh-node n-fra"><div class="nt">FRA 950</div><ul><li>한울발전소 1,2호기 RMS<span>2014.12~현재</span></li></ul></div>
-        <div class="nh-node n-candu"><div class="nt">CANDU 700</div><ul><li>월성발전소 1,2호기<span>1990.12~현재</span></li></ul></div>
-        <div class="nh-node n-opr"><div class="nt">OPR 1000</div><ul>
+      <div class="nh-pent2">
+        <svg viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="국내 원전 계측정비용역 실적 노형별 오각형">
+          <defs>
+            <linearGradient id="pentGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#005383"/><stop offset=".5" stop-color="#59bded"/><stop offset="1" stop-color="#c4d700"/>
+            </linearGradient>
+          </defs>
+          <circle cx="240" cy="195" r="142" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+          <polygon points="240,67 361.7,155.4 315.2,298.5 164.8,298.5 118.3,155.4" fill="rgba(89,189,237,.07)" stroke="url(#pentGrad)" stroke-width="7" stroke-linejoin="round"/>
+          <g fill="url(#pentGrad)">
+            <circle cx="240" cy="67" r="7"/><circle cx="361.7" cy="155.4" r="7"/><circle cx="315.2" cy="298.5" r="7"/><circle cx="164.8" cy="298.5" r="7"/><circle cx="118.3" cy="155.4" r="7"/>
+          </g>
+          <g font-family="inherit" font-weight="800" fill="var(--navy)" font-size="17">
+            <text x="240" y="46" text-anchor="middle">WH</text>
+            <text x="380" y="152" text-anchor="start">CANDU 700</text>
+            <text x="315" y="326" text-anchor="middle">APR 1400</text>
+            <text x="165" y="326" text-anchor="middle">OPR 1000</text>
+            <text x="100" y="152" text-anchor="end">FRA 950</text>
+          </g>
+          <g font-family="inherit" text-anchor="middle" fill="var(--navy)" font-weight="800">
+            <text x="240" y="188" font-size="18">국내 원전</text>
+            <text x="240" y="212" font-size="18">계측정비용역 실적</text>
+            <text x="240" y="236" font-size="13" fill="var(--muted)" font-weight="600">(노형별)</text>
+          </g>
+        </svg>
+      </div>
+      <div class="nh-grid">
+        <div class="nh-card"><div class="nt">WH</div><ul><li>고리발전소 1,2호기<span>1989.10~2011.11 , 2020.12~현재</span></li></ul></div>
+        <div class="nh-card"><div class="nt">FRA 950</div><ul><li>한울발전소 1,2호기 RMS<span>2014.12~현재</span></li></ul></div>
+        <div class="nh-card"><div class="nt">CANDU 700</div><ul><li>월성발전소 1,2호기<span>1990.12~현재</span></li></ul></div>
+      </div>
+      <div class="nh-grid2">
+        <div class="nh-card"><div class="nt">OPR 1000</div><ul>
           <li>신고리발전소 1,2호기<span>2010.12~2014.02 , 2020.08~현재</span></li>
           <li>한울발전소 3,4호기 RMS<span>2014.12~현재</span></li>
           <li>한울발전소 5,6호기 RMS<span>2014.12~현재</span></li>
           <li>신월성발전소 1,2호기 RMS<span>2021.08~현재</span></li>
           <li>신고리발전소 1,2호기 RMS<span>2016.10~현재</span></li>
         </ul></div>
-        <div class="nh-node n-apr"><div class="nt">APR 1400</div><ul>
+        <div class="nh-card two"><div class="nt">APR 1400</div><ul>
           <li>BNPP 1,2,3,4호기 시운전<span>2014.11~2024.03</span></li>
           <li>BNPP 3,4호기<span>2024.03~2025.06</span></li>
           <li>새울발전소 1,2호기 MMIS<span>2017.11~현재</span></li>
