@@ -240,6 +240,47 @@
   .cert-card .cbody{padding:18px 20px}
   .cert-card h5{font-size:15.5px;font-weight:800;color:var(--navy);margin-bottom:7px;line-height:1.4}
   .cert-card p{font-size:13px;color:var(--muted);line-height:1.55}
+  .cert-grid.two{grid-template-columns:repeat(2,1fr);max-width:640px;margin-left:auto;margin-right:auto}
+  .esg-detail{scroll-margin-top:120px}
+  .esg-detail+.esg-detail{margin-top:96px;padding-top:60px;border-top:1px solid var(--line)}
+  /* ESG 이미지 카드(상생·인권) */
+  .esg-imgcards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+  .esg-imgcards.c4{grid-template-columns:repeat(4,1fr)}
+  .eimg-card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 6px 18px rgba(11,34,64,.06);transition:transform .2s,box-shadow .2s}
+  .eimg-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+  .eimg-card .ei{aspect-ratio:16/11;overflow:hidden}
+  .eimg-card .ei img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .eimg-card:hover .ei img{transform:scale(1.05)}
+  .eimg-card .eb{padding:22px 22px 24px}
+  .eimg-card h4{font-size:17.5px;font-weight:800;color:var(--navy);margin-bottom:13px;padding-bottom:10px;border-bottom:2px solid var(--sky);display:inline-block}
+  .eimg-card ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .eimg-card li{position:relative;padding-left:16px;font-size:14.5px;color:var(--ink);line-height:1.5}
+  .eimg-card li::before{content:"";position:absolute;left:2px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--blue)}
+  /* 뉴스 탭·검색 */
+  .news-tabs{display:flex;justify-content:center;gap:8px;margin:44px 0 24px;flex-wrap:wrap}
+  .news-tab{padding:11px 28px;border:1px solid var(--line);background:#fff;border-radius:999px;font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s}
+  .news-tab:hover{border-color:var(--sky);color:var(--blue)}
+  .news-tab.on{background:var(--blue);border-color:var(--blue);color:#fff}
+  .news-search{max-width:460px;margin:0 auto 38px;position:relative}
+  .news-search input{width:100%;border:1px solid var(--line);border-radius:999px;padding:14px 46px 14px 22px;font:inherit;font-size:15px;background:#fff}
+  .news-search input:focus{outline:none;border-color:var(--sky)}
+  .news-search .si{position:absolute;right:20px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px}
+  .news-panel{display:none}
+  .news-panel.on{display:block}
+  .news-card.hide{display:none}
+  .news-empty{text-align:center;color:var(--muted);padding:70px 20px;font-size:16px;background:#fff;border:1px dashed var(--line);border-radius:16px}
+  .news-empty b{color:var(--navy)}
+  .news-more{text-align:center;margin-top:44px}
+  /* 사이버신문고 */
+  .voice-poster{display:block;width:420px;max-width:100%;margin:48px auto 0;border-radius:16px;box-shadow:var(--shadow)}
+  .vcontact{max-width:640px;margin:32px auto 0;border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:14px;padding:24px 28px;background:var(--bg-soft)}
+  .vcontact .row{display:flex;gap:14px;font-size:15.5px;margin-bottom:13px;align-items:baseline;line-height:1.6}
+  .vcontact .row:last-child{margin-bottom:0}
+  .vcontact .row b{color:var(--blue);min-width:100px;flex-shrink:0;font-weight:800}
+  .vcontact a{color:var(--navy);font-weight:700}
+  .voice-note{max-width:640px;margin:16px auto 0;color:var(--muted);font-size:14px;line-height:1.65;text-align:center}
+  .voice-divider{max-width:720px;margin:60px auto 0;display:flex;align-items:center;gap:16px;color:var(--muted);font-size:14.5px;font-weight:700}
+  .voice-divider::before,.voice-divider::after{content:"";flex:1;height:1px;background:var(--line)}
   /* ===== ESG ===== */
   .esg-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:52px}
   .esg-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px 30px;transition:transform .2s,box-shadow .2s}
@@ -516,6 +557,7 @@
     .numgrid,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:repeat(2,1fr);gap:36px 30px}
     .cert-grid{grid-template-columns:repeat(2,1fr)}
     .ed-policy,.ed-pdca{grid-template-columns:1fr;gap:28px}
+    .esg-imgcards,.esg-imgcards.c4{grid-template-columns:repeat(2,1fr)}
   }
   @media(max-width:640px){
     section{padding:80px 0}
@@ -535,6 +577,8 @@
     .nh-grid,.nh-grid2{grid-template-columns:1fr}
     .numgrid,.numgrid.c2,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:1fr;gap:32px}
     .cert-grid{grid-template-columns:1fr;max-width:360px;margin-left:auto;margin-right:auto}
+    .esg-imgcards,.esg-imgcards.c4{grid-template-columns:1fr}
+    .voice-poster{width:320px}
     .job-row{grid-template-columns:1fr;gap:8px}
     .dir-ways .way{grid-template-columns:1fr;gap:4px}
     .foot-top{grid-template-columns:1fr}
@@ -1114,35 +1158,8 @@
       <h2 class="sec-title">ESG 경영</h2>
       <p class="sec-desc">품질·환경, 안전, 인권·정도, 상생. 지속가능한 가치를 실천합니다.</p>
     </div>
-    <div class="numgrid c2">
-      <div class="numcard reveal" id="esg-quality">
-        <span class="no">01</span>
-        <h4>품질환경</h4>
-        <p>친환경적이고 안정적인 고품질의 제품·서비스를 공급하기 위해 체계적이고 효율적인 품질·환경 활동을 수행하며, 법규와 규정을 준수합니다.</p>
-        <ul class="tags"><li>KEPIC 자격인증(EN-081·EN-733)</li><li>품질경영시스템(ISO 9001)</li><li>환경경영시스템</li><li>항공우주경영시스템(AS9100)</li></ul>
-      </div>
-      <div class="numcard reveal" id="esg-safety">
-        <span class="no">02</span>
-        <h4>안전경영</h4>
-        <p>임직원 및 협력사 종사자의 안전과 보건을 최우선 핵심가치로 인식하고, 재해 없는 안전하고 쾌적한 근무환경 조성을 위해 안전보건경영을 실천합니다.</p>
-        <ul class="tags"><li>ISO 45001 (KFQ)</li><li>KOSHA-MS (산업안전보건공단)</li><li>사전 예방 활동</li><li>협력사 상생 협력</li></ul>
-      </div>
-      <div class="numcard reveal" id="esg-human">
-        <span class="no">03</span>
-        <h4>인권정도경영</h4>
-        <p>인권을 존중하고 국제 기준을 지지하는 글로벌 기업으로서, 기본에 철저하고 원칙을 지키는 경영활동을 통해 법과 윤리를 준수하는 문화를 정착시켰습니다.</p>
-        <ul class="tags"><li>적법·인간적 고용조건 보장</li><li>존중과 평등 문화</li><li>인권 실사의무(Due Diligence)</li><li>공정한 거래질서 준수</li></ul>
-      </div>
-      <div class="numcard reveal" id="esg-win">
-        <span class="no">04</span>
-        <h4>상생경영</h4>
-        <p>상호 신뢰를 기반으로 공정한 거래 질서를 확립하고, 이해관계자와의 동반 성장을 통해 함께 공존하는 기업 생태계를 구축합니다.</p>
-        <ul class="tags"><li>상호신뢰·동등한 관계</li><li>성과 공유·동반성장</li><li>기술·금융 지원</li><li>안정적 공급망 구축</li></ul>
-      </div>
-    </div>
-
     <!-- 품질환경 상세 -->
-    <div class="esg-detail" id="esg-quality-detail">
+    <div class="esg-detail" id="esg-quality">
       <div class="ed-head reveal"><h3>품질환경</h3><span class="bar"></span></div>
       <p class="ed-desc reveal">수산이앤에스는 친환경적이고 안정적인 고품질의 제품·활동 및 서비스를 공급하기 위하여 체계적이고 효율적인 품질·환경 활동을 수행하고 있습니다.</p>
 
@@ -1186,6 +1203,69 @@
           <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-lrqa1.jpg" alt="항공우주경영시스템 인증서 AS9100" loading="lazy"></div><div class="cbody"><h5>항공우주경영시스템 인증서 (10522215)</h5><p>Design and manufacture of signal processing system for aerospace and defense application</p></div></div>
           <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-lrqa2.jpg" alt="항공우주경영시스템 인증서 부속서" loading="lazy"></div><div class="cbody"><h5>항공우주경영시스템 인증서 (부속서)</h5><p>인증 범위 상세 (Certificate Schedule)</p></div></div>
         </div>
+      </div>
+    </div>
+
+    <!-- 안전경영 상세 -->
+    <div class="esg-detail" id="esg-safety">
+      <div class="ed-head reveal"><h3>안전경영</h3><span class="bar"></span></div>
+      <p class="ed-desc reveal">수산이앤에스는 임직원 및 협력회사 종사자들의 안전과 보건을 경영활동의 최우선 핵심가치로 인식하고, 재해 없는 안전하고 쾌적한 근무환경 조성과 모든 이해관계자의 만족을 위해 안전보건경영방침을 정하고 실천하고 있습니다.</p>
+
+      <div class="ed-block reveal">
+        <div class="ed-head"><h3>안전보건경영방침 수립</h3><span class="bar"></span></div>
+        <div class="ed-policy">
+          <div class="doc"><img src="company_assets/esg/safe1.jpg" alt="안전보건경영 현장" loading="lazy"></div>
+          <ul>
+            <li>안전보건법령 및 방침 준수</li>
+            <li>자발적 참여와 안전문화 정착</li>
+            <li>안전보건경영체계 구축 및 사전 예방 활동</li>
+            <li>리더십과 책임 · 자원 지원, 협력사와의 상생 협력</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ed-block reveal">
+        <div class="ed-head"><h3>안전보건 강화 활동</h3><span class="bar"></span></div>
+        <div class="ed-pdca">
+          <ul class="plist">
+            <li><b>(P)</b> 안전보건 목표 / 계획</li>
+            <li><b>(D)</b> 지원 및 운용</li>
+            <li><b>(C)</b> 성과 평가</li>
+            <li><b>(A)</b> 개선</li>
+          </ul>
+          <div class="pimg"><img src="company_assets/esg/safe-pdca.png" alt="안전보건 PDCA 강화활동 체계" loading="lazy"></div>
+        </div>
+      </div>
+
+      <div class="ed-block reveal">
+        <div class="ed-head"><h3>안전보건경영 인증서</h3><span class="bar"></span></div>
+        <div class="cert-grid two">
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/safe-cert1.jpg" alt="ISO 45001 안전보건경영시스템 인증서" loading="lazy"></div><div class="cbody"><h5>ISO 45001 (KFQ)</h5><p>발전·산업플랜트의 설계·제작·설치·시운전 및 정비서비스에 대한 안전·보건경영체제 구축·이행</p></div></div>
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/safe-cert2.jpg" alt="KOSHA-MS 안전보건경영시스템 인증서" loading="lazy"></div><div class="cbody"><h5>KOSHA-MS (한국산업안전보건공단)</h5><p>한국산업안전보건공단으로부터 안전·보건경영시스템 인증 취득</p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 인권정도경영 상세 -->
+    <div class="esg-detail" id="esg-human">
+      <div class="ed-head reveal"><h3>인권정도경영</h3><span class="bar"></span></div>
+      <p class="ed-desc reveal">수산이앤에스는 인권을 존중하고 관련 국제 기준을 지지하는 글로벌 기업으로서, 기본에 철저하고 원칙을 지키는 경영활동을 통해 법과 윤리를 준수하는 윤리적 기업문화를 정착시켰습니다.</p>
+      <div class="esg-imgcards c4 reveal">
+        <div class="eimg-card"><div class="ei"><img src="company_assets/esg/human1.jpg" alt="적법하고 인간적인 고용조건 보장" loading="lazy"></div><div class="eb"><h4>고용조건 보장</h4><ul><li>적법하고 인간적인 고용조건 보장</li><li>근로자의 기본 노동권 존중</li></ul></div></div>
+        <div class="eimg-card"><div class="ei"><img src="company_assets/esg/human2.jpg" alt="존중과 평등 문화" loading="lazy"></div><div class="eb"><h4>존중과 평등</h4><ul><li>임직원 보호</li><li>존중과 평등 문화 고착화</li></ul></div></div>
+        <div class="eimg-card"><div class="ei"><img src="company_assets/esg/human3.jpg" alt="인권 실사의무" loading="lazy"></div><div class="eb"><h4>실사의무</h4><ul><li>인권존중을 위한 실사의무(Due Diligence)</li><li>진정성 있는 경영활동 실시</li></ul></div></div>
+        <div class="eimg-card"><div class="ei"><img src="company_assets/esg/human4.jpg" alt="국제기준 존중과 공정거래" loading="lazy"></div><div class="eb"><h4>국제기준 준수</h4><ul><li>국제기준·현지국 법규 준수</li><li>공정한 거래질서 준수</li></ul></div></div>
+      </div>
+    </div>
+
+    <!-- 상생경영 상세 -->
+    <div class="esg-detail" id="esg-win">
+      <div class="ed-head reveal"><h3>상생경영</h3><span class="bar"></span></div>
+      <p class="ed-desc reveal">수산이앤에스는 상호 신뢰를 기반으로 공정한 거래 질서를 확립하고, 이해관계자와의 동반 성장을 통해 함께 공존하는 기업 생태계를 구축하려고 합니다.</p>
+      <div class="esg-imgcards reveal">
+        <div class="eimg-card"><div class="ei"><img src="company_assets/esg/win1.jpg" alt="상호신뢰" loading="lazy"></div><div class="eb"><h4>상호신뢰</h4><ul><li>상호존중 · 동등한 관계 구축</li><li>거래에서 입수한 정보 보호</li><li>공정거래 관련 법규 · 규정 준수</li></ul></div></div>
+        <div class="eimg-card"><div class="ei"><img src="company_assets/esg/win2.jpg" alt="동반성장" loading="lazy"></div><div class="eb"><h4>동반성장</h4><ul><li>성과 공유 · 상호 이익 추구</li><li>원활한 의사소통 · 상호 협력</li><li>공평한 기회 제공 · 동반자 관계 발전</li></ul></div></div>
+        <div class="eimg-card"><div class="ei"><img src="company_assets/esg/win3.jpg" alt="지속적 발전지원" loading="lazy"></div><div class="eb"><h4>지속적 발전지원</h4><ul><li>기술 및 금융 지원</li><li>안정적 공급망 구축</li><li>상생 · 동반성장 거래회사 범위 확대</li></ul></div></div>
       </div>
     </div>
   </div>
@@ -1305,10 +1385,34 @@
       <h2 class="sec-title">새로운 소식</h2>
       <p class="sec-desc">수산이앤에스의 최신 수상 내역과 활동 소식을 전합니다.</p>
     </div>
-    <div class="news-grid">
-      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/37299edb913cd872bbca55ee059693df.png" alt="제4회 대한민국 엔지니어링 대상 우수상 수상" loading="lazy"></div><div class="body"><span class="date">2025-12-19</span><h4>제4회 대한민국 엔지니어링 대상 시상식 '우수상' 수상</h4><p>기술력과 사업 성과를 인정받아 대한민국 엔지니어링 대상에서 우수상을 수상했습니다.</p></div></div>
-      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/8f0772e73742705725ca6272149be463.png" alt="해군 작전사령부 방문 및 관함식 참석" loading="lazy"></div><div class="body"><span class="date">2025-10-16</span><h4>한봉섭 부회장, 해군 작전사령부 방문 및 창설 80주년 관함식 참석</h4><p>해군 창설 80주년 기념 관함식에 참석하여 국가 안보에 대한 지지를 전했습니다.</p></div></div>
-      <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/644fcec0f351eb2d642c209aaed1e7c8.png" alt="한빛1발전소 이달의 발전소인 수상" loading="lazy"></div><div class="body"><span class="date">2025-10-02</span><h4>[한빛1사업소] 김현승 팀장, 한빛1발전소 '이달의 발전소인' 수상</h4><p>발전소 안전 운영에 기여한 공로로 이달의 발전소인에 선정되었습니다.</p></div></div>
+    <div class="news-tabs reveal">
+      <button class="news-tab on" data-panel="np-new">새소식</button>
+      <button class="news-tab" data-panel="np-pr">홍보자료실</button>
+      <button class="news-tab" data-panel="np-notice">공고자료실</button>
+    </div>
+
+    <div class="news-panel on" id="np-new">
+      <div class="news-search reveal"><input id="newsSearch" type="text" placeholder="제목으로 검색하세요" aria-label="뉴스 검색"><span class="si">🔍</span></div>
+      <div class="news-grid" id="newsGrid">
+        <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/37299edb913cd872bbca55ee059693df.png" alt="제4회 대한민국 엔지니어링 대상 우수상 수상" loading="lazy"></div><div class="body"><span class="date">2025-12-19</span><h4>제4회 대한민국 엔지니어링 대상 시상식 '우수상' 수상</h4><p>기술력과 사업 성과를 인정받아 대한민국 엔지니어링 대상에서 우수상을 수상했습니다.</p></div></div>
+        <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/8f0772e73742705725ca6272149be463.png" alt="해군 작전사령부 방문 및 관함식 참석" loading="lazy"></div><div class="body"><span class="date">2025-10-16</span><h4>한봉섭 부회장, 해군 작전사령부 방문 및 창설 80주년 관함식 참석</h4><p>해군 창설 80주년 기념 관함식에 참석하여 국가 안보에 대한 지지를 전했습니다.</p></div></div>
+        <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/644fcec0f351eb2d642c209aaed1e7c8.png" alt="한빛1발전소 이달의 발전소인 수상" loading="lazy"></div><div class="body"><span class="date">2025-10-02</span><h4>[한빛1사업소] 김현승 팀장, 한빛1발전소 '이달의 발전소인' 수상</h4><p>발전소 안전 운영에 기여한 공로로 이달의 발전소인에 선정되었습니다.</p></div></div>
+        <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/cc6c1f18c1d7c937e171905efddbdcc0.png" alt="신한울1사업소 협력사 우수 작업계획서 최우수 수상" loading="lazy"></div><div class="body"><span class="date">2025-09-22</span><h4>[신한울1사업소] 최승표 주임, 협력사 우수 작업계획서 최우수 수상</h4><p>우수한 작업계획서 수립으로 현장 작업의 안전성과 품질 향상에 기여했습니다.</p></div></div>
+        <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/8df3fe0f87469bdb91105d62289e752f.png" alt="고성하이사업소 2025년 위험성평가 우수사업장 인정" loading="lazy"></div><div class="body"><span class="date">2025-09-18</span><h4>[고성하이사업소] 2025년 위험성평가 우수사업장 인정</h4><p>체계적인 위험성평가 활동을 인정받아 위험성평가 우수사업장으로 인정받았습니다.</p></div></div>
+        <div class="news-card reveal"><div class="thumb"><img src="company_assets/ir/e065a0cadcb35385b4b04a18a18d84f0.png" alt="월성3사업소 신월성2호기 7차 OH 우수 협력사 수상" loading="lazy"></div><div class="body"><span class="date">2025-09-11</span><h4>[월성3사업소] 신월성2호기 7차 OH 우수 협력사 / 사원 수상</h4><p>신월성2호기 7차 계획예방정비(OH)에서 우수 협력사 및 사원으로 선정되었습니다.</p></div></div>
+        <div class="news-card reveal" data-more="1"><div class="thumb"><img src="company_assets/ir/feb4a19cf50fc00f0d01eaf5c5b73fcc.png" alt="우주항공기술센터 KARI 기술이전 계약 체결" loading="lazy"></div><div class="body"><span class="date">2025-09-09</span><h4>[우주항공기술센터] KARI 「우주발사체용 로켓 엔진 연소 시험설비 개발 기술」 기술이전 계약 체결</h4><p>한국항공우주연구원(KARI)과 로켓 엔진 연소 시험설비 개발 기술 이전 계약을 체결했습니다.</p></div></div>
+        <div class="news-card reveal" data-more="1"><div class="thumb"><img src="company_assets/ir/db8322ec730a7364ebedcf68526940cd.png" alt="환경공단 ERMS 방폐물관리사업 유공자 이사장상 수상" loading="lazy"></div><div class="body"><span class="date">2025-08-27</span><h4>[환경공단ERMS] 방폐물관리사업 유공자 이사장상 수상</h4><p>방폐물관리사업에 기여한 공로로 유공자 이사장상을 수상했습니다.</p></div></div>
+        <div class="news-card reveal" data-more="1"><div class="thumb"><img src="company_assets/ir/015cb1e285450f3a3abcddb2bc6f2551.png" alt="고리1사업소 김태성 팀장 이달의 협력사인상 수상" loading="lazy"></div><div class="body"><span class="date">2025-08-13</span><h4>[고리1사업소] 김태성 팀장, 이달의 협력사인상 수상</h4><p>성실한 자세로 맡은 업무에 충실하여 이달의 협력사인상을 수상했습니다.</p></div></div>
+      </div>
+      <div class="news-empty" id="newsEmpty" style="display:none">검색 결과가 없습니다. <b>다른 검색어</b>를 입력해 보세요.</div>
+      <div class="news-more reveal"><button class="btn-more" id="newsMoreBtn">더 많은 소식보기 <span>›</span></button></div>
+    </div>
+
+    <div class="news-panel" id="np-pr">
+      <div class="news-empty">홍보자료실 자료는 <a href="https://www.soosanens.co.kr/sub/news/pr/list.php" target="_blank" rel="noopener">공식 홈페이지 홍보자료실</a>에서 확인하실 수 있습니다.</div>
+    </div>
+    <div class="news-panel" id="np-notice">
+      <div class="news-empty">입찰·채용 등 공고 자료는 <a href="https://www.soosanens.co.kr/sub/news/ir/list.php" target="_blank" rel="noopener">공식 홈페이지 공고자료실</a>에서 확인하실 수 있습니다.</div>
     </div>
   </div>
 </section>
@@ -1319,9 +1423,17 @@
     <div class="biz-head reveal">
       <span class="eyebrow">Customer · 사이버신문고</span>
       <h2 class="sec-title">사이버신문고</h2>
-      <p class="sec-desc">부패·부조리 신고 및 고충·건의사항을 접수합니다. 접수된 내용은 비공개로 안전하게 처리됩니다.</p>
+      <p class="sec-desc">수산그룹은 임직원 청렴행동수칙을 제정하여 투명하고 공정한 경영을 실천합니다. 직원의 비윤리적 행위, 투명성 제고를 위한 제도개선 사항을 제보해 주시면 신속하게 처리합니다.</p>
     </div>
-    <form class="form-wrap reveal" onsubmit="return submitVoice(event)">
+    <img class="voice-poster reveal" src="company_assets/company/voice-poster.png" alt="수산 사이버신문고 청렴행동수칙 — 직원의 비윤리적 행위, 투명성 제고를 위한 제도개선 사항 제보" loading="lazy">
+    <div class="vcontact reveal">
+      <div class="row"><b>우편 · 방문</b><span>(06367) 서울시 강남구 밤고개로1길 10 수서현대벤처빌 315호 전략기획실</span></div>
+      <div class="row"><b>전화</b><a href="tel:02-451-6623">02-451-6623</a></div>
+      <div class="row"><b>이메일</b><a href="mailto:soosanjebo@gmail.com">soosanjebo@gmail.com</a></div>
+    </div>
+    <p class="voice-note reveal">신고는 실명을 원칙으로 하며, 제보된 내용과 제보자의 신원은 안전하게 보호됩니다.</p>
+    <div class="voice-divider reveal">온라인 접수</div>
+    <form class="form-wrap reveal" onsubmit="return submitVoice(event)" style="margin-top:28px">
       <div class="form-row two">
         <div><label for="v-name">성명</label><input id="v-name" type="text" placeholder="이름을 입력하세요"></div>
         <div><label for="v-contact">연락처 / 이메일</label><input id="v-contact" type="text" placeholder="회신 받을 연락처"></div>
@@ -1434,6 +1546,41 @@
     }, {rootMargin:'-124px 0px -55% 0px', threshold:0});
     secTargets.forEach(t => secObs.observe(t));
   }
+
+  // ===== 뉴스: 탭 + 검색 + 더보기 =====
+  (function(){
+    const tabs = document.querySelectorAll('.news-tab');
+    const panels = document.querySelectorAll('.news-panel');
+    tabs.forEach(t => t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('on')); t.classList.add('on');
+      panels.forEach(p => p.classList.toggle('on', p.id === t.dataset.panel));
+    }));
+    const grid = document.getElementById('newsGrid');
+    if(!grid) return;
+    const cards = [...grid.querySelectorAll('.news-card')];
+    const search = document.getElementById('newsSearch');
+    const empty = document.getElementById('newsEmpty');
+    const moreWrap = document.querySelector('#np-new .news-more');
+    const moreBtn = document.getElementById('newsMoreBtn');
+    let showAll = false;
+    const render = () => {
+      const q = (search.value || '').trim().toLowerCase();
+      let shown = 0;
+      cards.forEach(c => {
+        const title = c.querySelector('h4').textContent.toLowerCase();
+        const match = !q || title.includes(q);
+        const isMore = c.dataset.more === '1';
+        const visible = match && (q ? true : (showAll || !isMore));
+        c.classList.toggle('hide', !visible);
+        if(visible) shown++;
+      });
+      empty.style.display = shown === 0 ? 'block' : 'none';
+      moreWrap.style.display = (!q && !showAll) ? 'block' : 'none';
+    };
+    search.addEventListener('input', render);
+    moreBtn.addEventListener('click', () => { showAll = true; render(); });
+    render();
+  })();
 
   // 배경 영상 자동재생 (뷰포트에 보일 때만 재생 → 성능/배터리 절약)
   const videos = document.querySelectorAll('video[autoplay]');
