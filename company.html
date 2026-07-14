@@ -388,7 +388,7 @@
 
   /* ===== Works (사업실적: 필터 + 카드) ===== */
   .works{background:var(--bg)}
-  .filterbar{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:52px 0 40px}
+  .filterbar{display:grid;grid-template-columns:repeat(7,1fr);gap:14px;margin:52px 0 40px}
   .ftab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
     background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 8px;cursor:pointer;
     color:var(--muted);font-size:15px;font-weight:600;transition:all .2s;min-height:108px}
@@ -544,7 +544,7 @@
         <a href="#biz-nuc">원자력사업</a><a href="#biz-the">화력사업</a><a href="#biz-hyd">수력사업</a><a href="#biz-pla">플랜트</a><a href="#biz-def">방위사업</a><a href="#biz-rbd">R&amp;BD</a><a href="#biz-aero">우주항공사업</a>
       </div>
       <div class="mcol">
-        <a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a>
+        <a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a><a href="#works" data-filter="aero">우주항공사업</a>
       </div>
       <div class="mcol">
         <a href="#esg">품질환경</a><a href="#esg">안전경영</a><a href="#esg">인권정도경영</a><a href="#esg">상생경영</a>
@@ -1005,7 +1005,7 @@
 <div class="cat" id="cat-result">
   <div class="cat-banner"><img class="bg" src="company_assets/banner/result.jpg" alt=""><div class="cb"><span class="en">Achievement</span><h2>사업실적</h2></div></div>
   <nav class="subnav"><div class="subnav-inner">
-    <a href="#works" class="on" data-filter="all">전체</a><a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a>
+    <a href="#works" class="on" data-filter="all">전체</a><a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a><a href="#works" data-filter="aero">우주항공사업</a>
   </div></nav>
 
 <!-- WORKS -->
@@ -1024,6 +1024,7 @@
       <button class="ftab" data-cat="hyd"><span class="fi">💧</span>수력사업</button>
       <button class="ftab" data-cat="pla"><span class="fi">🏗</span>플랜트</button>
       <button class="ftab" data-cat="def"><span class="fi">🛡</span>방위사업</button>
+      <button class="ftab" data-cat="aero"><span class="fi">🚀</span>우주항공사업</button>
     </div>
 
     <div class="pgrid reveal" id="pgrid">
@@ -1053,6 +1054,11 @@
 
       <!-- 방위 추가 -->
       <article class="pcard more hide" data-cat="def"><div class="pthumb"><img src="company_assets/result/def-rf-scanner.png" alt="위성방탐 RF스캐너" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">방위사업</span></div><h4>위성방탐 RF스캐너 개발</h4></article>
+
+      <!-- 우주항공 추가 -->
+      <article class="pcard more hide" data-cat="aero"><div class="pthumb"><img src="company_assets/aero/aero-rep1.png" alt="차세대발사체 엔진 연소시험설비" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">우주항공사업</span></div><h4>차세대발사체 엔진 연소시험설비 기본설계 용역</h4></article>
+      <article class="pcard more hide" data-cat="aero"><div class="pthumb"><img src="company_assets/aero/aero-rep2.png" alt="유공압 판넬 및 가스배관" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">우주항공사업</span></div><h4>유공압 판넬 및 가스배관 설계·부품 납품</h4></article>
+      <article class="pcard more hide" data-cat="aero"><div class="pthumb"><img src="company_assets/aero/aero-rep3.png" alt="위성 추진기관 지상지원장비(FGSE)" loading="lazy"></div><div class="pmeta"><span class="badge loc">국내</span><span class="badge cat">우주항공사업</span></div><h4>능동 제어 위성 추진기관 지상지원장비(FGSE) 제작</h4></article>
     </div>
 
     <div class="more-wrap reveal"><button class="btn-more" id="moreBtn">더 많은 실적보기 <span>›</span></button></div>
