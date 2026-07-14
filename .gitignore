@@ -24,3 +24,6 @@ node_modules/
 # 영상 원본(고용량) 백업 — 압축본만 배포, 원본은 로컬 보관
 _video_src_backup/
 _compressed/
+
+# 손상 이미지 백업(로컬 보관) — repo 제외
+_backup_corrupt/
