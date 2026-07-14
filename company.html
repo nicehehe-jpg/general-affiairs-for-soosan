@@ -31,7 +31,7 @@
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","SF Pro KR","Apple SD Gothic Neo","Pretendard","Pretendard Variable","Malgun Gothic",sans-serif;
     letter-spacing:-0.01em;
     color:var(--ink);background:var(--bg);line-height:1.65;font-size:16.5px;
-    -webkit-font-smoothing:antialiased;overflow-x:clip;
+    -webkit-font-smoothing:antialiased;overflow-x:clip;word-break:keep-all;
   }
   a{color:inherit;text-decoration:none}
   img{max-width:100%;display:block}
@@ -40,7 +40,9 @@
     display:inline-block;font-size:13px;font-weight:700;letter-spacing:.14em;
     color:var(--blue);text-transform:uppercase;margin-bottom:14px;
   }
-  .sec-title{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.25}
+  .sec-title{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-.02em;line-height:1.25;text-wrap:balance}
+  .hero h1,.greet-tit,.ed-head h3,.recruit h2{text-wrap:balance}
+  .vcontact a,.job-note a{overflow-wrap:anywhere}
   .sec-desc{color:var(--muted);font-size:18px;margin-top:14px;max-width:680px}
   section{padding:110px 0}
 
