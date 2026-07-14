@@ -175,12 +175,12 @@
   .tl-row .txt{flex:1;color:var(--ink);font-size:14.5px;position:relative;padding-left:28px;line-height:1.55}
   .tl-row .txt::before{content:"";position:absolute;left:-5.5px;top:6px;width:11px;height:11px;border-radius:50%;background:#fff;border:3px solid var(--sky)}
   /* ===== 글로벌 네트워크 ===== */
-  .global{background:var(--navy);color:#fff;text-align:center}
-  .global .sec-title,.global .eyebrow{color:#fff}
-  .global .eyebrow{color:var(--sky)}
-  .global p{color:rgba(255,255,255,.82);max-width:780px;margin:16px auto 0;font-size:16px}
-  .global .map{margin-top:46px;border-radius:16px;background:rgba(255,255,255,.05);padding:34px 20px}
-  .global .map img{margin:0 auto;max-height:380px;filter:brightness(0) invert(1);opacity:.92}
+  .global{background:var(--bg-soft);text-align:center}
+  .global .eyebrow{color:var(--blue)}
+  .global p{color:var(--muted);max-width:800px;margin:16px auto 0;font-size:16.5px;line-height:1.75}
+  .global-map{position:relative;max-width:1140px;margin:48px auto 0}
+  .global-map>img{width:100%;height:auto;display:block}
+  .global-map .markers{position:absolute;top:0;left:0;width:100%;height:100%}
   /* ===== 오시는길 ===== */
   .direction{background:var(--bg-soft)}
   .dir-map{display:block;position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#fff;margin-top:52px;box-shadow:var(--shadow);aspect-ratio:1400/460}
@@ -214,6 +214,32 @@
   .numcard p{font-size:15px;color:var(--muted);line-height:1.68}
   .numcard .tags{list-style:none;display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
   .numcard .tags li{background:var(--bg-soft);border:1px solid var(--line);color:var(--navy-2);font-size:13px;font-weight:600;padding:7px 13px;border-radius:8px}
+  /* ===== 품질환경 상세 ===== */
+  .esg-detail{margin-top:84px}
+  .ed-block{margin-top:60px}
+  .ed-head{text-align:center;margin-bottom:8px}
+  .ed-head h3{font-size:clamp(21px,2.6vw,26px);font-weight:800;color:var(--navy)}
+  .ed-head .bar{width:44px;height:3px;background:var(--brand-grad);margin:14px auto 0;border-radius:3px}
+  .ed-desc{color:var(--muted);text-align:center;max-width:840px;margin:18px auto 0;font-size:16px;line-height:1.8}
+  .ed-policy{display:grid;grid-template-columns:0.75fr 1fr;gap:48px;align-items:center;max-width:940px;margin:40px auto 0}
+  .ed-policy .doc{border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .ed-policy .doc img{width:100%;display:block}
+  .ed-policy ul{list-style:none;display:flex;flex-direction:column;gap:16px}
+  .ed-policy li{padding-left:26px;position:relative;font-size:16.5px;font-weight:700;color:var(--navy);line-height:1.5}
+  .ed-policy li::before{content:"✓";position:absolute;left:0;top:-1px;color:var(--blue);font-weight:800;font-size:17px}
+  .ed-pdca{display:grid;grid-template-columns:1fr 1.1fr;gap:44px;align-items:center;max-width:980px;margin:40px auto 0}
+  .ed-pdca .plist{list-style:none;display:flex;flex-direction:column;gap:14px}
+  .ed-pdca .plist li{background:var(--bg-soft);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:10px;padding:15px 20px;font-size:15.5px;color:var(--ink)}
+  .ed-pdca .plist li b{color:var(--blue);margin-right:8px;font-weight:800}
+  .ed-pdca .pimg img{width:100%;display:block}
+  .cert-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:40px}
+  .cert-card{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 6px 18px rgba(11,34,64,.06);transition:transform .2s,box-shadow .2s}
+  .cert-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+  .cert-card .cimg{background:var(--bg-soft);padding:20px;display:grid;place-items:center}
+  .cert-card .cimg img{max-width:100%;max-height:320px;box-shadow:0 4px 16px rgba(0,0,0,.14)}
+  .cert-card .cbody{padding:18px 20px}
+  .cert-card h5{font-size:15.5px;font-weight:800;color:var(--navy);margin-bottom:7px;line-height:1.4}
+  .cert-card p{font-size:13px;color:var(--muted);line-height:1.55}
   /* ===== ESG ===== */
   .esg-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:52px}
   .esg-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:32px 30px;transition:transform .2s,box-shadow .2s}
@@ -378,7 +404,7 @@
   .bpanel{position:relative;flex:1 1 0;overflow:hidden;cursor:pointer;transition:flex .5s cubic-bezier(.2,.6,.2,1);min-width:0}
   .bpanel video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
   .bpanel::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(8,18,38,.25) 0%,rgba(8,18,38,.78) 100%);transition:background .4s}
-  .bpanel:hover{flex:2.4 1 0}
+  .bpanel:hover{flex:4 1 0}
   .bpanel:hover::after{background:linear-gradient(180deg,rgba(0,83,131,.25) 0%,rgba(8,18,38,.6) 100%)}
   .bp-txt{position:absolute;left:0;right:0;bottom:46px;z-index:2;text-align:center;color:#fff;padding:0 10px}
   .bp-txt .en{display:block;font-size:13px;font-weight:600;letter-spacing:.08em;color:rgba(255,255,255,.85);margin-bottom:10px}
@@ -488,6 +514,8 @@
     .tech-transfer{grid-template-columns:1fr;gap:22px}
     .nh-card.two ul{grid-template-columns:1fr}
     .numgrid,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:repeat(2,1fr);gap:36px 30px}
+    .cert-grid{grid-template-columns:repeat(2,1fr)}
+    .ed-policy,.ed-pdca{grid-template-columns:1fr;gap:28px}
   }
   @media(max-width:640px){
     section{padding:80px 0}
@@ -506,6 +534,7 @@
     .rep-grid{grid-template-columns:1fr}
     .nh-grid,.nh-grid2{grid-template-columns:1fr}
     .numgrid,.numgrid.c2,.numgrid.c3,.numgrid.c4,.numgrid.c5{grid-template-columns:1fr;gap:32px}
+    .cert-grid{grid-template-columns:1fr;max-width:360px;margin-left:auto;margin-right:auto}
     .job-row{grid-template-columns:1fr;gap:8px}
     .dir-ways .way{grid-template-columns:1fr;gap:4px}
     .foot-top{grid-template-columns:1fr}
@@ -541,7 +570,7 @@
         <a href="#about">기업정보</a><a href="#greeting">인사말</a><a href="#history">연혁</a><a href="#global">글로벌 네트워크</a><a href="#direction">오시는길</a>
       </div>
       <div class="mcol">
-        <a href="#biz-nuc">원자력사업</a><a href="#biz-the">화력사업</a><a href="#biz-hyd">수력사업</a><a href="#biz-pla">플랜트</a><a href="#biz-def">방위사업</a><a href="#biz-rbd">R&amp;BD</a><a href="#biz-aero">우주항공사업</a>
+        <a href="#biz-nuc">원자력사업</a><a href="#biz-the">화력사업</a><a href="#biz-hyd">수력사업</a><a href="#biz-pla">플랜트</a><a href="#biz-def">방위사업</a><a href="#biz-aero">우주항공사업</a><a href="#biz-rbd">R&amp;BD</a>
       </div>
       <div class="mcol">
         <a href="#works" data-filter="nuc">원자력사업</a><a href="#works" data-filter="the">화력사업</a><a href="#works" data-filter="hyd">수력사업</a><a href="#works" data-filter="pla">플랜트</a><a href="#works" data-filter="def">방위사업</a><a href="#works" data-filter="aero">우주항공사업</a>
@@ -713,7 +742,10 @@
       <h2 class="sec-title">글로벌 수산ENS!</h2>
       <p>수산이앤에스는 국내 NO.1에서 세계 NO.1의 자리로 나아가기 위해 동남아시아, 중동, 북아프리카 등 세계 각지 여러 나라에 원자력·화력·지열 발전소 정비 및 운전/운영 사업으로 사세를 끊임없이 확장하고 있습니다. 풍부한 경험과 최고의 기술력을 바탕으로 세계로부터 인정받는 대한민국의 자랑스러운 일류 정비 기업이 되겠습니다.</p>
     </div>
-    <div class="map reveal"><img src="company_assets/company/map01.png" alt="글로벌 네트워크 지도" loading="lazy"></div>
+    <div class="global-map reveal">
+      <img src="company_assets/company/map01.png" alt="글로벌 네트워크 세계지도" loading="lazy">
+      <img class="markers" src="company_assets/company/map02.png" alt="SOOSAN 글로벌 거점: Korea 본사·공장, China, Philippines, Indonesia, Vietnam, UAE, Europe, USA" loading="lazy">
+    </div>
   </div>
 </section>
 
@@ -755,7 +787,7 @@
 <div class="cat" id="cat-business">
   <div class="cat-banner"><img class="bg" src="company_assets/banner/business.jpg" alt=""><div class="cb"><span class="en">Business</span><h2>사업분야</h2></div></div>
   <nav class="subnav"><div class="subnav-inner">
-    <a href="#biz-nuc" class="on">원자력사업</a><a href="#biz-the">화력사업</a><a href="#biz-hyd">수력사업</a><a href="#biz-pla">플랜트</a><a href="#biz-def">방위사업</a><a href="#biz-rbd">R&amp;BD</a><a href="#biz-aero">우주항공사업</a>
+    <a href="#biz-nuc" class="on">원자력사업</a><a href="#biz-the">화력사업</a><a href="#biz-hyd">수력사업</a><a href="#biz-pla">플랜트</a><a href="#biz-def">방위사업</a><a href="#biz-aero">우주항공사업</a><a href="#biz-rbd">R&amp;BD</a>
   </div></nav>
 
 <!-- BUSINESS -->
@@ -772,8 +804,8 @@
       <a href="#biz-hyd" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="biz-hyd.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Hydro</span><h3>수력 사업</h3></div></a>
       <a href="#biz-pla" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="biz-pla.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Construction &amp; Commissioning</span><h3>플랜트</h3></div></a>
       <a href="#biz-def" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="biz-def.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">ANTI-UAV Defence System</span><h3>방위 사업</h3></div></a>
-      <a href="#biz-rbd" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="biz-rbd.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Research &amp; Development</span><h3>R&amp;BD</h3></div></a>
       <a href="#biz-aero" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="company_assets/aero/aero.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Aerospace &amp; Engineering</span><h3>우주항공 사업</h3></div></a>
+      <a href="#biz-rbd" class="bpanel"><video autoplay muted loop playsinline preload="metadata"><source src="biz-rbd.mp4" type="video/mp4"></video><div class="bp-txt"><span class="en">Research &amp; Development</span><h3>R&amp;BD</h3></div></a>
     </div>
   </div>
 </section>
@@ -948,24 +980,8 @@
   </div>
 </section>
 
-<!-- R&BD 상세 -->
-<section class="bizd alt" id="biz-rbd">
-  <div class="bd-hero" style="background-image:url('company_assets/company/com.jpg')">
-  <div class="wrap">
-    <div class="bd-head reveal"><span class="ic">🔬</span><span class="en">Research &amp; Business Development</span><h3>R&amp;BD</h3></div>
-    <p class="bd-lead reveal">수산ENS는 시대가 요구하는 기술과 혁신으로 새로운 가치를 창출하기 위해 노력하며, 독자적인 사업수행능력을 갖추고 Total 서비스를 제공하기 위해 최선을 다하고 있습니다.</p>
-    <div class="svc-grid c4 reveal">
-      <div class="svc"><h4><span class="d"></span>원전 MMIS(POSAFE-Q)</h4><p>국내 최초 원전 안전등급제어기기 국산화, KINS 인허가 획득. 신한울 1,2 / 새울 3,4 / 신한울 3,4 MMIS 안전계통 PLC 공급</p></div>
-      <div class="svc"><h4><span class="d"></span>연구·훈련용 원자로</h4><p>요르단 연구로 제어설비 공급(2015), 수출형 기장연구로 원자로 제어설비 제작 공급</p></div>
-      <div class="svc"><h4><span class="d"></span>차세대 안전계통 플랫폼</h4><p>FPGA 기반 안전계통 플랫폼 개발, 가상화 플랫폼 및 교육훈련용 시뮬레이터. SMR·부유식 원전·동력로 적용</p></div>
-      <div class="svc"><h4><span class="d"></span>ERMS 환경방사선</h4><p>환경방사선 감시시스템 — 고리·한빛·한울 원자력본부, 방폐장, 영광군 민간감시센터, 중이온가속기(대전)</p></div>
-    </div>
-  </div>
-  </div>
-</section>
-
 <!-- 우주항공 사업 상세 -->
-<section class="bizd" id="biz-aero">
+<section class="bizd alt" id="biz-aero">
   <div class="wrap">
     <div class="bd-head reveal"><span class="ic">🚀</span><span class="en">Aerospace &amp; Engineering</span><h3>우주항공 사업</h3></div>
     <p class="bd-lead reveal">정부출연연구소 시험설비 및 시험설비 인프라 구축 분야로의 고도화를 준비하고 있습니다.</p>
@@ -996,6 +1012,22 @@
       <div class="speclist reveal"><h4>시험설비 설계 · 사업실적</h4><ul class="one"><li>차세대발사체 엔진 연소시험설비 구축을 위한 기본계획 수립 및 기본설계 용역</li></ul></div>
       <div class="speclist reveal"><h4>부품 설계 및 제작 · 사업실적</h4><ul><li>차세대 엔진 연소시험용 고압가스 저장 용기 제작 관련 설계 및 부품 납품</li><li>차세대 발사체 엔진 시험을 위한 유공압 판넬 및 가스배관 설계 및 부품 납품</li><li>능동 제어 위성 추진기관 지상 지원 장비(FGSE) 제작</li></ul></div>
     </div>
+  </div>
+</section>
+
+<!-- R&BD 상세 -->
+<section class="bizd" id="biz-rbd">
+  <div class="bd-hero" style="background-image:url('company_assets/company/com.jpg')">
+  <div class="wrap">
+    <div class="bd-head reveal"><span class="ic">🔬</span><span class="en">Research &amp; Business Development</span><h3>R&amp;BD</h3></div>
+    <p class="bd-lead reveal">수산ENS는 시대가 요구하는 기술과 혁신으로 새로운 가치를 창출하기 위해 노력하며, 독자적인 사업수행능력을 갖추고 Total 서비스를 제공하기 위해 최선을 다하고 있습니다.</p>
+    <div class="svc-grid c4 reveal">
+      <div class="svc"><h4><span class="d"></span>원전 MMIS(POSAFE-Q)</h4><p>국내 최초 원전 안전등급제어기기 국산화, KINS 인허가 획득. 신한울 1,2 / 새울 3,4 / 신한울 3,4 MMIS 안전계통 PLC 공급</p></div>
+      <div class="svc"><h4><span class="d"></span>연구·훈련용 원자로</h4><p>요르단 연구로 제어설비 공급(2015), 수출형 기장연구로 원자로 제어설비 제작 공급</p></div>
+      <div class="svc"><h4><span class="d"></span>차세대 안전계통 플랫폼</h4><p>FPGA 기반 안전계통 플랫폼 개발, 가상화 플랫폼 및 교육훈련용 시뮬레이터. SMR·부유식 원전·동력로 적용</p></div>
+      <div class="svc"><h4><span class="d"></span>ERMS 환경방사선</h4><p>환경방사선 감시시스템 — 고리·한빛·한울 원자력본부, 방폐장, 영광군 민간감시센터, 중이온가속기(대전)</p></div>
+    </div>
+  </div>
   </div>
 </section>
 
@@ -1106,6 +1138,54 @@
         <h4>상생경영</h4>
         <p>상호 신뢰를 기반으로 공정한 거래 질서를 확립하고, 이해관계자와의 동반 성장을 통해 함께 공존하는 기업 생태계를 구축합니다.</p>
         <ul class="tags"><li>상호신뢰·동등한 관계</li><li>성과 공유·동반성장</li><li>기술·금융 지원</li><li>안정적 공급망 구축</li></ul>
+      </div>
+    </div>
+
+    <!-- 품질환경 상세 -->
+    <div class="esg-detail" id="esg-quality-detail">
+      <div class="ed-head reveal"><h3>품질환경</h3><span class="bar"></span></div>
+      <p class="ed-desc reveal">수산이앤에스는 친환경적이고 안정적인 고품질의 제품·활동 및 서비스를 공급하기 위하여 체계적이고 효율적인 품질·환경 활동을 수행하고 있습니다.</p>
+
+      <div class="ed-block reveal">
+        <div class="ed-head"><h3>품질환경체계 구축</h3><span class="bar"></span></div>
+        <p class="ed-desc">품질환경경영체계를 효과적으로 운영하여 경영목표를 달성할 수 있도록 기업활동이 환경에 미치는 영향과 리스크를 평가하고, 품질환경 경영 실적을 체계적으로 관리·분석하고 있습니다. 품질환경 경영시스템과 관련된 정보에 대하여 공감대를 형성하고 법규와 규정을 준수하고 있습니다.</p>
+      </div>
+
+      <div class="ed-block reveal">
+        <div class="ed-head"><h3>품질 · 환경 경영방침 수립</h3><span class="bar"></span></div>
+        <div class="ed-policy">
+          <div class="doc"><img src="company_assets/esg/esg05_img01.jpg" alt="수산이앤에스 품질방침" loading="lazy"></div>
+          <ul>
+            <li>품질 · 환경 경영방침 수립</li>
+            <li>규정과 절차 준수를 통한 품질 확보</li>
+            <li>품질 및 환경과 함께하는 기업문화 정착</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ed-block reveal">
+        <div class="ed-head"><h3>품질 · 환경 강화 활동</h3><span class="bar"></span></div>
+        <div class="ed-pdca">
+          <ul class="plist">
+            <li><b>(P)</b> 품질환경 목표 / 계획</li>
+            <li><b>(D)</b> 지원 및 운용</li>
+            <li><b>(C)</b> 성과 평가</li>
+            <li><b>(A)</b> 개선</li>
+          </ul>
+          <div class="pimg"><img src="company_assets/esg/esg05_img02.jpg" alt="품질환경 PDCA 강화활동 체계" loading="lazy"></div>
+        </div>
+      </div>
+
+      <div class="ed-block reveal">
+        <div class="ed-head"><h3>품질보증체계 인증서</h3><span class="bar"></span></div>
+        <div class="cert-grid">
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-kepic1.jpg" alt="KEPIC 자격인증서 EN-081" loading="lazy"></div><div class="cbody"><h5>KEPIC 자격인증서 (EN-081)</h5><p>전기 1급 논리연산장치(PLC) 모듈의 제작</p></div></div>
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-kepic2.jpg" alt="KEPIC 자격인증서 EN-733" loading="lazy"></div><div class="cbody"><h5>KEPIC 자격인증서 (EN-733)</h5><p>전기 1급 계통(보호·제어·경보·감시) 및 현장(보조)제어반의 제작</p></div></div>
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-kiwa1.jpg" alt="품질경영시스템 인증서 ISO 9001" loading="lazy"></div><div class="cbody"><h5>품질경영시스템 인증서 (KQ 091246)</h5><p>발전·산업플랜트 전기 및 계측제어시스템의 설계·연구개발·제작·설치 및 정비</p></div></div>
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-kiwa2.jpg" alt="환경경영시스템 인증서 ISO 14001" loading="lazy"></div><div class="cbody"><h5>환경경영시스템 인증서 (KE 07550)</h5><p>발전·산업플랜트 전기 및 계측제어시스템에 대한 시공·시운전 및 정비</p></div></div>
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-lrqa1.jpg" alt="항공우주경영시스템 인증서 AS9100" loading="lazy"></div><div class="cbody"><h5>항공우주경영시스템 인증서 (10522215)</h5><p>Design and manufacture of signal processing system for aerospace and defense application</p></div></div>
+          <div class="cert-card"><div class="cimg"><img src="company_assets/esg/cert-lrqa2.jpg" alt="항공우주경영시스템 인증서 부속서" loading="lazy"></div><div class="cbody"><h5>항공우주경영시스템 인증서 (부속서)</h5><p>인증 범위 상세 (Certificate Schedule)</p></div></div>
+        </div>
       </div>
     </div>
   </div>
