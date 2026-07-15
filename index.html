@@ -612,12 +612,30 @@
   </div>
 </div>
 <script>
-  /* ▼ 비밀번호를 바꾸려면: 새 비밀번호의 SHA-256 해시값으로 교체하세요 ▼ */
+  /* 기본(초기) 비밀번호 해시. 관리자가 설정에서 변경하면 클라우드(gate_pw_hash)에 저장되어 이 값 대신 사용됩니다. */
   const GATE_PW_HASH = 'fbdb32e45b2566ac0a1ead4d585162645698e431dfec179c69ccffb31d996a03';
-  /* ▲ 해시 생성: https://emn178.github.io/online-tools/sha256.html ▲ */
+
+  /* SHA-256 16진 해시 */
+  async function sha256Hex(s){
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s)));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  /* 현재 유효한 비밀번호 해시: 클라우드(gate_pw_hash) 우선 → localStorage 캐시 → 기본값 */
+  async function resolveGateHash(){
+    try{
+      if(typeof sbGet==='function'){
+        const h = await sbGet('gate_pw_hash');
+        if(typeof h==='string' && h.length===64){ try{ localStorage.setItem('gate_pw_hash', h); }catch(e){} return h; }
+      }
+    }catch(e){}
+    try{ const l=localStorage.getItem('gate_pw_hash'); if(l && l.length===64) return l; }catch(e){}
+    return GATE_PW_HASH;
+  }
 
   (function(){
-    if(sessionStorage.getItem('gm_auth')==='ok'){
+    let hasSession=false;
+    try{ const s=JSON.parse(localStorage.getItem('gm_session')||'null'); hasSession=!!(s&&s.access_token); }catch(e){}
+    if(hasSession){
       document.getElementById('gate').style.display='none';
     } else {
       setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
@@ -627,17 +645,19 @@
   async function gateCheck(){
     const v=(document.getElementById('gatePw').value||'').trim();
     if(!v) return;
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
-    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    if(hash===GATE_PW_HASH){
-      sessionStorage.setItem('gm_auth','ok');
+    const err=document.getElementById('gateErr');
+    err.style.color='#8B95A1'; err.textContent='확인 중…';
+    try{
+      await gmSignIn(v);   // Supabase 로그인(공용 계정) → 토큰 저장
+      err.textContent=''; err.style.color='#F04452';
       document.getElementById('gate').style.display='none';
-    } else {
-      const err=document.getElementById('gateErr');
+      if(typeof sbInit==='function'){ try{ await sbInit(); }catch(e){} }   // 토큰으로 데이터 재로딩
+    }catch(e){
+      err.style.color='#F04452';
       err.textContent='비밀번호가 올바르지 않습니다';
       document.getElementById('gatePw').value='';
       document.getElementById('gatePw').focus();
-      setTimeout(()=>{ err.textContent=''; },2500);
+      setTimeout(()=>{ if(err.textContent==='비밀번호가 올바르지 않습니다') err.textContent=''; },2500);
     }
   }
 </script>
@@ -1213,6 +1233,18 @@ async function sendAiMsg(){
       <button class="set-link" onclick="openVoucherGui()">📥 전표 생성기</button>
     </div>
 
+    <div class="set-section">🔐 관리자 · 비밀번호 변경</div>
+    <div style="font-size:11.5px;color:var(--t3);margin:-4px 0 10px;line-height:1.6;">현재 비밀번호를 확인한 뒤 새 비밀번호로 바꿉니다. 변경하면 <b>모든 기기·사용자</b>의 접속 비밀번호가 함께 바뀝니다.</div>
+    <div class="set-field"><label>현재 비밀번호</label><input type="password" id="setCurPw" autocomplete="off" placeholder="현재 비밀번호"></div>
+    <div class="set-grid">
+      <div class="set-field"><label>새 비밀번호</label><input type="password" id="setNewPw" autocomplete="new-password" placeholder="4자 이상"></div>
+      <div class="set-field"><label>새 비밀번호 확인</label><input type="password" id="setNewPw2" autocomplete="new-password" placeholder="새 비밀번호 재입력"></div>
+    </div>
+    <div class="set-row">
+      <div class="info" id="setPwMsg" style="min-height:16px;font-size:12px;"></div>
+      <button class="set-btn" onclick="changeGatePassword()">🔐 비밀번호 변경</button>
+    </div>
+
     <div class="modal-actions">
       <button class="set-btn line" onclick="closeSettings()">취소</button>
       <button class="set-btn" onclick="saveSettings()">저장</button>
@@ -1351,6 +1383,43 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SB_REST = SB_URL + '/rest/v1/app_store';
 const SB_HEADERS = { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json' };
 
+/* ── 접속 인증 (Supabase Auth · 공용 계정) ─────────────────────────────────── */
+const AUTH_EMAIL = 'nicehehe@soosan.co.kr';   // 공용 로그인 계정 (Supabase Authentication에 동일 계정을 만들어야 함)
+const GM_SESSION = 'gm_session';
+function gmGetSession(){ try{ return JSON.parse(localStorage.getItem(GM_SESSION)||'null'); }catch(e){ return null; } }
+function gmSetSession(d){ try{ localStorage.setItem(GM_SESSION, JSON.stringify({access_token:d.access_token, refresh_token:d.refresh_token})); }catch(e){} }
+function gmClearSession(){ try{ localStorage.removeItem(GM_SESSION); }catch(e){} }
+function gmToken(){ const s=gmGetSession(); return (s&&s.access_token)||''; }
+/* 데이터 호출용 헤더: 로그인 토큰 우선(없으면 anon키 — RLS OFF 상태 호환) */
+function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+(t||SB_KEY), 'Content-Type':'application/json' }; }
+async function gmSignIn(password){
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',
+    headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({email:AUTH_EMAIL,password})});
+  const d=await r.json().catch(()=>({}));
+  if(!d.access_token) throw new Error(d.error_description||d.msg||d.error||'로그인 실패');
+  gmSetSession(d); return true;
+}
+async function gmRefresh(){
+  const s=gmGetSession(); if(!s||!s.refresh_token) return false;
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',
+    headers:{apikey:SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({refresh_token:s.refresh_token})});
+  const d=await r.json().catch(()=>({}));
+  if(d.access_token){ gmSetSession(d); return true; }
+  gmClearSession(); return false;
+}
+async function gmChangePassword(newPassword){
+  const call=()=>fetch(SB_URL+'/auth/v1/user',{method:'PUT',
+    headers:{apikey:SB_KEY,'Authorization':'Bearer '+gmToken(),'Content-Type':'application/json'},
+    body:JSON.stringify({password:newPassword})});
+  let r=await call();
+  if(r.status===401 && await gmRefresh()) r=await call();
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error_description||d.msg||d.error||('변경 실패('+r.status+')'));
+  return true;
+}
+
 function setSyncStatus(state){
   const b = document.getElementById('syncBadge'); if(!b) return;
   const map = { online:['online','☁ 연결됨'], saving:['saving','💾 저장 중…'], loading:['loading','☁ 연결 중…'], offline:['offline','⚠ 오프라인(로컬)'] };
@@ -1359,7 +1428,9 @@ function setSyncStatus(state){
 }
 async function sbGet(key){
   try{
-    const r = await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`, { headers:SB_HEADERS });
+    const url = `${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`;
+    let r = await fetch(url, { headers: gmAuthHeaders() });
+    if(r.status===401 && await gmRefresh()) r = await fetch(url, { headers: gmAuthHeaders() });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const rows = await r.json();
     return rows.length ? rows[0].value : null;
@@ -1367,10 +1438,11 @@ async function sbGet(key){
 }
 async function sbSet(key, value){
   try{
-    const r = await fetch(`${SB_REST}?on_conflict=key`, {
-      method:'POST', headers:{ ...SB_HEADERS, Prefer:'resolution=merge-duplicates' },
-      body: JSON.stringify({ key, value, updated_at:new Date().toISOString() }),
-    });
+    const url = `${SB_REST}?on_conflict=key`;
+    const body = JSON.stringify({ key, value, updated_at:new Date().toISOString() });
+    const opts = ()=>({ method:'POST', headers:{ ...gmAuthHeaders(), Prefer:'resolution=merge-duplicates' }, body });
+    let r = await fetch(url, opts());
+    if(r.status===401 && await gmRefresh()) r = await fetch(url, opts());
     if(!r.ok) throw new Error('HTTP '+r.status);
     return true;
   }catch(e){ return false; }
@@ -1884,10 +1956,31 @@ function openSettings(){
   document.getElementById('setUserName').value = SETTINGS.userName||'';
   document.getElementById('setCompany').value = SETTINGS.company||'';
   document.getElementById('setSite').value = SETTINGS.site||'';
+  ['setCurPw','setNewPw','setNewPw2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const pm=document.getElementById('setPwMsg'); if(pm) pm.innerHTML='';
   recheckCloud();
   document.getElementById('settingsModal').classList.add('show');
 }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
+/* 관리자 · 접속 비밀번호 변경 (클라우드 gate_pw_hash에 저장 → 전 기기 적용) */
+async function changeGatePassword(){
+  const cur=(document.getElementById('setCurPw').value||'').trim();
+  const n1=(document.getElementById('setNewPw').value||'').trim();
+  const n2=(document.getElementById('setNewPw2').value||'').trim();
+  const msg=document.getElementById('setPwMsg');
+  const show=(t,ok)=>{ msg.innerHTML=`<b style="color:${ok?'#10B981':'#F04452'}">${t}</b>`; };
+  if(!cur||!n1||!n2){ show('현재/새 비밀번호를 모두 입력하세요.',false); return; }
+  if(n1.length<6){ show('새 비밀번호는 6자 이상이어야 합니다.',false); return; }
+  if(n1!==n2){ show('새 비밀번호가 서로 일치하지 않습니다.',false); return; }
+  if(n1===cur){ show('새 비밀번호가 현재 비밀번호와 같습니다.',false); return; }
+  show('변경 중…',true);
+  try{ await gmSignIn(cur); }catch(e){ show('현재 비밀번호가 올바르지 않습니다.',false); return; }
+  try{
+    await gmChangePassword(n1);
+    ['setCurPw','setNewPw','setNewPw2'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+    show('✅ 비밀번호가 변경되었습니다. 다음 접속부터 이 비밀번호로 로그인합니다.',true);
+  }catch(e){ show('변경 실패: '+(e.message||e),false); }
+}
 function saveSettings(){
   SETTINGS.userName = document.getElementById('setUserName').value.trim();
   SETTINGS.company = document.getElementById('setCompany').value.trim();
