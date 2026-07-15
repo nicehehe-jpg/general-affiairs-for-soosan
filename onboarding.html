@@ -71,6 +71,31 @@
 </style>
 </head>
 <body>
+<!-- ===== 접속 로그인 ===== -->
+<div id="gate" style="position:fixed;inset:0;z-index:9999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+  <div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">
+    <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+    <div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>
+    <div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>
+    <input id="gatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;" onkeydown="if(event.key==='Enter')gateCheck()">
+    <div id="gateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>
+    <button onclick="gateCheck()" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">들어가기</button>
+  </div>
+</div>
+<script>
+  (function(){
+    let hasSession=false;
+    try{ const s=JSON.parse(localStorage.getItem('gm_session')||'null'); hasSession=!!(s&&s.access_token); }catch(e){}
+    if(hasSession){ document.getElementById('gate').style.display='none'; }
+    else { setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100); }
+  })();
+  async function gateCheck(){
+    const v=(document.getElementById('gatePw').value||'').trim(); if(!v) return;
+    const err=document.getElementById('gateErr'); err.style.color='#8B95A1'; err.textContent='확인 중…';
+    try{ await gmSignIn(v); location.reload(); }
+    catch(e){ err.style.color='#F04452'; err.textContent='비밀번호가 올바르지 않습니다'; document.getElementById('gatePw').value=''; document.getElementById('gatePw').focus(); setTimeout(()=>{ if(err.textContent==='비밀번호가 올바르지 않습니다') err.textContent=''; },2500); }
+  }
+</script>
   <a href="index.html" class="back-link">‹ 총무 관리 대시보드</a>
   <div class="page-head">
     <div>
@@ -113,6 +138,28 @@
 const SB_URL='https://vvyqldyljajlmtydtqdf.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
 const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+/* ── 접속 인증 (Supabase Auth · 공용 계정) ── */
+const AUTH_EMAIL='nicehehe@soosan.co.kr';
+const GM_SESSION='gm_session';
+function gmGetSession(){ try{ return JSON.parse(localStorage.getItem(GM_SESSION)||'null'); }catch(e){ return null; } }
+function gmSetSession(d){ try{ localStorage.setItem(GM_SESSION, JSON.stringify({access_token:d.access_token, refresh_token:d.refresh_token})); }catch(e){} }
+function gmToken(){ const s=gmGetSession(); return (s&&s.access_token)||''; }
+function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+(t||SB_KEY), 'Content-Type':'application/json' }; }
+async function gmSignIn(password){
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:AUTH_EMAIL,password})});
+  const d=await r.json().catch(()=>({})); if(!d.access_token) throw new Error(d.error_description||d.msg||d.error||'로그인 실패'); gmSetSession(d); return true;
+}
+async function gmRefresh(){
+  const s=gmGetSession(); if(!s||!s.refresh_token) return false;
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.refresh_token})});
+  const d=await r.json().catch(()=>({})); if(d.access_token){ gmSetSession(d); return true; } try{localStorage.removeItem(GM_SESSION);}catch(e){} return false;
+}
+async function authFetch(url, opts={}, extraHeaders={}){
+  const mk=()=>Object.assign({}, opts, {headers:{...gmAuthHeaders(), ...extraHeaders}});
+  let r=await fetch(url, mk());
+  if(r.status===401 && await gmRefresh()) r=await fetch(url, mk());
+  return r;
+}
 const REST=SB_URL+'/rest/v1/onboarding';
 
 const ITEMS=[
@@ -130,7 +177,7 @@ function setSync(s){const b=document.getElementById('syncBadge');const m={online
 async function loadAll(){
   setSync('loading');
   try{
-    const r=await fetch(`${REST}?order=created_at.desc&limit=200`,{headers:H});
+    const r=await authFetch(`${REST}?order=created_at.desc&limit=200`);
     if(!r.ok) throw new Error('HTTP '+r.status);
     ROWS=await r.json(); setSync('online'); render();
   }catch(e){ setSync('offline'); document.getElementById('list').innerHTML=`<div class="empty" style="color:var(--red)">오류: ${e.message}</div>`; }
@@ -169,7 +216,7 @@ function render(){
 
 async function toggle(id,key,val){
   try{
-    const r=await fetch(`${REST}?id=eq.${id}`,{method:'PATCH',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify({[key]:val})});
+    const r=await authFetch(`${REST}?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({[key]:val})},{Prefer:'return=minimal'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const row=ROWS.find(x=>x.id===id); if(row) row[key]=val; render();
   }catch(e){ alert('변경 실패: '+e.message); }
@@ -177,7 +224,7 @@ async function toggle(id,key,val){
 async function removeRow(id){
   if(!confirm('이 온보딩 기록을 삭제할까요?')) return;
   try{
-    const r=await fetch(`${REST}?id=eq.${id}`,{method:'DELETE',headers:{...H,Prefer:'return=minimal'}});
+    const r=await authFetch(`${REST}?id=eq.${id}`,{method:'DELETE'},{Prefer:'return=minimal'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     ROWS=ROWS.filter(x=>x.id!==id); render();
   }catch(e){ alert('삭제 실패: '+e.message); }
@@ -191,7 +238,7 @@ async function saveAdd(){
   const rec={ name, dept:document.getElementById('aDept').value.trim(), position:document.getElementById('aPos').value.trim(),
     hire_date:document.getElementById('aHire').value||null, source:'manual' };
   try{
-    const r=await fetch(REST,{method:'POST',headers:{...H,Prefer:'return=minimal'},body:JSON.stringify(rec)});
+    const r=await authFetch(REST,{method:'POST',body:JSON.stringify(rec)},{Prefer:'return=minimal'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     closeAdd(); ['aName','aDept','aPos','aHire'].forEach(i=>document.getElementById(i).value='');
     loadAll();
