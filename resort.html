@@ -117,28 +117,22 @@
   </div>
 </div>
 <script>
-  const GATE_PW_HASH = '942b9f04dfaa9d87f4ef9d76fdb40cfd30b843cf8121fc19274bd285bd0c999a';
   (function(){
-    if(sessionStorage.getItem('gm_auth')==='ok'){
-      document.getElementById('gate').style.display='none';
-    } else {
-      setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100);
-    }
+    let hasSession=false;
+    try{ const s=JSON.parse(localStorage.getItem('gm_session')||'null'); hasSession=!!(s&&s.access_token); }catch(e){}
+    if(hasSession){ document.getElementById('gate').style.display='none'; }
+    else { setTimeout(()=>{ const el=document.getElementById('gatePw'); if(el) el.focus(); },100); }
   })();
   async function gateCheck(){
-    const v=(document.getElementById('gatePw').value||'').trim();
-    if(!v) return;
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
-    const hash = Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-    if(hash===GATE_PW_HASH){
-      sessionStorage.setItem('gm_auth','ok');
-      document.getElementById('gate').style.display='none';
-    } else {
-      const err=document.getElementById('gateErr');
-      err.textContent='비밀번호가 올바르지 않습니다';
-      document.getElementById('gatePw').value='';
-      document.getElementById('gatePw').focus();
-      setTimeout(()=>{ err.textContent=''; },2500);
+    const v=(document.getElementById('gatePw').value||'').trim(); if(!v) return;
+    const err=document.getElementById('gateErr'); err.style.color='#8B95A1'; err.textContent='확인 중…';
+    try{
+      await gmSignIn(v);
+      location.reload();
+    }catch(e){
+      err.style.color='#F04452'; err.textContent='비밀번호가 올바르지 않습니다';
+      document.getElementById('gatePw').value=''; document.getElementById('gatePw').focus();
+      setTimeout(()=>{ if(err.textContent==='비밀번호가 올바르지 않습니다') err.textContent=''; },2500);
     }
   }
 </script>
@@ -250,18 +244,40 @@ const SB_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
 const SB_REST = SB_URL + '/rest/v1/app_store';
 const SB_HEADERS = { apikey:SB_KEY, Authorization:'Bearer '+SB_KEY, 'Content-Type':'application/json' };
+/* ── 접속 인증 (Supabase Auth · 공용 계정) ── */
+const AUTH_EMAIL='nicehehe@soosan.co.kr';
+const GM_SESSION='gm_session';
+function gmGetSession(){ try{ return JSON.parse(localStorage.getItem(GM_SESSION)||'null'); }catch(e){ return null; } }
+function gmSetSession(d){ try{ localStorage.setItem(GM_SESSION, JSON.stringify({access_token:d.access_token, refresh_token:d.refresh_token})); }catch(e){} }
+function gmToken(){ const s=gmGetSession(); return (s&&s.access_token)||''; }
+function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+(t||SB_KEY), 'Content-Type':'application/json' }; }
+async function gmSignIn(password){
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:AUTH_EMAIL,password})});
+  const d=await r.json().catch(()=>({})); if(!d.access_token) throw new Error(d.error_description||d.msg||d.error||'로그인 실패'); gmSetSession(d); return true;
+}
+async function gmRefresh(){
+  const s=gmGetSession(); if(!s||!s.refresh_token) return false;
+  const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.refresh_token})});
+  const d=await r.json().catch(()=>({})); if(d.access_token){ gmSetSession(d); return true; } try{localStorage.removeItem(GM_SESSION);}catch(e){} return false;
+}
 function setSyncStatus(state){
   const b=document.getElementById('syncBadge'); if(!b) return;
   const map={online:['online','☁ 연결됨'],saving:['saving','💾 저장 중…'],loading:['loading','☁ 연결 중…'],offline:['offline','⚠ 오프라인(로컬)']};
   const [cls,txt]=map[state]||map.loading; b.className='sync-badge '+cls; b.textContent=txt;
 }
 async function sbGet(key){
-  try{ const r=await fetch(`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`,{headers:SB_HEADERS});
+  try{ const url=`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`;
+    let r=await fetch(url,{headers:gmAuthHeaders()});
+    if(r.status===401 && await gmRefresh()) r=await fetch(url,{headers:gmAuthHeaders()});
     if(!r.ok) throw 0; const rows=await r.json(); return rows.length?rows[0].value:null; }catch(e){ return undefined; }
 }
 async function sbSet(key,value){
-  try{ const r=await fetch(`${SB_REST}?on_conflict=key`,{method:'POST',headers:{...SB_HEADERS,Prefer:'resolution=merge-duplicates'},
-    body:JSON.stringify({key,value,updated_at:new Date().toISOString()})}); if(!r.ok) throw 0; return true; }catch(e){ return false; }
+  try{ const url=`${SB_REST}?on_conflict=key`;
+    const body=JSON.stringify({key,value,updated_at:new Date().toISOString()});
+    const opts=()=>({method:'POST',headers:{...gmAuthHeaders(),Prefer:'resolution=merge-duplicates'},body});
+    let r=await fetch(url,opts());
+    if(r.status===401 && await gmRefresh()) r=await fetch(url,opts());
+    if(!r.ok) throw 0; return true; }catch(e){ return false; }
 }
 const _pt={};
 function sbPush(key,value){
