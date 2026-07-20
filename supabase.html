@@ -242,10 +242,13 @@
   created_at timestamptz <span class="sql-kw">default</span> now()
 );
 
-<span class="sql-kw">-- RLS 비활성화 (내부 사용용)</span>
-<span class="sql-kw">alter table</span> todos <span class="sql-kw">disable row level security</span>;
-<span class="sql-kw">alter table</span> gongmu_tasks <span class="sql-kw">disable row level security</span>;
-<span class="sql-kw">alter table</span> contacts <span class="sql-kw">disable row level security</span>;
+<span class="sql-kw">-- RLS 활성화 + 로그인(authenticated) 사용자만 허용 (보안)</span>
+<span class="sql-kw">alter table</span> todos <span class="sql-kw">enable row level security</span>;
+<span class="sql-kw">alter table</span> gongmu_tasks <span class="sql-kw">enable row level security</span>;
+<span class="sql-kw">alter table</span> contacts <span class="sql-kw">enable row level security</span>;
+<span class="sql-kw">create policy</span> <span class="sql-str">"auth_todos"</span> <span class="sql-kw">on</span> todos <span class="sql-kw">for all to</span> authenticated <span class="sql-kw">using</span> (true) <span class="sql-kw">with check</span> (true);
+<span class="sql-kw">create policy</span> <span class="sql-str">"auth_gongmu"</span> <span class="sql-kw">on</span> gongmu_tasks <span class="sql-kw">for all to</span> authenticated <span class="sql-kw">using</span> (true) <span class="sql-kw">with check</span> (true);
+<span class="sql-kw">create policy</span> <span class="sql-str">"auth_contacts"</span> <span class="sql-kw">on</span> contacts <span class="sql-kw">for all to</span> authenticated <span class="sql-kw">using</span> (true) <span class="sql-kw">with check</span> (true);
     </div>
     <div class="btn-row">
       <button class="btn btn-outline btn-sm" onclick="checkTables()">🔍 테이블 존재 확인</button>
@@ -323,7 +326,17 @@ let sb = null;
 const DEFAULT_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
 const DEFAULT_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
 
-window.addEventListener('DOMContentLoaded', () => {
+// 로그인 세션(gm_session) 토큰을 supabase-js 클라이언트에 적용
+// → sb.from(...) 호출이 '익명(anon)'이 아니라 '로그인 사용자(authenticated)'로 나가게 함(RLS 대응)
+function gmSession(){ try{ return JSON.parse(localStorage.getItem('gm_session')||'null'); }catch(e){ return null; } }
+async function applySession(){
+  const s = gmSession();
+  if (sb && s && s.access_token) {
+    try { await sb.auth.setSession({ access_token:s.access_token, refresh_token:s.refresh_token }); } catch(e) {}
+  }
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
   let cfg = loadConfig();
   if (!cfg) {
     cfg = { url: DEFAULT_URL, key: DEFAULT_KEY };
@@ -332,6 +345,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sbUrl').value = cfg.url;
   document.getElementById('sbKey').value = cfg.key;
   initClient(cfg.url, cfg.key, false);
+  await applySession();          // 로그인 토큰 적용
   // 자동 연결 테스트
   saveAndTest();
   refreshCounts();
@@ -370,6 +384,7 @@ async function saveAndTest() {
 
   showSt('connStatus','info','연결 테스트 중...');
   if (!initClient(url, key, true)) return;
+  await applySession();          // 로그인 토큰 적용
 
   try {
     const { error } = await sb.from('todos').select('id').limit(1);
@@ -641,10 +656,13 @@ create table if not exists contacts (
   created_at timestamptz default now()
 );
 
--- RLS 비활성화 (내부 사용용)
-alter table todos disable row level security;
-alter table gongmu_tasks disable row level security;
-alter table contacts disable row level security;`;
+-- RLS 활성화 + 로그인(authenticated) 사용자만 허용 (보안)
+alter table todos enable row level security;
+alter table gongmu_tasks enable row level security;
+alter table contacts enable row level security;
+create policy "auth_todos" on todos for all to authenticated using (true) with check (true);
+create policy "auth_gongmu" on gongmu_tasks for all to authenticated using (true) with check (true);
+create policy "auth_contacts" on contacts for all to authenticated using (true) with check (true);`;
   navigator.clipboard.writeText(sql).then(() => {
     const btn = document.querySelector('.sql-copy');
     btn.textContent = '복사됨 ✓';
