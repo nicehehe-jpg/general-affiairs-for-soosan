@@ -142,7 +142,8 @@ app.post('/send', async (req, res) => {
 app.get('/health', (_, res) => res.json({ ok: true, msg: '메일 서버 실행 중' }));
 
 const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`메일 서버 실행 중: http://localhost:${PORT}`);
+// 127.0.0.1 로만 바인딩 → 같은 PC(로컬)에서만 접근 가능. LAN 다른 기기의 무단 메일 릴레이 차단.
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`메일 서버 실행 중: http://127.0.0.1:${PORT} (로컬 전용)`);
   console.log(`SMTP: mail.soosan.co.kr:25`);
 });

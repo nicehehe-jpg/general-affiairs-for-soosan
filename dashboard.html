@@ -254,7 +254,9 @@ async function fetchAppStore(){
   return map;
 }
 async function fetchTable(path){
-  const r = await fetch(`${SB_URL}/rest/v1/${path}`, { headers:SB_HEADERS });
+  const u = `${SB_URL}/rest/v1/${path}`;
+  let r = await fetch(u, { headers:gmAuthHeaders() });
+  if(r.status===401 && await gmRefresh()) r = await fetch(u, { headers:gmAuthHeaders() });
   if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
 }
