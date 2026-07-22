@@ -267,6 +267,7 @@
     <button class="btn line sm" onclick="backupJSON()">💾 백업</button>
     <button class="btn line sm" onclick="document.getElementById('restoreFile').click()">📂 복원</button>
     <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="restoreJSON(this)">
+    <button class="btn sm" style="background:#eab308;color:#fff;" onclick="applySurvey20260722()">📋 재고실사 반영(7/22)</button>
     <button class="btn line sm" onclick="resetData()">↺ 초기화</button>
   </div>
 </div>
@@ -2169,6 +2170,39 @@ function restoreJSON(input){
     input.value = '';
   };
   reader.readAsText(file);
+}
+
+/* ===== 재고실사 반영 (2026-07-22) · 실사 수량으로 재고 맞춤 ===== */
+const SURVEY_20260722 = {"sweat_long":{"90":5,"95":3,"100":8,"105":8,"110":7,"115":6,"120":15},"sweat_short":{"90":2,"95":11,"100":20,"105":4,"110":12,"115":14,"120":10},"winter_top":{"90":3,"95":6,"100":5,"105":1,"110":18,"115":24,"120":2},"spring_top":{"90":18,"95":20,"100":25,"105":10,"110":18,"115":32,"120":11},"summer_top":{"90":14,"95":16,"100":11,"105":19,"110":15,"115":36,"120":10},"vest":{"M":3,"L":10,"XL":4,"2XL":5,"3XL":9,"4XL":0,"5XL":5},"winter_bottom":{"28":7,"30":10,"32":13,"34":6,"36":7,"38":20,"40":15,"42":8},"spring_bottom":{"28":7,"30":23,"32":25,"34":27,"36":16,"38":25,"40":9,"42":19},"summer_bottom":{"28":2,"30":5,"32":5,"34":11,"36":4,"38":5,"40":3,"42":3}};
+async function applySurvey20260722(){
+  if(typeof TXNS==='undefined' || typeof computeStock!=='function'){ alert('데이터 로딩 후 다시 시도하세요.'); return; }
+  const itemByKey={}; ITEMS.forEach(it=>itemByKey[it.key]=it);
+  const stock=computeStock();
+  const plan=[];
+  for(const key in SURVEY_20260722){
+    const it=itemByKey[key]; if(!it) continue;
+    for(const size in SURVEY_20260722[key]){
+      const cur=(stock[key]&&size in stock[key])?stock[key][size]:0;
+      const delta=SURVEY_20260722[key][size]-cur;
+      if(delta) plan.push({key,size,delta,it});
+    }
+  }
+  if(!plan.length){ alert('이미 실재고와 일치합니다. 반영할 변경이 없습니다.'); return; }
+  const plus=plan.filter(p=>p.delta>0).reduce((s,p)=>s+p.delta,0);
+  const minus=plan.filter(p=>p.delta<0).reduce((s,p)=>s+p.delta,0);
+  if(!confirm('재고실사(2026-07-22) 반영\n\n조정 '+plan.length+'건 (입고 +'+plus+' / 출고 '+minus+')\n각 사이즈 재고를 실사 수량으로 맞춥니다.\n\n실행 전 현재 데이터를 클라우드에 자동 백업합니다.\n계속할까요?')) return;
+  const bakKey=TXN_KEY+'_bak_sisa_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+  const ok=await sbSet(bakKey, TXNS);
+  if(!ok){ alert('⚠ 백업 실패 — 로그인 상태를 확인한 뒤 다시 시도하세요. 반영을 중단합니다.'); return; }
+  let maxNum=TXNS.reduce((m,t)=>{const n=parseInt((t.id||'r0').replace(/\D/g,''))||0;return n>m?n:m;},0);
+  plan.forEach(p=>{ maxNum++;
+    TXNS.push({id:'adj'+String(maxNum).padStart(4,'0'),date:'2026-07-22',key:p.key,size:p.size,
+      type:p.delta>0?'in':'out',qty:Math.abs(p.delta),price:p.delta>0?(p.it.price||0):0,
+      maker:p.delta>0?(p.it.maker||''):'',party:'재고실사',note:'재고실사 반영 (2026-07-22)'});
+  });
+  saveTxns();
+  if(typeof renderAll==='function'){ try{ renderAll(); }catch(e){} }
+  alert('✅ 재고실사 반영 완료\n조정 '+plan.length+'건 (입고 +'+plus+' / 출고 '+minus+')\n백업키: '+bakKey);
 }
 
 /* ============== 초기화 ============== */
