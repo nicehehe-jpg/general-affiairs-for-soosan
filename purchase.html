@@ -438,11 +438,14 @@ const DOC_TYPES = [
   { key:'etc',         label:'기타 문서',        icon:'📎' },
 ];
 /* docs[key]는 경로 배열(신) 또는 문자열(구버전) 모두 지원 → 항상 배열로 정규화 */
+/* docs[key] 항목 = 경로 문자열(구버전) 또는 {p:경로, n:이름}(이름 지정 시). 항상 [{path,name}] 로 정규화 */
 function docFiles(c, key){
   const v = (c && c.docs) ? c.docs[key] : null;
-  if(Array.isArray(v)) return v.map(x=>String(x==null?'':x).trim()).filter(Boolean);
-  if(typeof v==='string' && v.trim()) return [v.trim()];
-  return [];
+  const arr = Array.isArray(v) ? v : (typeof v==='string' && v.trim() ? [v] : []);
+  return arr.map(x=>{
+    if(x && typeof x==='object'){ const p=String(x.p==null?'':x.p).trim(); return p ? {path:p, name:String(x.n==null?'':x.n).trim()} : null; }
+    const p=String(x==null?'':x).trim(); return p ? {path:p, name:''} : null;
+  }).filter(Boolean);
 }
 /* 문서 업로드 상태를 결재 진행 단계에 반영: 파일이 1개 이상이면 매칭 단계를 완료로.
    (해당없음(na)은 유지, 파일 삭제 시 자동 되돌리지 않음 — 수동 토글 존중) */
@@ -714,10 +717,13 @@ function renderCases(){
       </div>
       <div class="stage-row">${chips}</div>
       ${(()=>{
-        const rows = DOC_TYPES.flatMap(d=> docFiles(c,d.key).map((f,i,arr)=>({d,f,i,multi:arr.length>1})));
+        const rows = DOC_TYPES.flatMap(d=> docFiles(c,d.key).map((it,i,arr)=>({d,it,i,multi:arr.length>1})));
         if(!rows.length) return '';
         return `<div class="doc-row"><span class="doc-label">📂 관련 문서</span>${
-          rows.map(({d,f,i,multi})=>`<button class="doc-chip" onclick="openDoc('${c.id}','${d.key}',${i})" title="${esc(f)}">${d.icon} ${d.label}${multi?` <span style="opacity:.55;font-weight:800;">${i+1}</span>`:''}</button>`).join('')
+          rows.map(({d,it,i,multi})=>{
+            const label = it.name ? esc(it.name) : (esc(d.label)+(multi?` <span style="opacity:.55;font-weight:800;">${i+1}</span>`:''));
+            return `<button class="doc-chip" onclick="openDoc('${c.id}','${d.key}',${i})" title="${esc(it.path)}">${d.icon} ${label}</button>`;
+          }).join('')
         }</div>`;
       })()}
       ${c.note ? `<div class="case-note"><span class="k">📝 비고</span>${esc(c.note)}</div>` : ''}
@@ -744,7 +750,7 @@ function payScheduleLine(c){
 function openDoc(id, key, idx){
   const c = CASES.find(x=>x.id===id); if(!c || !c.docs) return;
   const files = docFiles(c, key);
-  const v = (files[idx||0]||'').replace(/^"+|"+$/g,''); if(!v) return;
+  const v = ((files[idx||0]||{}).path||'').replace(/^"+|"+$/g,''); if(!v) return;
   if(/^https?:\/\//i.test(v)){
     window.open(v, '_blank');
     return;
@@ -764,9 +770,12 @@ function copyDocPath(v){
 }
 
 /* ===== 관련 문서: 종류별 여러 경로 입력 UI ===== */
-function docRowHtml(key, val){
+function docRowHtml(key, item){
+  const path = (item && typeof item==='object') ? (item.path||'') : (item||'');
+  const name = (item && typeof item==='object') ? (item.name||'') : '';
   return `<div class="doc-row-item">`
-    + `<input type="text" class="cmDocInput" data-key="${key}" value="${esc(val||'')}" placeholder="파일 또는 폴더 경로 · 웹주소(http…)">`
+    + `<input type="text" class="cmDocName" data-key="${key}" value="${esc(name)}" placeholder="이름(선택)" style="flex:0 0 120px;min-width:0;">`
+    + `<input type="text" class="cmDocInput" data-key="${key}" value="${esc(path)}" placeholder="파일 또는 폴더 경로 · 웹주소(http…)">`
     + `<button type="button" class="browse-btn" onclick="browseDocRow(this)">📁 찾기</button>`
     + `<button type="button" class="doc-del-btn" onclick="removeDocRow(this)" title="이 경로 삭제">✕</button>`
     + `</div>`;
@@ -776,7 +785,7 @@ function renderDocFields(docs){
   const host = document.getElementById('cmDocFields');
   host.innerHTML = DOC_TYPES.map(d=>{
     const files = docFiles({docs}, d.key);
-    const rows = (files.length ? files : ['']).map(f=>docRowHtml(d.key, f)).join('');
+    const rows = (files.length ? files : [{path:'',name:''}]).map(f=>docRowHtml(d.key, f)).join('');
     return `<div class="pm-field cm-doc-block" data-key="${d.key}">`
       + `<label>${d.icon} ${d.label}</label>`
       + `<div class="cm-doc-rows">${rows}</div>`
@@ -807,9 +816,13 @@ function browseDocRow(btn){
 function collectDocs(){
   const docs = {};
   DOC_TYPES.forEach(d=>{ docs[d.key] = []; });
-  document.querySelectorAll('#cmDocFields .cmDocInput').forEach(inp=>{
-    const v = inp.value.trim().replace(/^"+|"+$/g,'').trim();
-    if(v && docs[inp.dataset.key]) docs[inp.dataset.key].push(v);
+  document.querySelectorAll('#cmDocFields .doc-row-item').forEach(row=>{
+    const inp = row.querySelector('.cmDocInput'); if(!inp) return;
+    const v = inp.value.trim().replace(/^"+|"+$/g,'').trim(); if(!v) return;
+    const key = inp.dataset.key; if(!docs[key]) return;
+    const nameInp = row.querySelector('.cmDocName');
+    const n = nameInp ? nameInp.value.trim() : '';
+    docs[key].push(n ? { p:v, n:n } : v);   // 이름 있으면 {p,n} 객체, 없으면 경로 문자열(하위호환)
   });
   return docs;
 }
