@@ -2307,22 +2307,25 @@ function renderAll(){
         tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#999;">슬랙에서 접수된 신청이 없습니다.</td></tr>';
         return;
       }
+      const escH = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       tbody.innerHTML = rows.map(r => {
         const s = STATUS_MAP[r.status] || STATUS_MAP.pending;
+        const rid = Number(r.id);   // 슬랙 유입값 → 정수 강제(주입 방지)
         return `<tr style="border-bottom:1px solid #f0f0f0;">
-          <td style="padding:8px 12px;">${(r.date||r.created_at||"").slice(0,10)}</td>
-          <td style="padding:8px 12px;">${r.party||"-"}</td>
-          <td style="padding:8px 12px;">${ITEM_NAMES[r.item_key] || r.item_key || "-"}</td>
-          <td style="padding:8px 12px;">${r.size||"-"}</td>
-          <td style="padding:8px 12px;">${r.qty||1}</td>
+          <td style="padding:8px 12px;">${escH((r.date||r.created_at||"").slice(0,10))}</td>
+          <td style="padding:8px 12px;">${escH(r.party||"-")}</td>
+          <td style="padding:8px 12px;">${escH(ITEM_NAMES[r.item_key] || r.item_key || "-")}</td>
+          <td style="padding:8px 12px;">${escH(r.size||"-")}</td>
+          <td style="padding:8px 12px;">${Number(r.qty)||1}</td>
           <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:4px;font-size:12px;">${s.label}</span></td>
           <td style="padding:8px 12px;">${r.status==="pending"
-            ? `<button onclick="updateSlackStatus(${r.id},'approved')" style="background:#28a745;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;margin-right:4px;">승인</button><button onclick="updateSlackStatus(${r.id},'rejected')" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;">반려</button>`
+            ? `<button onclick="updateSlackStatus(${rid},'approved')" style="background:#28a745;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;margin-right:4px;">승인</button><button onclick="updateSlackStatus(${rid},'rejected')" style="background:#dc3545;color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:12px;">반려</button>`
             : "-"}</td>
         </tr>`;
       }).join("");
     } catch(e) {
-      tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:red;">오류: ${e.message}</td></tr>`;
+      const msg = String(e&&e.message||e).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:20px;text-align:center;color:red;">오류: ${msg}</td></tr>`;
     }
   };
 
