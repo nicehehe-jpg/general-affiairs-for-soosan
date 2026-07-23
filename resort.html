@@ -770,26 +770,30 @@ async function sbInit(){
         tbody.innerHTML = '<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--t3);">슬랙에서 접수된 신청이 없습니다.</td></tr>';
         return;
       }
+      const escH = v => String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       tbody.innerHTML = rows.map(r=>{
         const imported = r.status==='imported' || alreadyImported(r.id);
         const m = MATCH[r.match_status] || MATCH.unmatched;
         const s = imported ? ST.imported : ST.pending;
-        const facName = r.facility==='birch'?'⛷️ 버치힐':(r.facility==='kimila'?'🏖️ 키밀라':r.facility||'-');
+        const rid = Number(r.id);   // 슬랙 유입값 → 정수 강제(주입 방지)
+        const facName = r.facility==='birch'?'⛷️ 버치힐':(r.facility==='kimila'?'🏖️ 키밀라':escH(r.facility||'-'));
+        const hireTitle = escH(r.hire_date?('입사일 '+r.hire_date):'입사일 미확인 — 신청 목록에서 직접 입력 필요');
         return `<tr style="border-top:1px solid var(--line);">
-          <td style="padding:8px 12px;">${(r.created_at||'').slice(0,10)}</td>
-          <td style="padding:8px 12px; font-weight:700;">${r.name||'-'}</td>
-          <td style="padding:8px 12px; color:var(--t2);">${r.dept||'-'}</td>
+          <td style="padding:8px 12px;">${escH((r.created_at||'').slice(0,10))}</td>
+          <td style="padding:8px 12px; font-weight:700;">${escH(r.name||'-')}</td>
+          <td style="padding:8px 12px; color:var(--t2);">${escH(r.dept||'-')}</td>
           <td style="padding:8px 12px;">${facName}</td>
-          <td style="padding:8px 12px;">${r.check_in||'-'}</td>
-          <td style="padding:8px 12px;">${r.nights||1}</td>
-          <td style="padding:8px 12px;"><span style="background:${m.bg};color:${m.color};padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;" title="${r.hire_date?('입사일 '+r.hire_date):'입사일 미확인 — 신청 목록에서 직접 입력 필요'}">${m.label}</span></td>
+          <td style="padding:8px 12px;">${escH(r.check_in||'-')}</td>
+          <td style="padding:8px 12px;">${Number(r.nights)||1}</td>
+          <td style="padding:8px 12px;"><span style="background:${m.bg};color:${m.color};padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;" title="${hireTitle}">${m.label}</span></td>
           <td style="padding:8px 12px;"><span style="background:${s.bg};color:${s.color};padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;">${s.label}</span></td>
           <td style="padding:8px 12px;">${imported ? '-' :
-            `<button class="mini on" onclick="window.importResortReq(${r.id})">반영</button>`}</td>
+            `<button class="mini on" onclick="window.importResortReq(${rid})">반영</button>`}</td>
         </tr>`;
       }).join('');
     }catch(e){
-      tbody.innerHTML = `<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--red);">오류: ${e.message}</td></tr>`;
+      const msg = String(e&&e.message||e).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      tbody.innerHTML = `<tr><td colspan="9" style="padding:18px;text-align:center;color:var(--red);">오류: ${msg}</td></tr>`;
     }
   };
 
