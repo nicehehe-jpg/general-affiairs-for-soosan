@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시간외근무 저장자료 · 관리자</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F2F4F6;--card:#FFF;--line:#E5E8EB;--line2:#F0F2F5;
+  --blue:#3182F6;--blue-bg:#EBF3FE;--green:#00C471;--red:#F04452;
+  --t1:#191F28;--t2:#4E5968;--t3:#8B95A1;--t4:#B0B8C1;
+}
+body{background:var(--bg);font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:var(--t1)}
+.header{background:var(--card);border-bottom:1px solid var(--line);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.logo{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;background:var(--blue);border-radius:50%}
+.con{max-width:1000px;margin:0 auto;padding:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.mut{color:var(--t3);font-size:13px}
+.btn{border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-b{background:var(--blue);color:#fff}
+.btn-g{background:var(--green);color:#fff}
+.btn-o{background:transparent;border:1px solid var(--line);color:var(--t2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:11px 10px;border-bottom:1px solid var(--line2);text-align:left}
+th{color:var(--t3);font-weight:700;font-size:12px;background:var(--bg)}
+tr:hover td{background:#FAFBFC}
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;background:var(--blue-bg);color:var(--blue)}
+/* 로그인 게이트 */
+.gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+.gatebox{background:#fff;border-radius:22px;padding:40px 32px;width:360px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center}
+.gatebox input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;outline:none}
+.gatebox button{width:100%;padding:13px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo"><span class="dot"></span>시간외근무 저장자료 · 관리자</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="who" class="mut"></span>
+    <button class="btn btn-o" onclick="adminSignOut()">로그아웃</button>
+  </div>
+</div>
+
+<div class="con">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div>
+        <div style="font-size:16px;font-weight:800">저장된 ERP 양식</div>
+        <div class="mut" id="cnt" style="margin-top:2px">불러오는 중…</div>
+      </div>
+      <button class="btn btn-b" onclick="loadList()">↻ 새로고침</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr>
+          <th style="width:70px">연월</th><th>파일명</th><th style="width:120px">사업소</th>
+          <th style="width:60px;text-align:right">건수</th><th style="width:150px">저장일시</th><th style="width:90px"></th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="mut" style="text-align:center;padding:24px">불러오는 중…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   관리자 페이지 — 저장된 시간외근무 ERP 양식 열람/다운로드
+   · 이 페이지는 shared.js를 쓰지 않습니다(일반 계정과 분리).
+   · 반드시 "관리자 전용 Supabase 계정"으로만 로그인 → RLS가
+     overtime_archive의 SELECT를 관리자 이메일에만 허용.
+   ───────────────────────────────────────────────────────────── */
+var SB_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+
+/* ▼▼▼ 반드시 여기에 "새로 만든 관리자 계정 이메일"을 입력하세요 ▼▼▼ */
+var ADMIN_EMAIL = 'admin@soosan.co.kr';
+/* ▲▲▲ Supabase 대시보드에서 이 이메일로 계정을 만들고, RLS에도 동일 이메일 지정 ▲▲▲ */
+
+var SESSION_KEY = 'gm_admin_session';
+function getSession(){ try{ return JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){ return null; } }
+function setSession(d){ try{ localStorage.setItem(SESSION_KEY, JSON.stringify({access_token:d.access_token, refresh_token:d.refresh_token})); }catch(e){} }
+function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+function token(){ var s=getSession(); return (s&&s.access_token)||''; }
+function authHeaders(){ return { apikey:SB_KEY, Authorization:'Bearer '+token(), 'Content-Type':'application/json' }; }
+
+async function signIn(password){
+  var r = await fetch(SB_URL+'/auth/v1/token?grant_type=password', {
+    method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ email: ADMIN_EMAIL, password: password })
+  });
+  var d = await r.json().catch(function(){ return {}; });
+  if(!d.access_token) throw new Error(d.error_description||d.msg||d.error||'로그인 실패');
+  setSession(d); return true;
+}
+async function refresh(){
+  var s=getSession(); if(!s||!s.refresh_token) return false;
+  var r = await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token', {
+    method:'POST', headers:{ apikey:SB_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ refresh_token: s.refresh_token })
+  });
+  var d = await r.json().catch(function(){ return {}; });
+  if(d.access_token){ setSession(d); return true; }
+  clearSession(); return false;
+}
+function adminSignOut(){ clearSession(); location.reload(); }
+
+/* 로그인 게이트 */
+function injectGate(){
+  var g=document.createElement('div'); g.className='gate';
+  g.innerHTML =
+    '<div class="gatebox">'+
+    '<div style="font-size:38px;margin-bottom:10px">🔐</div>'+
+    '<div style="font-size:19px;font-weight:800;margin-bottom:4px">관리자 로그인</div>'+
+    '<div class="mut" style="margin-bottom:20px">저장된 시간외근무 자료 열람 전용</div>'+
+    '<input id="gpw" type="password" placeholder="관리자 비밀번호">'+
+    '<div id="gerr" style="font-size:12px;color:var(--red);font-weight:700;height:18px;margin-bottom:8px"></div>'+
+    '<button id="gbtn">들어가기</button>'+
+    '<div class="mut" style="margin-top:12px;font-size:11px">계정: '+ADMIN_EMAIL+'</div>'+
+    '</div>';
+  document.body.appendChild(g);
+  var pw=g.querySelector('#gpw'), err=g.querySelector('#gerr'), btn=g.querySelector('#gbtn'), busy=false;
+  async function submit(){
+    var v=(pw.value||'').trim(); if(!v||busy) return;
+    busy=true; btn.textContent='확인 중…'; err.textContent='';
+    try{ await signIn(v); location.reload(); }
+    catch(e){ busy=false; btn.textContent='들어가기'; err.textContent='비밀번호가 올바르지 않습니다'; pw.value=''; pw.focus(); }
+  }
+  btn.addEventListener('click', submit);
+  pw.addEventListener('keydown', function(e){ if(e.key==='Enter') submit(); });
+  setTimeout(function(){ pw.focus(); }, 80);
+}
+
+/* 목록 조회 (file_b64 제외 → 가벼움) */
+async function loadList(){
+  var url = SB_URL+'/rest/v1/overtime_archive?select=id,title,ym,site,count,filename,created_at&order=created_at.desc';
+  var doGet=function(){ return fetch(url, { headers: authHeaders() }); };
+  var r = await doGet();
+  if(r.status===401 && await refresh()) r = await doGet();
+  if(!r.ok){
+    document.getElementById('rows').innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--red)">불러오기 실패 (HTTP '+r.status+') — 관리자 계정/RLS 설정을 확인하세요</td></tr>';
+    document.getElementById('cnt').textContent='';
+    return;
+  }
+  var list = await r.json();
+  document.getElementById('cnt').textContent = '총 '+list.length+'건';
+  if(!list.length){ document.getElementById('rows').innerHTML='<tr><td colspan="6" class="mut" style="text-align:center;padding:24px">저장된 자료가 없습니다</td></tr>'; return; }
+  document.getElementById('rows').innerHTML = list.map(function(row){
+    var when = (row.created_at||'').replace('T',' ').slice(0,16);
+    return '<tr>'+
+      '<td><span class="pill">'+esc(row.ym||'-')+'</span></td>'+
+      '<td style="font-weight:600">'+esc(row.filename||row.title||'-')+'</td>'+
+      '<td>'+esc(row.site||'-')+'</td>'+
+      '<td style="text-align:right">'+(row.count!=null?row.count:'-')+'</td>'+
+      '<td class="mut">'+esc(when)+'</td>'+
+      '<td><button class="btn btn-g" onclick="downloadRow('+row.id+', this)">⬇ 받기</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+/* 단건 다운로드 — 해당 id의 file_b64만 가져와 디코드 */
+async function downloadRow(id, btn){
+  var orig = btn.textContent; btn.disabled=true; btn.textContent='...';
+  try{
+    var url = SB_URL+'/rest/v1/overtime_archive?id=eq.'+id+'&select=filename,file_b64';
+    var doGet=function(){ return fetch(url, { headers: authHeaders() }); };
+    var r = await doGet();
+    if(r.status===401 && await refresh()) r = await doGet();
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var rows = await r.json();
+    if(!rows.length || !rows[0].file_b64) throw new Error('파일 데이터 없음');
+    var bin = atob(rows[0].file_b64), len=bin.length, arr=new Uint8Array(len);
+    for(var i=0;i<len;i++) arr[i]=bin.charCodeAt(i);
+    var blob = new Blob([arr], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download = rows[0].filename || ('시간외근무_'+id+'.xlsx');
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  }catch(e){ alert('다운로드 실패: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent=orig; }
+}
+
+function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+/* 진입 */
+if(!token()){ injectGate(); }
+else { document.getElementById('who').textContent = ADMIN_EMAIL; loadList(); }
+</script>
+</body>
+</html>
