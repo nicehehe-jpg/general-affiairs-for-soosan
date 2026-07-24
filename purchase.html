@@ -504,24 +504,49 @@ function setSyncStatus(state){
   const [cls,txt] = map[state] || map.loading;
   b.className = 'sync-badge ' + cls; b.textContent = txt;
 }
+/* 동시편집 감지용: 마지막으로 본 서버 updated_at (키별) */
+let _seenUpdatedAt = {};
 async function sbGet(key){
   try{
-    const url = `${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`;
+    const url = `${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value,updated_at`;
     let r = await fetch(url, { headers: gmAuthHeaders() });
     if(r.status===401 && await gmRefresh()) r = await fetch(url, { headers: gmAuthHeaders() });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const rows = await r.json();
-    return rows.length ? rows[0].value : null;
+    if(rows.length){ _seenUpdatedAt[key] = rows[0].updated_at; return rows[0].value; }
+    return null;
   }catch(e){ return undefined; }
+}
+/* 서버의 현재 updated_at만 조회(충돌 감지용). 실패 시 null → 검사 생략(안전) */
+async function _sbCurrentUpdatedAt(key){
+  try{
+    const url = `${SB_REST}?key=eq.${encodeURIComponent(key)}&select=updated_at`;
+    let r = await fetch(url, { headers: gmAuthHeaders() });
+    if(r.status===401 && await gmRefresh()) r = await fetch(url, { headers: gmAuthHeaders() });
+    if(!r.ok) return null;
+    const rows = await r.json();
+    return rows.length ? rows[0].updated_at : null;
+  }catch(e){ return null; }
 }
 async function sbSet(key, value){
   try{
-    const url = `${SB_REST}?on_conflict=key`;
-    const body = JSON.stringify({ key, value, updated_at:new Date().toISOString() });
-    const opts = ()=>({ method:'POST', headers:{ ...gmAuthHeaders(), Prefer:'resolution=merge-duplicates' }, body });
+    // 동시편집 감지 — 안전 실패: 확인 불가/오류면 그냥 저장. 사용자가 '취소'해야만 저장 중단.
+    if(_seenUpdatedAt[key]){
+      const cur = await _sbCurrentUpdatedAt(key);
+      if(cur && cur !== _seenUpdatedAt[key]){
+        if(!confirm('⚠ 다른 사람이 방금 이 데이터를 저장했습니다.\n지금 저장하면 그 변경이 사라질 수 있습니다.\n\n[확인] 그래도 내 변경으로 저장\n[취소] 저장 취소 — F5로 최신본을 받은 뒤 다시 저장하세요')){
+          setSyncStatus('online'); return false;
+        }
+      }
+    }
+    const now = new Date().toISOString();
+    const url = `${SB_REST}?on_conflict=key&select=updated_at`;
+    const body = JSON.stringify({ key, value, updated_at: now });
+    const opts = ()=>({ method:'POST', headers:{ ...gmAuthHeaders(), Prefer:'return=representation,resolution=merge-duplicates' }, body });
     let r = await fetch(url, opts());
     if(r.status===401 && await gmRefresh()) r = await fetch(url, opts());
     if(!r.ok) throw new Error('HTTP '+r.status);
+    try{ const rows = await r.json(); _seenUpdatedAt[key] = (rows && rows[0] && rows[0].updated_at) || now; }catch(e){ _seenUpdatedAt[key] = now; }
     return true;
   }catch(e){ return false; }
 }
