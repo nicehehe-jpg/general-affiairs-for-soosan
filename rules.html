@@ -77,7 +77,7 @@ const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 /* 로그인 세션 토큰을 붙여 요청 → RLS 대응(로그인 사용자만 규정 열람) */
 function gmSession(){ try{ return JSON.parse(localStorage.getItem('gm_session')||'null'); }catch(e){ return null; } }
 function gmToken(){ const s=gmSession(); return (s&&s.access_token)||''; }
-function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+(t||SB_KEY) }; }
+function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+t }; }
 async function gmRefresh(){
   const s=gmSession(); if(!s||!s.refresh_token) return false;
   const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.refresh_token})});

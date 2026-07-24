@@ -1391,7 +1391,7 @@ function gmSetSession(d){ try{ localStorage.setItem(GM_SESSION, JSON.stringify({
 function gmClearSession(){ try{ localStorage.removeItem(GM_SESSION); }catch(e){} }
 function gmToken(){ const s=gmGetSession(); return (s&&s.access_token)||''; }
 /* 데이터 호출용 헤더: 로그인 토큰 우선(없으면 anon키 — RLS OFF 상태 호환) */
-function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+(t||SB_KEY), 'Content-Type':'application/json' }; }
+function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+t, 'Content-Type':'application/json' }; }
 async function gmSignIn(password){
   const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',
     headers:{apikey:SB_KEY,'Content-Type':'application/json'},
