@@ -119,51 +119,43 @@
     var g = document.createElement('div');
     g.id = 'gmGate';
     g.setAttribute('style', "position:fixed;inset:0;z-index:99999;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;");
+    var lastEmail = '';
+    try { lastEmail = localStorage.getItem('gm_last_email') || ''; } catch (e) {}
     g.innerHTML =
       '<div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">' +
       '<div style="font-size:38px;margin-bottom:10px;">🔐</div>' +
       '<div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>' +
-      '<div id="gmGateSub" style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>' +
-      '<input id="gmGatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;">' +
+      '<div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 이메일과 비밀번호로 로그인하세요</div>' +
+      '<input id="gmGateEmail" type="email" autocomplete="username" placeholder="이메일" value="' + lastEmail.replace(/"/g, '&quot;') + '" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;">' +
+      '<input id="gmGatePw" type="password" autocomplete="current-password" placeholder="비밀번호" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;">' +
       '<div id="gmGateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>' +
-      '<button id="gmGateBtn" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">들어가기</button>' +
-      '<div id="gmGateToggle" style="margin-top:14px;font-size:12px;color:#8B95A1;cursor:pointer;user-select:none;">🔧 관리자로 로그인</div>';
+      '<button id="gmGateBtn" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">로그인</button>';
     document.body.appendChild(g);
+    var em = g.querySelector('#gmGateEmail');
     var pw = g.querySelector('#gmGatePw');
     var err = g.querySelector('#gmGateErr');
     var btn = g.querySelector('#gmGateBtn');
-    var sub = g.querySelector('#gmGateSub');
-    var toggle = g.querySelector('#gmGateToggle');
-    var busy = false, asAdmin = false;
-    toggle.addEventListener('click', function () {
-      asAdmin = !asAdmin;
-      if (asAdmin) {
-        sub.innerHTML = '<b style="color:#3182F6">관리자 로그인</b> · ' + ADMIN_EMAIL;
-        btn.style.background = '#191F28';
-        toggle.textContent = '↩ 일반 로그인으로';
-      } else {
-        sub.textContent = '수산이앤에스 · 접근하려면 비밀번호를 입력하세요';
-        btn.style.background = '#3182F6';
-        toggle.textContent = '🔧 관리자로 로그인';
-      }
-      err.textContent = ''; pw.value = ''; pw.focus();
-    });
+    var busy = false;
     async function submit() {
-      var v = (pw.value || '').trim(); if (!v || busy) return;
+      var email = (em.value || '').trim().toLowerCase();
+      var v = (pw.value || '');
+      if (!email || !v || busy) return;
       busy = true; btn.textContent = '확인 중…'; err.textContent = '';
       try {
-        await gmSignIn(v, asAdmin ? ADMIN_EMAIL : AUTH_EMAIL);
-        location.reload();                 // 로그인 성공 → 토큰 보유 상태로 재로딩(데이터 정상 로드)
+        await gmSignIn(v, email);
+        try { localStorage.setItem('gm_last_email', email); } catch (e) {}
+        location.reload();                 // 로그인 성공 → 토큰 보유 상태로 재로딩
       } catch (e) {
-        busy = false; btn.textContent = '들어가기';
-        err.textContent = '비밀번호가 올바르지 않습니다';
+        busy = false; btn.textContent = '로그인';
+        err.textContent = '이메일 또는 비밀번호가 올바르지 않습니다';
         pw.value = ''; pw.focus();
-        setTimeout(function () { err.textContent = ''; }, 2500);
+        setTimeout(function () { err.textContent = ''; }, 2800);
       }
     }
     btn.addEventListener('click', submit);
+    em.addEventListener('keydown', function (e) { if (e.key === 'Enter') pw.focus(); });
     pw.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
-    setTimeout(function () { pw.focus(); }, 100);
+    setTimeout(function () { (lastEmail ? pw : em).focus(); }, 100);
   }
   function ensureGate() {
     if (gmToken()) return;   // 세션 있으면 통과(만료는 데이터 호출 401→gmRefresh로 처리)
