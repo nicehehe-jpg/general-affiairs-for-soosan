@@ -987,8 +987,14 @@ function deleteCase(id){
   CASES = CASES.filter(x=>x.id!==id);
   saveCases(); renderAll();
 }
-function resetData(){
+async function resetData(){
   if(!confirm('모든 구매 건을 초기 상태로 되돌릴까요?\n(클라우드 데이터도 초기화됩니다.)')) return;
+  if(((prompt('⚠ 실수 방지: 정말 초기화하려면 아래에 "초기화" 라고 입력하세요.')||'').trim())!=='초기화'){ alert('취소되었습니다.'); return; }
+  // 초기화 전 현재 데이터를 클라우드에 자동 백업(복구 가능하도록)
+  const bak = STORE+'_bak_reset_'+new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+  const ok = (typeof sbSet==='function') ? await sbSet(bak, CASES) : false;
+  if(ok){ alert('현재 데이터를 백업했습니다:\n'+bak+'\n(문제 시 이 키로 복구 가능)'); }
+  else if(!confirm('⚠ 자동 백업에 실패했습니다(로그인/네트워크 확인).\n백업 없이 그래도 초기화할까요?')) return;
   localStorage.removeItem(STORE);
   CASES = loadCases();
   saveCases();
