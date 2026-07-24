@@ -14,7 +14,8 @@
   var SB_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
   var SB_REST = SB_URL + '/rest/v1/app_store';
-  var AUTH_EMAIL = 'nicehehe@soosan.co.kr';
+  var AUTH_EMAIL = 'nicehehe@soosan.co.kr';   // 일반(공용) 계정
+  var ADMIN_EMAIL = 'admin@soosan.co.kr';      // 관리자 계정 — 명부 편집·일정 추가 권한
   var GM_SESSION = 'gm_session';
 
   /* ── 세션/인증 ─────────────────────────────────────────────── */
@@ -23,13 +24,21 @@
   function gmClearSession() { try { localStorage.removeItem(GM_SESSION); } catch (e) {} }
   function gmToken() { var s = gmGetSession(); return (s && s.access_token) || ''; }
 
+  /* JWT payload 디코드 → 현재 로그인 이메일/역할 판별 */
+  function gmDecode(tok) {
+    try { var p = tok.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); while (p.length % 4) p += '='; return JSON.parse(atob(p)); }
+    catch (e) { return {}; }
+  }
+  function gmEmail() { var t = gmToken(); return t ? (gmDecode(t).email || '') : ''; }
+  function gmIsAdmin() { return gmEmail().toLowerCase() === ADMIN_EMAIL.toLowerCase(); }
+
   /* 데이터 호출 헤더: 로그인 토큰만(anon fallback 없음). 토큰 없으면 401 → 게이트. */
   function gmAuthHeaders() { return { apikey: SB_KEY, Authorization: 'Bearer ' + gmToken(), 'Content-Type': 'application/json' }; }
 
-  async function gmSignIn(password) {
+  async function gmSignIn(password, email) {
     var r = await fetch(SB_URL + '/auth/v1/token?grant_type=password', {
       method: 'POST', headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: AUTH_EMAIL, password: password })
+      body: JSON.stringify({ email: email || AUTH_EMAIL, password: password })
     });
     var d = await r.json().catch(function () { return {}; });
     if (!d.access_token) throw new Error(d.error_description || d.msg || d.error || '로그인 실패');
@@ -114,20 +123,36 @@
       '<div style="background:#fff;border-radius:22px;padding:40px 32px;width:340px;max-width:90vw;box-shadow:0 8px 30px rgba(0,0,0,.08);text-align:center;">' +
       '<div style="font-size:38px;margin-bottom:10px;">🔐</div>' +
       '<div style="font-size:19px;font-weight:800;color:#191F28;margin-bottom:4px;">총무 관리 시스템</div>' +
-      '<div style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>' +
+      '<div id="gmGateSub" style="font-size:12.5px;color:#8B95A1;margin-bottom:22px;">수산이앤에스 · 접근하려면 비밀번호를 입력하세요</div>' +
       '<input id="gmGatePw" type="password" placeholder="비밀번호 입력" style="width:100%;padding:13px 14px;border:1.5px solid #E5E8EB;border-radius:12px;font-size:15px;font-family:inherit;text-align:center;margin-bottom:8px;box-sizing:border-box;outline:none;">' +
       '<div id="gmGateErr" style="font-size:12px;color:#F04452;font-weight:700;height:18px;margin-bottom:8px;"></div>' +
-      '<button id="gmGateBtn" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">들어가기</button>';
+      '<button id="gmGateBtn" style="width:100%;padding:13px;background:#3182F6;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">들어가기</button>' +
+      '<div id="gmGateToggle" style="margin-top:14px;font-size:12px;color:#8B95A1;cursor:pointer;user-select:none;">🔧 관리자로 로그인</div>';
     document.body.appendChild(g);
     var pw = g.querySelector('#gmGatePw');
     var err = g.querySelector('#gmGateErr');
     var btn = g.querySelector('#gmGateBtn');
-    var busy = false;
+    var sub = g.querySelector('#gmGateSub');
+    var toggle = g.querySelector('#gmGateToggle');
+    var busy = false, asAdmin = false;
+    toggle.addEventListener('click', function () {
+      asAdmin = !asAdmin;
+      if (asAdmin) {
+        sub.innerHTML = '<b style="color:#3182F6">관리자 로그인</b> · ' + ADMIN_EMAIL;
+        btn.style.background = '#191F28';
+        toggle.textContent = '↩ 일반 로그인으로';
+      } else {
+        sub.textContent = '수산이앤에스 · 접근하려면 비밀번호를 입력하세요';
+        btn.style.background = '#3182F6';
+        toggle.textContent = '🔧 관리자로 로그인';
+      }
+      err.textContent = ''; pw.value = ''; pw.focus();
+    });
     async function submit() {
       var v = (pw.value || '').trim(); if (!v || busy) return;
       busy = true; btn.textContent = '확인 중…'; err.textContent = '';
       try {
-        await gmSignIn(v);
+        await gmSignIn(v, asAdmin ? ADMIN_EMAIL : AUTH_EMAIL);
         location.reload();                 // 로그인 성공 → 토큰 보유 상태로 재로딩(데이터 정상 로드)
       } catch (e) {
         busy = false; btn.textContent = '들어가기';
@@ -146,8 +171,9 @@
   }
 
   /* ── 전역 노출(기존 페이지 코드가 전역 이름으로 호출) ─────────── */
-  var api = { SB_URL: SB_URL, SB_KEY: SB_KEY, SB_REST: SB_REST, AUTH_EMAIL: AUTH_EMAIL,
+  var api = { SB_URL: SB_URL, SB_KEY: SB_KEY, SB_REST: SB_REST, AUTH_EMAIL: AUTH_EMAIL, ADMIN_EMAIL: ADMIN_EMAIL,
     gmGetSession: gmGetSession, gmSetSession: gmSetSession, gmClearSession: gmClearSession, gmToken: gmToken,
+    gmEmail: gmEmail, gmIsAdmin: gmIsAdmin,
     gmAuthHeaders: gmAuthHeaders, gmSignIn: gmSignIn, gmRefresh: gmRefresh, gmChangePassword: gmChangePassword, gmSignOut: gmSignOut,
     setSyncStatus: setSyncStatus, sbGet: sbGet, sbSet: sbSet, sbPush: sbPush, esc: esc, escAttr: escAttr };
   window.GM = api;
