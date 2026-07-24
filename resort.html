@@ -666,8 +666,8 @@ async function sbInit(){
 // =====================================================
 (function(){
   const RST_URL = (typeof SB_URL!=='undefined') ? SB_URL : 'https://vvyqldyljajlmtydtqdf.supabase.co';
-  const RST_KEY = SB_KEY; // 상위 스크립트의 anon 키 (resort_requests만 접근, 명부는 접근 불가)
-  const H = { apikey:RST_KEY, Authorization:'Bearer '+RST_KEY, 'Content-Type':'application/json' };
+  const RST_KEY = SB_KEY; // apikey용 anon 키 (신원은 아래 로그인 토큰으로)
+  const H = { apikey:RST_KEY, Authorization:'Bearer '+gmToken(), 'Content-Type':'application/json' };
 
   const MATCH = {
     matched:   { label:'✅ 명부확인', bg:'var(--green-bg)', color:'var(--green)' },
