@@ -487,7 +487,7 @@ const GM_SESSION='gm_session';
 function gmGetSession(){ try{ return JSON.parse(localStorage.getItem(GM_SESSION)||'null'); }catch(e){ return null; } }
 function gmSetSession(d){ try{ localStorage.setItem(GM_SESSION, JSON.stringify({access_token:d.access_token, refresh_token:d.refresh_token})); }catch(e){} }
 function gmToken(){ const s=gmGetSession(); return (s&&s.access_token)||''; }
-function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+(t||SB_KEY), 'Content-Type':'application/json' }; }
+function gmAuthHeaders(){ const t=gmToken(); return { apikey:SB_KEY, Authorization:'Bearer '+t, 'Content-Type':'application/json' }; }
 async function gmSignIn(password){
   const r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:AUTH_EMAIL,password})});
   const d=await r.json().catch(()=>({})); if(!d.access_token) throw new Error(d.error_description||d.msg||d.error||'로그인 실패'); gmSetSession(d); return true;
