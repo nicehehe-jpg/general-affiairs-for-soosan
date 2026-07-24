@@ -2291,7 +2291,7 @@ function renderAll(){
     try {
       const res = await fetch(
         `${SUPABASE_URL}/rest/v1/uniform_requests?source=eq.slack&order=created_at.desc&limit=50`,
-        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${gmToken()}` } }
       );
       if (!res.ok) throw new Error("HTTP " + res.status);
       const rows = await res.json();
@@ -2332,7 +2332,7 @@ function renderAll(){
   window.updateSlackStatus = async function (id, status) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/uniform_requests?id=eq.${id}`, {
       method: "PATCH",
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${gmToken()}`, "Content-Type": "application/json", Prefer: "return=minimal" },
       body: JSON.stringify({ status })
     });
     if (!res.ok) { alert("처리 실패: " + res.status); return; }
