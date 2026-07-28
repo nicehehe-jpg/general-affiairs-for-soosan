@@ -51,10 +51,25 @@ Deno.serve(async (req) => {
   const dow = DAY[now.getUTCDay()];
 
   let menu: Record<string, { lunch?: string[]; dinner?: string[] | null }> = {};
+  // 1) 정적 menu.json (과거/기본 데이터)
   try {
     const r = await fetch(MENU_URL, { headers: { "cache-control": "no-cache" } });
     if (r.ok) menu = await r.json();
-  } catch (_e) { /* 네트워크 실패 시 아래에서 안내 */ }
+  } catch (_e) { /* skip */ }
+  // 2) 클라우드 menu_data (앱 '식단 입력' 폼으로 저장한 최신 — 우선 적용, RLS는 service_role로 우회)
+  try {
+    const SB_URL = Deno.env.get("SUPABASE_URL") ?? "";
+    const SRK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (SB_URL && SRK) {
+      const r2 = await fetch(`${SB_URL}/rest/v1/app_store?key=eq.menu_data&select=value`, {
+        headers: { apikey: SRK, Authorization: `Bearer ${SRK}` },
+      });
+      if (r2.ok) {
+        const rows = await r2.json();
+        if (rows.length && rows[0].value) Object.assign(menu, rows[0].value);
+      }
+    }
+  } catch (_e) { /* skip */ }
 
   const d = menu[today];
   let text: string;
