@@ -773,7 +773,10 @@
         <div class="mc-title">🍱 매곡테크노파크 식단표
           <span class="mc-badge" id="mealWeekBadge">불러오는 중</span>
         </div>
-        <a class="mc-link" href="https://www.stxfood.com/archives/menu/list" target="_blank">전체보기 →</a>
+        <span style="display:flex;gap:12px;align-items:center;">
+          <button class="mc-link" style="background:none;border:none;cursor:pointer;font:inherit;color:var(--blue);padding:0;" onclick="openMenuForm()">✏️ 입력</button>
+          <a class="mc-link" href="https://www.stxfood.com/archives/menu/list" target="_blank">전체보기 →</a>
+        </span>
       </div>
       <div class="meal-tabs">
         <button class="meal-tab active" id="mealTabLunch" onclick="switchMealTab('lunch')">점심 (Lunch)</button>
@@ -1504,6 +1507,14 @@ async function sbInit(){
     await sbSet('ab_contacts', AB_CONTACTS);
   }
 
+  // 5. 식단표(menu_data) — 앱에서 입력한 주가 여기 저장됨. 클라우드가 코드 기본값을 덮어씀.
+  const cloudMenu = await sbGet('menu_data');
+  if(cloudMenu && typeof cloudMenu==='object' && !Array.isArray(cloudMenu)){
+    CLOUD_MENU = cloudMenu;
+    Object.assign(MEAL_DATA, cloudMenu);
+    initMealWidget();
+  }
+
   setSyncStatus('online');
   renderAll();
   renderTodoWidget();
@@ -2144,6 +2155,7 @@ async function loadWeather(){
 /* ============================================================
    식단표 위젯  (stxfood.com 울산테크노매곡)
    ============================================================ */
+let CLOUD_MENU = {};   // 앱에서 입력해 클라우드(menu_data)에 저장된 식단(누적)
 const MEAL_DATA = {
   '2026-06-29':{
     lunch:['쌀밥/잡곡밥','사골떡국','김치돈육볶음','두부구이*양념장','알배기겉절이','깍두기'],
@@ -2386,21 +2398,87 @@ function renderMealBody(){
   body.innerHTML = html;
 }
 
+function weekLabel(key){
+  // 'YYYY-MM-DD' → 그 주 수요일 기준 'M월 N주' (자동 계산 — 매주 수정 불필요)
+  const d = new Date(key+'T00:00:00');
+  const wed = new Date(d); wed.setDate(d.getDate() - ((d.getDay()+6)%7) + 2);
+  return (wed.getMonth()+1)+'월 '+Math.ceil(wed.getDate()/7)+'주';
+}
 function initMealWidget(){
-  const info = getTodayKey();
-  const key = info.key;
+  const key = getTodayKey().key;
   const badge = document.getElementById('mealWeekBadge');
-  if(badge){
-    if(key >= '2026-07-27' && key <= '2026-08-01') badge.textContent = '7월 5주';
-    else if(key >= '2026-07-20' && key <= '2026-07-25') badge.textContent = '7월 4주';
-    else if(key >= '2026-07-13' && key <= '2026-07-18') badge.textContent = '7월 3주';
-    else if(key >= '2026-07-06' && key <= '2026-07-11') badge.textContent = '7월 2주';
-    else if(key >= '2026-06-29' && key <= '2026-07-04') badge.textContent = '7월 1주';
-    else if(key >= '2026-06-22' && key <= '2026-06-27') badge.textContent = '6월 4주';
-    else if(key >= '2026-06-16' && key <= '2026-06-21') badge.textContent = '6월 3주';
-    else badge.textContent = '식단표';
-  }
+  if(badge){ badge.textContent = MEAL_DATA[key] ? weekLabel(key) : '식단표'; }
   renderMealBody();
+}
+
+/* ===== 식단 입력(앱에서 직접) — 클라우드 menu_data에 저장, 코드수정·배포 불필요 ===== */
+function _mondayOf(dateStr){
+  const d = dateStr ? new Date(dateStr+'T00:00:00') : new Date();
+  d.setDate(d.getDate() - ((d.getDay()+6)%7));
+  return d;
+}
+function _fmt(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function openMenuForm(){
+  if(typeof gmToken==='function' && !gmToken()){ alert('로그인 후 이용하세요.'); return; }
+  let m = document.getElementById('menuFormModal');
+  if(!m){
+    m = document.createElement('div');
+    m.id='menuFormModal';
+    m.setAttribute('style','position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;');
+    m.innerHTML =
+      '<div style="background:#fff;border-radius:18px;padding:22px;width:640px;max-width:96vw;max-height:90vh;overflow:auto;font-family:inherit;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:17px;font-weight:800;">🍱 이번 주 식단 입력</div>'
+      + '<button onclick="document.getElementById(\'menuFormModal\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#8B95A1;">✕</button></div>'
+      + '<div style="font-size:12px;color:#8B95A1;margin-bottom:12px;">한 줄에 한 메뉴씩 입력하세요. 비우면 그 끼니는 없음으로 처리됩니다. 저장하면 사이트·슬랙에 바로 반영(배포 불필요).</div>'
+      + '<label style="font-size:12.5px;font-weight:700;">주 시작(월요일)</label><br>'
+      + '<input type="date" id="mfMonday" onchange="mfBuildDays()" style="padding:9px 11px;border:1.5px solid #E5E8EB;border-radius:10px;font-size:14px;margin:6px 0 14px;">'
+      + '<div id="mfDays"></div>'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">'
+      + '<button onclick="document.getElementById(\'menuFormModal\').remove()" style="padding:10px 16px;border:1px solid #E5E8EB;background:#fff;border-radius:10px;font-weight:700;cursor:pointer;">취소</button>'
+      + '<button onclick="saveMenuForm()" style="padding:10px 18px;border:none;background:#3182F6;color:#fff;border-radius:10px;font-weight:700;cursor:pointer;">저장</button></div></div>';
+    document.body.appendChild(m);
+  } else { m.style.display='flex'; }
+  document.getElementById('mfMonday').value = _fmt(_mondayOf(getTodayKey().key));
+  mfBuildDays();
+}
+function mfBuildDays(){
+  const mon = _mondayOf(document.getElementById('mfMonday').value);
+  const dn = ['월','화','수','목','금','토'];
+  let html='';
+  for(let i=0;i<6;i++){
+    const d = new Date(mon); d.setDate(mon.getDate()+i); const key=_fmt(d);
+    const ex = MEAL_DATA[key]||{};
+    const L = (ex.lunch||[]).join('\n'); const D = (ex.dinner||[]).join('\n');
+    html += '<div style="border:1px solid #EEF1F4;border-radius:12px;padding:10px 12px;margin-bottom:8px;">'
+      + '<div style="font-weight:800;font-size:13px;margin-bottom:6px;">'+dn[i]+'요일 <span style="color:#8B95A1;font-weight:600;">('+key+')</span></div>'
+      + '<div style="display:flex;gap:8px;">'
+      + '<div style="flex:1;"><div style="font-size:11.5px;color:#8B95A1;margin-bottom:3px;">점심</div><textarea data-key="'+key+'" data-meal="lunch" rows="6" style="width:100%;box-sizing:border-box;border:1px solid #E5E8EB;border-radius:8px;padding:7px;font-family:inherit;font-size:13px;resize:vertical;">'+L+'</textarea></div>'
+      + '<div style="flex:1;"><div style="font-size:11.5px;color:#8B95A1;margin-bottom:3px;">저녁</div><textarea data-key="'+key+'" data-meal="dinner" rows="6" style="width:100%;box-sizing:border-box;border:1px solid #E5E8EB;border-radius:8px;padding:7px;font-family:inherit;font-size:13px;resize:vertical;">'+D+'</textarea></div>'
+      + '</div></div>';
+  }
+  document.getElementById('mfDays').innerHTML = html;
+}
+async function saveMenuForm(){
+  const btn = (typeof event!=='undefined' && event) ? event.target : null;
+  const areas = document.querySelectorAll('#mfDays textarea');
+  const byDate = {};
+  areas.forEach(function(t){
+    const key=t.dataset.key, meal=t.dataset.meal;
+    const items = (t.value||'').split('\n').map(function(x){return x.trim();}).filter(Boolean);
+    byDate[key] = byDate[key] || {};
+    byDate[key][meal] = items.length ? items : null;
+  });
+  Object.keys(byDate).forEach(function(key){
+    const e = byDate[key];
+    if((e.lunch&&e.lunch.length) || (e.dinner&&e.dinner.length)){
+      MEAL_DATA[key] = { lunch: e.lunch||[], dinner: (e.dinner&&e.dinner.length)?e.dinner:null };
+      CLOUD_MENU[key] = MEAL_DATA[key];
+    }
+  });
+  if(btn){ btn.textContent='저장 중…'; btn.disabled=true; }
+  const ok = (typeof sbSet==='function') ? await sbSet('menu_data', CLOUD_MENU) : false;
+  if(ok){ initMealWidget(); document.getElementById('menuFormModal').remove(); alert('저장됐습니다. 사이트·슬랙에 바로 반영됩니다.'); }
+  else { alert('저장 실패 — 로그인/네트워크를 확인하세요.'); if(btn){ btn.textContent='저장'; btn.disabled=false; } }
 }
 
 loadWeather();
