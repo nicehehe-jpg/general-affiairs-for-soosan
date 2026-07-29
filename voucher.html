@@ -1089,11 +1089,12 @@ let giftUnmatched = [];  // 적용률 매칭 실패 인원(진단용)
 
 // 코스트센터/귀속부서 → 계정과목·비용구분 분류
 function giftAcct(dept, cc){
-  const s = String(cc||'') + ' ' + String(dept||'');
-  if(s.includes('기술연구소')) return {계정과목:'판관비_경상연구개발비_복리후생비_기념품지급', 비용구분:'판관'};
-  const dtype = isHQ(dept, cc) ? '판관비' : '제조비용';
+  // 계정과목은 '코스트센터' 기준으로 판정 (귀속부서와 무관). 예: cc=기술연구원 → 제조비용
+  const c = String(cc||dept||'').trim();
+  if(c.includes('기술연구소')) return {계정과목:'판관비_경상연구개발비_복리후생비_기념품지급', 비용구분:'판관'};
+  const dtype = HQ_DEPTS.includes(c) ? '판관비' : '제조비용';  // 본사 판관부서 코스트센터만 판관비
   let base = '복리후생비_기념품지급';
-  if(dtype==='제조비용' && String(cc).includes('국책과제')) base = '경상연구개발비_복리후생비_기념품지급';
+  if(dtype==='제조비용' && c.includes('국책과제')) base = '경상연구개발비_복리후생비_기념품지급';
   return {계정과목: acct(base, dtype), 비용구분: dtype==='판관비' ? '판관' : '용역'};
 }
 // 코스트센터 기준으로 귀속부서 결정
@@ -1215,9 +1216,10 @@ function giftTotalUpdate(){
   const total=giftRows.reduce((s,r)=>s+(r.금액||0),0);
   const taxable=document.getElementById('giftTaxable').checked;
   const vat=taxable?Math.round(total*0.1):0;
-  const head=giftRows.reduce((s,r)=>s+(r.인원||0),0);
+  // 인원 = 실제 명단 로드 인원(각 1명). 코스트센터별 분할 소수의 합이 아니라 원본 인원 수로 표기(반올림 드리프트 방지)
+  const head = giftRecipients.length || Math.round(giftRows.reduce((s,r)=>s+(r.인원||0),0));
   document.getElementById('giftTotalLine').textContent =
-    `공급가액 ${total.toLocaleString()}원 · 부가세 ${vat.toLocaleString()}원 · 합계(미지급금) ${(total+vat).toLocaleString()}원 · 인원 ${Math.round(head*100)/100}명 · 코스트센터 ${giftRows.length}개`;
+    `공급가액 ${total.toLocaleString()}원 · 부가세 ${vat.toLocaleString()}원 · 합계(미지급금) ${(total+vat).toLocaleString()}원 · 인원 ${head}명 · 코스트센터 ${giftRows.length}개`;
 }
 function addGiftRow(){ giftRows.push({계정과목:'제조비용_복리후생비_기념품지급',비용구분:'용역',귀속부서:'',코스트센터:'',인원:0,금액:0}); renderGiftTable(); }
 
