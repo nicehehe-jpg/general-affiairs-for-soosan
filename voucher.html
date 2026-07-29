@@ -431,13 +431,14 @@ function rebuildRateNormIndex(){
 // empMaster: { 아이디(소문자): {empno, name, dept}, ... }
 let empMaster = {};
 let empByName = {}; // 성명 -> {empno, dept} (아이디 없는 사원명부도 지원, 매칭 보조)
+let empDupNames = new Set(); // 동명이인 이름 → 이름→사번 다리에서 제외(오매칭 방지)
 
 function lookupRates(empno, name, ym){
   let entries = null;
   if(empno && rateMaster[empno]) entries = rateMaster[empno];
   if(!entries && empno){ const alt = rateMasterByNorm[normSabun(empno)]; if(alt && rateMaster[alt]) entries = rateMaster[alt]; } // 앞자리0 차이 등 정규화 매칭
   if(!entries && name && rateMasterByName[name]) entries = rateMaster[rateMasterByName[name]];
-  if(!entries && name && empByName[name]){ // 사원명부(이름→사번) 다리
+  if(!entries && name && empByName[name] && !empDupNames.has(name)){ // 사원명부(이름→사번) 다리 — 동명이인은 제외
     const e = empByName[name];
     const alt = rateMaster[e.empno] ? e.empno : rateMasterByNorm[normSabun(e.empno)];
     if(alt && rateMaster[alt]) entries = rateMaster[alt];
@@ -646,7 +647,7 @@ async function handleEmpMasterUpload(ev){
     const head = findHeaderRow(aoa, ['사번']); // 아이디는 선택(없으면 사번+성명만으로 처리)
     if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(사번)를 찾지 못했습니다.'; return; }
     const nameCol = head.col['사원']!==undefined ? head.col['사원'] : head.col['성명'];
-    empMaster = {}; empByName = {};
+    empMaster = {}; empByName = {}; empDupNames = new Set();
     let cnt=0, idCnt=0;
     for(let i=head.idx+1;i<aoa.length;i++){
       const r=aoa[i];
@@ -657,7 +658,7 @@ async function handleEmpMasterUpload(ev){
       const dept = head.col['부서']!==undefined ? String(r[head.col['부서']]||'').trim() : '';
       const userid = head.col['아이디']!==undefined && r[head.col['아이디']]!==null && r[head.col['아이디']]!==undefined ? String(r[head.col['아이디']]).trim() : '';
       if(userid){ empMaster[userid.toLowerCase()] = {empno, name, dept}; idCnt++; }
-      if(name && !empByName[name]) empByName[name] = {empno, dept};
+      if(name){ if(empByName[name]) empDupNames.add(name); else empByName[name]={empno, dept}; }
       cnt++;
     }
     if(cnt===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행(사번)을 찾지 못했습니다.'; return; }
@@ -670,19 +671,22 @@ async function handleEmpMasterUpload(ev){
 }
 
 async function saveEmpsEncrypted(statusEl, rows, idCnt){
-  const count = Object.keys(empByName).length || Object.keys(empMaster).length;
-  const idNote = (idCnt!==undefined && idCnt===0) ? ' (아이디 없음 · 사번/성명 기준)' : '';
+  const uniq = Object.keys(empByName).length;
+  const count = rows || uniq || Object.keys(empMaster).length; // 실제 인원(사번 기준)
+  const dup = (rows && rows>uniq) ? (rows-uniq) : 0;
+  const idNote = (idCnt!==undefined && idCnt===0) ? ' · 사번/성명 기준(아이디 없음)' : '';
+  const dupNote = dup>0 ? ` · 동명이인 ${dup}명(이름검색 ${uniq})` : '';
   const pass  = await ratePass();
-  if(!pass){ statusEl.textContent = `사원명부 로드됨 · ${count}명${idNote} · ⚠️ 암호 미입력 → 이번 세션만 적용(저장 안 함)`; return; }
+  if(!pass){ statusEl.textContent = `사원명부 로드됨 · ${count}명${idNote}${dupNote} · ⚠️ 암호 미입력 → 이번 세션만 적용(저장 안 함)`; return; }
   statusEl.textContent = '🔒 암호화하여 저장 중…';
   try{
-    const blob = await encryptJSON({ empMaster, empByName }, pass);
-    blob.meta = { count, rows, uploadedAt:new Date().toISOString() };
+    const blob = await encryptJSON({ empMaster, empByName, empDup:[...empDupNames] }, pass);
+    blob.meta = { count, rows, dup, uploadedAt:new Date().toISOString() };
     const ok = await sbSet(EMP_KEY, blob);
     statusEl.classList.remove('err');
     statusEl.textContent = ok
-      ? `✅ 사원명부 적용 중 · ${count}명${idNote} · 클라우드 암호저장 완료`
-      : `사원명부 로드됨 · ${count}명${idNote} · ⚠️ 클라우드 저장 실패(이번 세션만 적용)`;
+      ? `✅ 사원명부 적용 중 · ${count}명${idNote}${dupNote} · 클라우드 암호저장 완료`
+      : `사원명부 로드됨 · ${count}명${idNote}${dupNote} · ⚠️ 클라우드 저장 실패(이번 세션만 적용)`;
   }catch(e){
     statusEl.classList.add('err');
     statusEl.textContent = '저장 중 오류: '+e.message;
@@ -701,14 +705,16 @@ async function loadStoredEmps(){
     const data = await decryptJSON(blob, pass);
     empMaster = data.empMaster || {};
     empByName = data.empByName || {};
+    empDupNames = new Set(data.empDup || []);
     if(Object.keys(empByName).length===0){ // 구버전 저장본 → empMaster로 이름 인덱스 재구성
-      Object.values(empMaster).forEach(v=>{ if(v && v.name && !empByName[v.name]) empByName[v.name]={empno:v.empno, dept:v.dept}; });
+      Object.values(empMaster).forEach(v=>{ if(v && v.name){ if(empByName[v.name]) empDupNames.add(v.name); else empByName[v.name]={empno:v.empno, dept:v.dept}; } });
     }
     const m = blob.meta || {};
     const d = m.uploadedAt ? new Date(m.uploadedAt) : null;
     const cc = m.count || Object.keys(empByName).length || Object.keys(empMaster).length;
+    const dupNote = m.dup>0 ? ` · 동명이인 ${m.dup}명` : '';
     statusEl.classList.remove('err');
-    statusEl.textContent = `✅ 사원명부 적용 중 · ${cc}명${d?(' · 업로드 '+(d.getMonth()+1)+'/'+d.getDate()):''} (클라우드 암호저장)`;
+    statusEl.textContent = `✅ 사원명부 적용 중 · ${cc}명${dupNote}${d?(' · 업로드 '+(d.getMonth()+1)+'/'+d.getDate()):''} (클라우드 암호저장)`;
   }catch(e){
     statusEl.classList.add('err');
     statusEl.textContent = '🔒 저장된 사원명부 복호화 실패 — 암호가 다른 듯합니다. [🔑 적용률 암호 재설정]으로 다시 입력하세요.';
@@ -718,7 +724,7 @@ async function loadStoredEmps(){
 async function clearStoredEmps(){
   if(!confirm('클라우드에 저장된 사원명부를 삭제할까요?\n(자동 적용이 해제됩니다)')) return;
   await sbDel(EMP_KEY);
-  empMaster = {}; empByName = {};
+  empMaster = {}; empByName = {}; empDupNames = new Set();
   const statusEl = document.getElementById('empMasterStatus');
   if(statusEl){ statusEl.classList.remove('err'); statusEl.textContent = '사원명부 미업로드 (저장본 삭제됨)'; }
 }
@@ -1096,7 +1102,13 @@ function giftOwner(dept, cc){
   cc = String(cc||dept||'').trim();
   const dep = String(dept||'').trim();
   const isProject = /^\d{4}/.test(cc) || (cc.includes('-') && /\d/.test(cc));
-  const owner = isProject ? (dep.split(/\s+/)[0] || cc) : cc;
+  let owner;
+  if(!isProject){
+    owner = cc;                          // 부서명형 CC → 귀속부서 = CC (예: 마케팅본부 → 마케팅본부, 본사근무여도 CC 사용)
+  } else {
+    const first = dep.split(/\s+/)[0];   // 프로젝트 CC → 부서의 사업소(첫 토큰)
+    owner = (!first || /^본사근무$/.test(first)) ? cc : first;  // 본사근무 등 실체없는 부서면 CC로 대체
+  }
   return {귀속부서: owner, 코스트센터: cc};
 }
 // 적용률 마스터에서 가장 흔한 적용월
