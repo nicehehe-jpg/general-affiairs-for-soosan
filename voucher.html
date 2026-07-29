@@ -151,6 +151,7 @@
     <label><input type="checkbox" id="task-driver" onchange="updateTaskVisibility()"> 🚗 ④ 법인운전대행(대리운전)</label>
     <label><input type="checkbox" id="task-comm" onchange="updateTaskVisibility()"> 📱 ⑤ 직책보임자 통신비</label>
     <label><input type="checkbox" id="task-lib" onchange="updateTaskVisibility()"> 📚 ⑥ 전자도서관</label>
+    <label><input type="checkbox" id="task-gift" onchange="updateTaskVisibility()"> 🎁 ⑦ 선물지급/기념품</label>
   </div>
   <div class="hint">처리할 업무를 선택하면 아래에 공통 설정과 해당 업무의 입력 항목이 나타납니다. 여러 업무를 동시에 선택할 수 있습니다.</div>
 </div>
@@ -302,6 +303,35 @@
   </table>
   <div class="actions"><button class="btn small" onclick="addLibRow()">➕ 사원 추가</button></div>
   <div class="total-line" id="libTotalLine"></div>
+</div>
+
+<div class="card hidden" id="giftCard">
+  <h2>🎁 ⑦ 선물지급/기념품 (인원 × 단가, 코스트센터 안분)</h2>
+  <div class="upload-box">
+    <label class="upl">📎 선물지급 취합 명단 엑셀 업로드 (사번/이름 컬럼)</label>
+    <input type="file" id="giftXlsxFile" accept=".xlsx,.xls">
+    <div class="hint">선물지급 취합관리에서 내려받은 <b>전체 취합 명단</b>을 올리면, 각 인원을 <b>사번으로 적용률 조회 → 코스트센터별로 자동 분류·집계</b>합니다(금액 = 인원 × 단가). 적용률 미매칭 인원은 명단의 부서를 사용하며, 아래 표에서 계정과목·코스트센터·금액을 직접 수정할 수 있습니다.</div>
+    <div class="status-msg" id="giftXlsxStatus">명단 미업로드</div>
+  </div>
+  <div class="row">
+    <label>거래처</label><input id="giftVendor" value="주식회사 하림" style="width:150px">
+    <label>사업자번호</label><input id="giftBizno" value="403-81-61113" style="width:125px">
+    <label>1인 단가</label><input id="giftUnit" type="number" value="34000" style="width:105px" oninput="recomputeGift()">
+    <label>적용월</label><input id="giftYM" type="month" oninput="recomputeGift()">
+    <label style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="giftTaxable" checked onchange="giftTotalUpdate()"> 과세(10%)</label>
+  </div>
+  <div class="row">
+    <label>적요</label><input id="giftMemo" value="25년 수산그룹 임직원 하계 삼계탕 지급" style="width:440px">
+  </div>
+  <table id="giftTable">
+    <thead><tr><th style="width:18%">귀속부서</th><th style="width:30%">코스트센터</th><th style="width:26%">계정과목</th><th style="width:8%">인원</th><th style="width:12%">금액</th><th style="width:6%"></th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="actions">
+    <button class="btn small" onclick="addGiftRow()">➕ 행 추가</button>
+    <button class="btn gen" onclick="generateGift()">📥 전표입력 양식 다운로드</button>
+  </div>
+  <div class="total-line" id="giftTotalLine"></div>
 </div>
 
 <div class="footer hidden" id="footerBar">
@@ -1022,6 +1052,153 @@ function renderLibTable(){
 }
 function addLibRow(){ libEmployees.push({empno:'',name:'',userid:'',dept:'경영지원팀',cc:'경영지원팀',amount:0}); renderLibTable(); }
 
+// ===================== ⑦ 선물지급/기념품 =====================
+let giftRecipients = []; // 업로드된 원본 인원 [{empno,name,dept}]
+let giftRows = [];       // 코스트센터별 집계 결과(표시·수정용)
+
+// 코스트센터/귀속부서 → 계정과목·비용구분 분류
+function giftAcct(dept, cc){
+  const s = String(cc||'') + ' ' + String(dept||'');
+  if(s.includes('기술연구소')) return {계정과목:'판관비_경상연구개발비_복리후생비_기념품지급', 비용구분:'판관'};
+  const dtype = isHQ(dept, cc) ? '판관비' : '제조비용';
+  let base = '복리후생비_기념품지급';
+  if(dtype==='제조비용' && String(cc).includes('국책과제')) base = '경상연구개발비_복리후생비_기념품지급';
+  return {계정과목: acct(base, dtype), 비용구분: dtype==='판관비' ? '판관' : '용역'};
+}
+// 코스트센터 기준으로 귀속부서 결정
+//  · 프로젝트 코스트센터(2024015-…)면 귀속부서 = 부서의 사업소(첫 토큰)
+//  · 부서명형 코스트센터(감시솔루션/경영지원팀/기술연구원 등)면 귀속부서 = 코스트센터
+function giftOwner(dept, cc){
+  cc = String(cc||dept||'').trim();
+  const dep = String(dept||'').trim();
+  const isProject = /^\d{4}/.test(cc) || (cc.includes('-') && /\d/.test(cc));
+  const owner = isProject ? (dep.split(/\s+/)[0] || cc) : cc;
+  return {귀속부서: owner, 코스트센터: cc};
+}
+// 적용률 마스터에서 가장 흔한 적용월
+function giftDefaultYM(){
+  const cnt={};
+  Object.values(rateMaster).forEach(arr=>arr.forEach(e=>{ if(e.ym) cnt[e.ym]=(cnt[e.ym]||0)+1; }));
+  let best='', n=-1; for(const k in cnt){ if(cnt[k]>n){ n=cnt[k]; best=k; } }
+  return best;
+}
+
+async function handleGiftUpload(ev){
+  const file = ev.target.files[0];
+  const statusEl = document.getElementById('giftXlsxStatus');
+  if(!file) return;
+  try{
+    const wb = await readWorkbookSheets(file);
+    let sheetName = wb.SheetNames.find(n=>/전체|명단|취합/.test(n)) || wb.SheetNames[0];
+    const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
+    const head = findHeaderRow(aoa, ['사번']);
+    if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(사번)를 찾지 못했습니다.'; return; }
+    const nameCol = head.col['이름']!==undefined ? head.col['이름'] : head.col['성명'];
+    const deptCol = head.col['부서']!==undefined ? head.col['부서'] : head.col['사업소'];
+    const recs=[];
+    for(let i=head.idx+1;i<aoa.length;i++){
+      const r=aoa[i]; if(!r) continue;
+      const empno=r[head.col['사번']];
+      if(empno===null || empno===undefined || String(empno).trim()==='') continue;
+      recs.push({
+        empno: String(empno).trim(),
+        name: nameCol!==undefined ? String(r[nameCol]||'').trim() : '',
+        dept: deptCol!==undefined ? String(r[deptCol]||'').trim() : '',
+      });
+    }
+    if(recs.length===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 인원(사번)을 찾지 못했습니다.'; return; }
+    giftRecipients = recs;
+    if(!document.getElementById('giftYM').value){ const dy=giftDefaultYM(); if(dy) document.getElementById('giftYM').value=dy; }
+    recomputeGift();
+    statusEl.classList.remove('err');
+    const matched = recs.filter(p=>lookupRates(p.empno,p.name,document.getElementById('giftYM').value)).length;
+    statusEl.textContent = `${recs.length}명 불러왔습니다 · 적용률 매칭 ${matched}명 (시트: ${sheetName})`;
+  } catch(e){
+    statusEl.classList.add('err');
+    statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
+  }
+}
+
+// 인원별 단가를 적용률로 코스트센터 분할 → 코스트센터 단위 집계
+function recomputeGift(){
+  const unit = Number(document.getElementById('giftUnit').value)||0;
+  let ym = document.getElementById('giftYM').value; if(!ym) ym = giftDefaultYM();
+  const agg={};
+  const add=(dept,cc,amount,head)=>{ const k=dept+'|'+cc; if(!agg[k]) agg[k]={dept,cc,amount:0,head:0}; agg[k].amount+=amount; agg[k].head+=head; };
+  giftRecipients.forEach(p=>{
+    const rates = lookupRates(p.empno, p.name, ym);
+    if(rates && rates.length){
+      let alloc=0;
+      rates.forEach((r,i)=>{
+        const portion = (i===rates.length-1) ? unit-alloc : Math.round(unit*r.rate/100);
+        alloc+=portion;
+        const o = giftOwner(r.dept, r.cc);
+        add(o.귀속부서, o.코스트센터, portion, r.rate/100);
+      });
+    } else {
+      const o = giftOwner(p.dept||'(미지정)', p.dept||'(미지정)');
+      add(o.귀속부서, o.코스트센터, unit, 1);
+    }
+  });
+  giftRows = Object.values(agg).map(a=>{
+    const c = giftAcct(a.dept, a.cc);
+    return {계정과목:c.계정과목, 비용구분:c.비용구분, 귀속부서:a.dept, 코스트센터:a.cc, 인원:Math.round(a.head*100)/100, 금액:a.amount};
+  }).sort((x,y)=> String(x.귀속부서).localeCompare(String(y.귀속부서),'ko') || String(x.코스트센터).localeCompare(String(y.코스트센터),'ko'));
+  renderGiftTable();
+}
+
+function renderGiftTable(){
+  const tbody=document.querySelector('#giftTable tbody');
+  tbody.innerHTML='';
+  giftRows.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><input value="${(r.귀속부서||'').replace(/"/g,'&quot;')}" oninput="giftRows[${i}].귀속부서=this.value"></td>
+      <td><input value="${(r.코스트센터||'').replace(/"/g,'&quot;')}" oninput="giftRows[${i}].코스트센터=this.value"></td>
+      <td><input value="${(r.계정과목||'').replace(/"/g,'&quot;')}" oninput="giftRows[${i}].계정과목=this.value"></td>
+      <td style="text-align:right">${r.인원}</td>
+      <td><input type="number" value="${r.금액}" oninput="giftRows[${i}].금액=Number(this.value)||0; giftTotalUpdate()"></td>
+      <td><button class="btn small danger" onclick="giftRows.splice(${i},1);renderGiftTable()">삭제</button></td>`;
+    tbody.appendChild(tr);
+  });
+  giftTotalUpdate();
+}
+function giftTotalUpdate(){
+  const total=giftRows.reduce((s,r)=>s+(r.금액||0),0);
+  const taxable=document.getElementById('giftTaxable').checked;
+  const vat=taxable?Math.round(total*0.1):0;
+  const head=giftRows.reduce((s,r)=>s+(r.인원||0),0);
+  document.getElementById('giftTotalLine').textContent =
+    `공급가액 ${total.toLocaleString()}원 · 부가세 ${vat.toLocaleString()}원 · 합계(미지급금) ${(total+vat).toLocaleString()}원 · 인원 ${Math.round(head*100)/100}명 · 코스트센터 ${giftRows.length}개`;
+}
+function addGiftRow(){ giftRows.push({계정과목:'제조비용_복리후생비_기념품지급',비용구분:'용역',귀속부서:'',코스트센터:'',인원:0,금액:0}); renderGiftTable(); }
+
+// 전표입력_YYYYMMDD.xlsx 양식으로 내보내기 (작년 파일과 동일 컬럼)
+function generateGift(){
+  const rows=giftRows.filter(r=>(r.금액||0)>0);
+  if(rows.length===0){ alert('금액이 0보다 큰 행이 없습니다.\n명단을 업로드하고 1인 단가를 입력했는지 확인하세요.'); return; }
+  const memo=document.getElementById('giftMemo').value||'';
+  const vendor=document.getElementById('giftVendor').value||'';
+  const bizno=document.getElementById('giftBizno').value||'';
+  const taxable=document.getElementById('giftTaxable').checked;
+  const evid= taxable ? '전자세금계산서(일반)' : '전자계산서(면세)';
+  const H=['행번호','계정과목','비용구분','차변금액','대변금액','적요','귀속부서','코스트센터','거래처','증빙','거래처번호','계정세목','거래처사업자번호','추가정보','관리항목정보'];
+  const aoa=[['전표입력'], H.slice()];
+  const pad=n=>String(n).padStart(4,'0');
+  let seq=0, total=0;
+  rows.forEach(r=>{ seq++; total+=r.금액; aoa.push([pad(seq), r.계정과목, r.비용구분, r.금액, 0, memo, r.귀속부서, r.코스트센터, vendor, '', '', '', bizno, '', '']); });
+  const vat = taxable ? Math.round(total*0.1) : 0;
+  if(vat>0){ seq++; aoa.push([pad(seq), '일반매입부가세', '', vat, 0, memo, '', '', vendor, evid, '', '', bizno, '', '']); }
+  seq++; aoa.push([pad(seq), '미지급금_일반', '', 0, total+vat, memo, '', '', vendor, '', '', '', bizno, '', '']);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:H.length-1}}];
+  ws['!cols']=[{wch:7},{wch:34},{wch:8},{wch:12},{wch:12},{wch:34},{wch:20},{wch:34},{wch:16},{wch:20},{wch:11},{wch:10},{wch:16},{wch:9},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '전표입력');
+  const d=(document.getElementById('docDate').value||'').replace(/-/g,'');
+  XLSX.writeFile(wb, `전표입력_선물지급${d?('_'+d):''}.xlsx`);
+}
+
 function renderMgmtTable(){
   const tbody=document.querySelector('#mgmtTable tbody');
   tbody.innerHTML='';
@@ -1295,6 +1472,7 @@ document.getElementById('etcPdfFile').addEventListener('change', handleEtcPdfUpl
 document.getElementById('driverXlsxFile').addEventListener('change', handleDriverUpload);
 document.getElementById('commXlsxFile').addEventListener('change', handleCommUpload);
 document.getElementById('libXlsxFile').addEventListener('change', handleLibUpload);
+document.getElementById('giftXlsxFile').addEventListener('change', handleGiftUpload);
 
 // ===================== 업무 선택에 따른 카드 표시/숨김 =====================
 function updateTaskVisibility(){
@@ -1306,7 +1484,9 @@ function updateTaskVisibility(){
     comm: document.getElementById('task-comm').checked,
     lib: document.getElementById('task-lib').checked,
   };
-  const any = Object.values(checks).some(v=>v);
+  checks.gift = document.getElementById('task-gift').checked;
+  const anyMain = checks.mgmt||checks.rent||checks.etc||checks.driver||checks.comm||checks.lib;
+  const any = anyMain || checks.gift;
   document.getElementById('commonCard').classList.toggle('hidden', !any);
   document.getElementById('mgmtCard').classList.toggle('hidden', !checks.mgmt);
   document.getElementById('rentCard').classList.toggle('hidden', !checks.rent);
@@ -1314,14 +1494,15 @@ function updateTaskVisibility(){
   document.getElementById('driverCard').classList.toggle('hidden', !checks.driver);
   document.getElementById('commCard').classList.toggle('hidden', !checks.comm);
   document.getElementById('libCard').classList.toggle('hidden', !checks.lib);
-  document.getElementById('footerBar').classList.toggle('hidden', !any);
+  document.getElementById('giftCard').classList.toggle('hidden', !checks.gift);
+  document.getElementById('footerBar').classList.toggle('hidden', !anyMain);
 }
 // ===================== 총무 대시보드 연동: URL 파라미터로 사전 설정 =====================
 function applyUrlParams(){
   const params = new URLSearchParams(window.location.search);
   const task = params.get('task');
   if(!task) return;
-  const idMap = {mgmt:'task-mgmt', rent:'task-rent', etc:'task-etc', driver:'task-driver', comm:'task-comm', lib:'task-lib'};
+  const idMap = {mgmt:'task-mgmt', rent:'task-rent', etc:'task-etc', driver:'task-driver', comm:'task-comm', lib:'task-lib', gift:'task-gift'};
   const tasks = task.split(',').map(s=>s.trim()).filter(Boolean);
   tasks.forEach(t=>{
     const id = idMap[t];
