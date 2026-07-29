@@ -417,6 +417,15 @@ let libEmployees = [
 // rateMaster: { 사번: [{name, dept, cc, ym, rate}, ...], ... }
 let rateMaster = {};
 let rateMasterByName = {}; // 성명 -> 사번(첫 매칭) 보조 인덱스
+let rateMasterByNorm = {}; // 정규화사번(앞자리0·비숫자 제거) -> 원본사번 보조 인덱스
+
+// 사번 정규화: 공백·비숫자 제거 + 앞자리 0 제거 (000523 == 523)
+function normSabun(s){ return String(s==null?'':s).trim().replace(/\D/g,'').replace(/^0+/,''); }
+// 정규화 사번 인덱스 재구성 (클라우드 로드/업로드 후 호출)
+function rebuildRateNormIndex(){
+  rateMasterByNorm = {};
+  Object.keys(rateMaster).forEach(empno=>{ const ns=normSabun(empno); if(ns && !rateMasterByNorm[ns]) rateMasterByNorm[ns]=empno; });
+}
 
 // ===================== 사원명부 마스터 =====================
 // empMaster: { 아이디(소문자): {empno, name, dept}, ... }
@@ -425,6 +434,7 @@ let empMaster = {};
 function lookupRates(empno, name, ym){
   let entries = null;
   if(empno && rateMaster[empno]) entries = rateMaster[empno];
+  if(!entries && empno){ const alt = rateMasterByNorm[normSabun(empno)]; if(alt && rateMaster[alt]) entries = rateMaster[alt]; } // 앞자리0 차이 등 정규화 매칭
   if(!entries && name && rateMasterByName[name]) entries = rateMaster[rateMasterByName[name]];
   if(!entries || entries.length===0) return null;
   let filtered = ym ? entries.filter(e=>e.ym===ym) : entries;
@@ -490,6 +500,7 @@ async function handleRateMasterUpload(ev){
       if(name && !rateMasterByName[name]) rateMasterByName[name]=empno;
       cnt++;
     }
+    rebuildRateNormIndex();
     statusEl.classList.remove('err');
     await saveRatesEncrypted(statusEl, cnt);  // 암호화하여 클라우드 저장 → 다음에 열 때 자동 적용
   } catch(e){
@@ -594,6 +605,7 @@ async function loadStoredRates(){
     const data = await decryptJSON(blob, pass);
     rateMaster       = data.rateMaster || {};
     rateMasterByName = data.rateMasterByName || {};
+    rebuildRateNormIndex();
     const m = blob.meta || {};
     const d = m.uploadedAt ? new Date(m.uploadedAt) : null;
     statusEl.classList.remove('err');
