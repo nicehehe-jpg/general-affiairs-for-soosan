@@ -1085,6 +1085,7 @@ function addLibRow(){ libEmployees.push({empno:'',name:'',userid:'',dept:'경영
 // ===================== ⑦ 선물지급/기념품 =====================
 let giftRecipients = []; // 업로드된 원본 인원 [{empno,name,dept}]
 let giftRows = [];       // 코스트센터별 집계 결과(표시·수정용)
+let giftUnmatched = [];  // 적용률 매칭 실패 인원(진단용)
 
 // 코스트센터/귀속부서 → 계정과목·비용구분 분류
 function giftAcct(dept, cc){
@@ -1098,18 +1099,19 @@ function giftAcct(dept, cc){
 // 코스트센터 기준으로 귀속부서 결정
 //  · 프로젝트 코스트센터(2024015-…)면 귀속부서 = 부서의 사업소(첫 토큰)
 //  · 부서명형 코스트센터(감시솔루션/경영지원팀/기술연구원 등)면 귀속부서 = 코스트센터
+// 실제 ERP 규칙: 코스트센터=적용코스트센터(그대로), 귀속부서=사람의 홈부서(사업소/본부, 팀 제거).
+//  단, 부서가 '본사근무'(실체 없음)면 코스트센터의 부서를 귀속부서로 사용.
 function giftOwner(dept, cc){
-  cc = String(cc||dept||'').trim();
+  cc = String(cc||'').trim();
   const dep = String(dept||'').trim();
-  const isProject = /^\d{4}/.test(cc) || (cc.includes('-') && /\d/.test(cc));
-  let owner;
-  if(!isProject){
-    owner = cc;                          // 부서명형 CC → 귀속부서 = CC (예: 마케팅본부 → 마케팅본부, 본사근무여도 CC 사용)
+  const 코스트센터 = cc || dep || '(미지정)';
+  let 귀속부서;
+  if(!dep || /본사근무/.test(dep)){
+    귀속부서 = cc || '(미지정)';            // 본사근무·공백 → 코스트센터의 부서 (예: 마케팅본부)
   } else {
-    const first = dep.split(/\s+/)[0];   // 프로젝트 CC → 부서의 사업소(첫 토큰)
-    owner = (!first || /^본사근무$/.test(first)) ? cc : first;  // 본사근무 등 실체없는 부서면 CC로 대체
+    귀속부서 = dep.split(/\s+/)[0] || dep;   // 홈부서: 팀 제거(공백 앞), 괄호는 유지 (고리1사업소 원자로정비팀→고리1사업소)
   }
-  return {귀속부서: owner, 코스트센터: cc};
+  return {귀속부서, 코스트센터};
 }
 // 적용률 마스터에서 가장 흔한 적용월
 function giftDefaultYM(){
@@ -1147,8 +1149,10 @@ async function handleGiftUpload(ev){
     if(!document.getElementById('giftYM').value){ const dy=giftDefaultYM(); if(dy) document.getElementById('giftYM').value=dy; }
     recomputeGift();
     statusEl.classList.remove('err');
-    const matched = recs.filter(p=>lookupRates(p.empno,p.name,document.getElementById('giftYM').value)).length;
-    statusEl.textContent = `${recs.length}명 불러왔습니다 · 적용률 매칭 ${matched}명 (시트: ${sheetName})`;
+    const total = recs.length, un = giftUnmatched.length, mt = total - un;
+    statusEl.innerHTML = `${total}명 로드 · <b style="color:#12B886">적용률 매칭 ${mt}명</b>`
+      + (un ? ` · <b style="color:#F04452">미매칭 ${un}명</b> <button type="button" onclick="showGiftUnmatched()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:7px;padding:3px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">미매칭 명단 보기</button>` : '')
+      + ` · 코스트센터 ${giftRows.length}개 (시트: ${sheetName})`;
   } catch(e){
     statusEl.classList.add('err');
     statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
@@ -1161,6 +1165,7 @@ function recomputeGift(){
   let ym = document.getElementById('giftYM').value; if(!ym) ym = giftDefaultYM();
   const agg={};
   const add=(dept,cc,amount,head)=>{ const k=dept+'|'+cc; if(!agg[k]) agg[k]={dept,cc,amount:0,head:0}; agg[k].amount+=amount; agg[k].head+=head; };
+  giftUnmatched = [];
   giftRecipients.forEach(p=>{
     const rates = lookupRates(p.empno, p.name, ym);
     if(rates && rates.length){
@@ -1172,6 +1177,7 @@ function recomputeGift(){
         add(o.귀속부서, o.코스트센터, portion, r.rate/100);
       });
     } else {
+      giftUnmatched.push(p); // 적용률 미매칭 → 명단 부서로 처리(진단 기록)
       const o = giftOwner(p.dept||'(미지정)', p.dept||'(미지정)');
       add(o.귀속부서, o.코스트센터, unit, 1);
     }
@@ -1181,6 +1187,12 @@ function recomputeGift(){
     return {계정과목:c.계정과목, 비용구분:c.비용구분, 귀속부서:a.dept, 코스트센터:a.cc, 인원:Math.round(a.head*100)/100, 금액:a.amount};
   }).sort((x,y)=> String(x.귀속부서).localeCompare(String(y.귀속부서),'ko') || String(x.코스트센터).localeCompare(String(y.코스트센터),'ko'));
   renderGiftTable();
+}
+function showGiftUnmatched(){
+  if(!giftUnmatched.length){ alert('적용률 미매칭 인원이 없습니다.'); return; }
+  const lines = giftUnmatched.slice(0,60).map((p,i)=>`${i+1}. 사번:${p.empno}  이름:${p.name}  명단부서:${p.dept}`).join('\n');
+  console.log('[선물 전표 · 적용률 미매칭 명단]', giftUnmatched);
+  alert(`적용률에 매칭되지 않은 인원 ${giftUnmatched.length}명\n(이 인원은 명단의 '부서'로 처리되어 코스트센터가 뭉칩니다)\n\n최대 60명 표시 — 전체는 브라우저 콘솔(F12) 참고:\n\n${lines}`);
 }
 
 function renderGiftTable(){
