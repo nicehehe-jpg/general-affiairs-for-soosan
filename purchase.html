@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>구매업무 관리 시스템 | 수산이앤에스</title>
+<script>window.APP_LOG_NAME='구매';</script>
+<script src="applog.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
@@ -902,9 +904,10 @@ function cycleStage(id, key){
 
 /* ============== 업데이트 이력(변경 로그) ============== */
 const CHANGELOG = [
-  { date:'2026-08-04', items:[
+  { date:'2026-08-07', items:[
     '계약완료 시 품의진행 완료가 자동으로 완료됩니다(선제조건 반영)',
-    '업데이트 이력(변경 로그) 기능 추가'
+    '업데이트 이력(변경 로그) 기능 추가',
+    '오류 자동수집 연동(대시보드 설정 › 로그 관리에서 확인)'
   ]},
   { date:'2026-07-13', items:[
     '관련문서에 전자세금계산서 항목 추가',
