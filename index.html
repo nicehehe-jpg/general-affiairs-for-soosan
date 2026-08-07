@@ -9,6 +9,8 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="총무시스템">
+<script>window.APP_LOG_NAME='대시보드';</script>
+<script src="applog.js"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
@@ -1208,6 +1210,37 @@ async function sendAiMsg(){
 </div>
 
 <!-- 설정 모달 -->
+<style>
+  .log-tab{padding:8px 14px;border:1px solid var(--line);background:var(--bg);border-radius:10px;font-size:13px;font-weight:700;color:var(--t2);cursor:pointer;font-family:inherit;}
+  .log-tab.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .log-ctl{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:12.5px;font-family:inherit;background:var(--bg);color:var(--t1);}
+  #logBody table{width:100%;border-collapse:collapse;font-size:12px;}
+  #logBody th,#logBody td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;}
+  #logBody th{background:var(--bg);position:sticky;top:0;}
+  #logBody td.msg{max-width:340px;word-break:break-all;}
+  #logBody .lv-error{color:#F04452;font-weight:700;}
+  #logBody .empty{padding:30px;text-align:center;color:var(--t3);}
+</style>
+<div class="modal-overlay" id="logModal" onclick="if(event.target===this) closeLogManager()">
+  <div class="modal" style="max-width:840px;">
+    <h3>🧾 로그 관리</h3>
+    <p class="modal-sub">시스템 변경 이력과 각 앱에서 자동 수집된 오류 로그입니다.</p>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="log-tab active" id="logTabUpdate" onclick="switchLogTab('update')">🗒 업데이트 이력</button>
+      <button class="log-tab" id="logTabError" onclick="switchLogTab('error')">⚠️ 오류 로그</button>
+    </div>
+    <div id="logToolbar" style="display:none;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+      <select id="logFilterApp" class="log-ctl" onchange="renderErrorLog()"><option value="">전체 앱</option></select>
+      <input id="logSearch" class="log-ctl" placeholder="메시지 검색" oninput="renderErrorLog()" style="flex:1;min-width:120px;">
+      <button class="set-btn line" onclick="reloadErrorLog()">↻ 새로고침</button>
+      <button class="set-btn line" onclick="exportErrorLogCsv()">⬇ CSV</button>
+      <button class="set-btn line" style="color:#F04452;border-color:#FDD;" onclick="clearErrorLog()">🗑 전체 삭제</button>
+    </div>
+    <div id="logBody" style="max-height:56vh;overflow:auto;"></div>
+    <div class="modal-actions"><button class="set-btn line" onclick="closeLogManager()">닫기</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="settingsModal" onclick="if(event.target===this) closeSettings()">
   <div class="modal">
     <h3>⚙️ 설정</h3>
@@ -1241,6 +1274,12 @@ async function sendAiMsg(){
       <button class="set-link" onclick="window.open('uniform.html','_blank')">🧥 피복 관리</button>
       <button class="set-link" onclick="window.open('resort.html','_blank')">🏝️ 휴양시설 관리</button>
       <button class="set-link" onclick="openVoucherGui()">📥 전표 생성기</button>
+    </div>
+
+    <div class="set-section">🧾 로그 관리</div>
+    <div class="set-row">
+      <div class="info">업데이트 이력 · 오류 로그<br><span style="color:var(--t3); font-size:11.5px;">시스템 변경 기록과 자동 수집된 오류를 확인·관리합니다</span></div>
+      <button class="set-btn" onclick="openLogManager()">🧾 로그 열기</button>
     </div>
 
     <div class="set-section">🔐 관리자 · 비밀번호 변경</div>
@@ -1980,6 +2019,90 @@ function openSettings(){
   document.getElementById('settingsModal').classList.add('show');
 }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
+
+/* ============== 로그 관리 (업데이트 이력 + 오류 로그) ============== */
+function logEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const CHANGELOG_CENTRAL = [
+  { date:'2026-08-07', app:'대시보드', items:[
+    '설정에 로그 관리(업데이트 이력·오류 로그) 기능 추가',
+    '전 앱 공통 오류 자동 수집 시작(applog.js)'
+  ]},
+  { date:'2026-08-07', app:'구매', items:[
+    '계약완료 시 품의진행 완료 자동 완료(선제조건 반영)',
+    '구매시스템 업데이트 이력 기능 추가'
+  ]},
+  { date:'2026-08-04', app:'대시보드', items:['매곡테크노파크 8월 1주 식단표 업데이트'] },
+  { date:'2026-07-29', app:'전표생성기', items:[
+    '선물지급/기념품 전표 자동생성(적용률 기반 코스트센터 분할)',
+    '사번 정규화·사원명부 이름매칭·본사근무 귀속부서·계정과목 코스트센터 기준 처리'
+  ]},
+  { date:'2026-07-13', app:'구매', items:[
+    '전자세금계산서 항목 추가 · 폴더/여러 파일 입력 · 문서 업로드 시 단계 자동완료 · 계약 폴더 37건 일괄 입력'
+  ]},
+];
+let LOG_ERRORS = [];
+function openLogManager(){ document.getElementById('logModal').classList.add('show'); switchLogTab('update'); }
+function closeLogManager(){ document.getElementById('logModal').classList.remove('show'); }
+function switchLogTab(t){
+  document.getElementById('logTabUpdate').classList.toggle('active', t==='update');
+  document.getElementById('logTabError').classList.toggle('active', t==='error');
+  document.getElementById('logToolbar').style.display = (t==='error') ? 'flex' : 'none';
+  if(t==='update') renderChangelogCentral(); else reloadErrorLog();
+}
+function renderChangelogCentral(){
+  document.getElementById('logBody').innerHTML = CHANGELOG_CENTRAL.map(e=>
+    `<div style="margin-bottom:16px;">
+       <div style="font-size:12.5px;font-weight:800;color:var(--blue);margin-bottom:6px;">${logEsc(e.date)} · <span style="color:var(--t2)">${logEsc(e.app||'')}</span></div>
+       <ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--t2);line-height:1.75;">
+         ${e.items.map(it=>`<li>${logEsc(it)}</li>`).join('')}
+       </ul>
+     </div>`).join('');
+}
+async function reloadErrorLog(){
+  const body=document.getElementById('logBody');
+  body.innerHTML='<div class="empty">불러오는 중…</div>';
+  let cloud=[]; try{ const v=await sbGet('error_log'); if(Array.isArray(v)) cloud=v; }catch(e){}
+  let local=[]; try{ const v=JSON.parse(localStorage.getItem('applog_errors')||'[]'); if(Array.isArray(v)) local=v; }catch(e){}
+  const seen=new Set(), merged=[];
+  cloud.concat(local).forEach(x=>{ if(!x) return; const k=(x.ts||'')+'|'+(x.msg||''); if(seen.has(k)) return; seen.add(k); merged.push(x); });
+  merged.sort((a,b)=> String(b.ts||'').localeCompare(String(a.ts||'')));
+  LOG_ERRORS=merged;
+  const sel=document.getElementById('logFilterApp'), cur=sel.value;
+  const apps=[...new Set(merged.map(x=>x.app||'?'))].sort();
+  sel.innerHTML='<option value="">전체 앱</option>'+apps.map(a=>`<option value="${logEsc(a)}">${logEsc(a)}</option>`).join('');
+  sel.value=cur;
+  renderErrorLog();
+}
+function renderErrorLog(){
+  const body=document.getElementById('logBody');
+  const app=document.getElementById('logFilterApp').value;
+  const q=(document.getElementById('logSearch').value||'').toLowerCase();
+  const rows=LOG_ERRORS.filter(x=> (!app||x.app===app) && (!q || (String(x.msg||'')+String(x.url||'')).toLowerCase().includes(q)));
+  if(!rows.length){ body.innerHTML='<div class="empty">🟢 표시할 오류 로그가 없습니다.</div>'; return; }
+  const fmt=ts=>{ try{ const d=new Date(ts); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }catch(e){ return logEsc(ts); } };
+  body.innerHTML=`<div style="font-size:11.5px;color:var(--t3);margin-bottom:6px;">총 ${rows.length}건${rows.length>300?' (상위 300건 표시)':''}</div>
+    <table><thead><tr><th style="width:118px;">시각</th><th style="width:74px;">앱</th><th>메시지 / URL / 스택</th></tr></thead><tbody>`+
+    rows.slice(0,300).map(x=>`<tr>
+      <td>${fmt(x.ts)}</td><td>${logEsc(x.app||'')}</td>
+      <td class="msg"><span class="lv-${logEsc(x.level||'error')}">${logEsc(x.msg||'')}</span>${x.url?`<br><span style="color:var(--t3);font-size:11px;">${logEsc(x.url)}</span>`:''}${x.stack?`<br><span style="color:var(--t3);font-size:10.5px;white-space:pre-wrap;">${logEsc(String(x.stack).slice(0,300))}</span>`:''}</td>
+    </tr>`).join('')+`</tbody></table>`;
+}
+async function clearErrorLog(){
+  if(!confirm('클라우드와 이 기기의 오류 로그를 모두 삭제할까요?')) return;
+  try{ await sbSet('error_log', []); }catch(e){}
+  try{ localStorage.removeItem('applog_errors'); }catch(e){}
+  reloadErrorLog();
+}
+function exportErrorLogCsv(){
+  const app=document.getElementById('logFilterApp').value;
+  const q=(document.getElementById('logSearch').value||'').toLowerCase();
+  const rows=LOG_ERRORS.filter(x=> (!app||x.app===app) && (!q || (String(x.msg||'')+String(x.url||'')).toLowerCase().includes(q)));
+  const c=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const csv='﻿'+['시각','앱','레벨','메시지','URL','스택'].map(c).join(',')+'\n'+
+    rows.map(x=>[x.ts,x.app,x.level,x.msg,x.url,x.stack].map(c).join(',')).join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  a.download='오류로그_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+}
 /* 관리자 · 접속 비밀번호 변경 (클라우드 gate_pw_hash에 저장 → 전 기기 적용) */
 async function changeGatePassword(){
   const cur=(document.getElementById('setCurPw').value||'').trim();
