@@ -10,7 +10,8 @@
   var SB_URL = 'https://vvyqldyljajlmtydtqdf.supabase.co';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
   var REST  = SB_URL + '/rest/v1/app_store';
-  var KEY   = 'error_log', CAP = 500;        // 클라우드 보관 최대 건수
+  var LOGS  = SB_URL + '/rest/v1/logs';      // Phase2 전용 테이블 (없으면 REST 배열로 폴백)
+  var KEY   = 'error_log', CAP = 500;        // 폴백 시 클라우드 배열 보관 최대 건수
   var LKEY  = 'applog_errors', LCAP = 200;   // 로컬 보관 최대 건수
   var recent = {};                            // 중복제거: msg -> 마지막 기록시각(ms)
   var queue  = [], pushing = false;
@@ -39,20 +40,31 @@
       .then(function(r){ return r.ok; }).catch(function(){ return false; });
   }
 
+  // 전용 테이블에 한 건 insert (성공 true). 테이블 없거나 실패하면 false → key-value 폴백
+  function insertLog(entry){
+    var h=headers(); h.Prefer='return=minimal';
+    return fetch(LOGS,{ method:'POST', headers:h, body:JSON.stringify({
+      ts:entry.ts, app:entry.app, level:entry.level, message:entry.msg, stack:entry.stack, url:entry.url, src:entry.src
+    })}).then(function(r){ return r.status>=200 && r.status<300; }).catch(function(){ return false; });
+  }
+  function fallbackKV(entries, done){
+    sbGet(KEY).then(function(cur){
+      var arr = Array.isArray(cur) ? cur : [];
+      arr = entries.concat(arr);
+      if(arr.length>CAP) arr = arr.slice(0,CAP);
+      return sbSet(KEY, arr);
+    }).then(done, done);
+  }
   function flush(){
     if(pushing || !queue.length) return;
     if(!token()) return;                       // 미인증 → 로컬만 유지, 로그인 후 재시도
     pushing = true;
     var batch = queue.slice();
-    sbGet(KEY).then(function(cur){
-      var arr = Array.isArray(cur) ? cur : [];
-      arr = batch.concat(arr);
-      if(arr.length>CAP) arr = arr.slice(0,CAP);
-      return sbSet(KEY, arr).then(function(ok){
-        pushing=false;
-        if(ok){ queue = queue.slice(batch.length); }
-        if(queue.length) setTimeout(flush, 2000);
-      });
+    Promise.all(batch.map(insertLog)).then(function(results){
+      var failed = batch.filter(function(_,i){ return !results[i]; });
+      var finish = function(){ pushing=false; queue = queue.slice(batch.length); if(queue.length) setTimeout(flush, 2000); };
+      if(failed.length) fallbackKV(failed, finish);   // 테이블 미존재/실패분만 배열로 폴백
+      else finish();
     }).catch(function(){ pushing=false; });
   }
 

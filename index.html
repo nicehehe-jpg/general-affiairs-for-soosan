@@ -2025,7 +2025,8 @@ function logEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/<
 const CHANGELOG_CENTRAL = [
   { date:'2026-08-07', app:'대시보드', items:[
     '설정에 로그 관리(업데이트 이력·오류 로그) 기능 추가',
-    '전 앱 공통 오류 자동 수집 시작(applog.js)'
+    '전 앱 공통 오류 자동 수집 시작(applog.js)',
+    '오류 로그를 전용 테이블(logs)로 이관 — 장기보존·대량조회(테이블 없으면 기존 방식 자동 폴백)'
   ]},
   { date:'2026-08-07', app:'구매', items:[
     '계약완료 시 품의진행 완료 자동 완료(선제조건 반영)',
@@ -2061,10 +2062,14 @@ function renderChangelogCentral(){
 async function reloadErrorLog(){
   const body=document.getElementById('logBody');
   body.innerHTML='<div class="empty">불러오는 중…</div>';
+  let table=[]; try{
+    const r=await fetch(SB_URL+'/rest/v1/logs?select=ts,created_at,app,level,message,stack,url&order=created_at.desc&limit=1000',{ headers:gmAuthHeaders() });
+    if(r.ok){ const rows=await r.json(); if(Array.isArray(rows)) table=rows.map(x=>({ ts:x.ts||x.created_at, app:x.app, level:x.level, msg:x.message, stack:x.stack, url:x.url })); }
+  }catch(e){}
   let cloud=[]; try{ const v=await sbGet('error_log'); if(Array.isArray(v)) cloud=v; }catch(e){}
   let local=[]; try{ const v=JSON.parse(localStorage.getItem('applog_errors')||'[]'); if(Array.isArray(v)) local=v; }catch(e){}
   const seen=new Set(), merged=[];
-  cloud.concat(local).forEach(x=>{ if(!x) return; const k=(x.ts||'')+'|'+(x.msg||''); if(seen.has(k)) return; seen.add(k); merged.push(x); });
+  table.concat(cloud).concat(local).forEach(x=>{ if(!x) return; const k=(x.ts||'')+'|'+(x.msg||''); if(seen.has(k)) return; seen.add(k); merged.push(x); });
   merged.sort((a,b)=> String(b.ts||'').localeCompare(String(a.ts||'')));
   LOG_ERRORS=merged;
   const sel=document.getElementById('logFilterApp'), cur=sel.value;
@@ -2088,7 +2093,8 @@ function renderErrorLog(){
     </tr>`).join('')+`</tbody></table>`;
 }
 async function clearErrorLog(){
-  if(!confirm('클라우드와 이 기기의 오류 로그를 모두 삭제할까요?')) return;
+  if(!confirm('클라우드(테이블·배열)와 이 기기의 오류 로그를 모두 삭제할까요?')) return;
+  try{ await fetch(SB_URL+'/rest/v1/logs?id=gt.0',{ method:'DELETE', headers:gmAuthHeaders() }); }catch(e){}
   try{ await sbSet('error_log', []); }catch(e){}
   try{ localStorage.removeItem('applog_errors'); }catch(e){}
   reloadErrorLog();
