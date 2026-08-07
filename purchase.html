@@ -232,6 +232,7 @@
     <button class="btn line sm" onclick="backupJSON()">💾 백업</button>
     <button class="btn line sm" onclick="document.getElementById('restoreFile').click()">📂 복원</button>
     <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="restoreJSON(this)">
+    <button class="btn line sm" onclick="openChangelog()">🗒 업데이트 이력</button>
     <button class="btn line sm" onclick="resetData()">↺ 초기화</button>
   </div>
 </div>
@@ -296,6 +297,15 @@
 <div class="case-grid" id="caseGrid"></div>
 
 <!-- 구매 건 추가/수정 모달 -->
+<div class="modal-overlay" id="changelogModal" onclick="if(event.target===this) closeChangelog()">
+  <div class="modal" style="max-width:560px;">
+    <h3>🗒 업데이트 이력</h3>
+    <p class="modal-sub">구매업무 관리 시스템의 변경 기록입니다. 최신 항목이 위에 표시됩니다.</p>
+    <div id="changelogBody"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeChangelog()">닫기</button></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="caseModal" onclick="if(event.target===this) closeCaseModal()">
   <div class="modal">
     <h3 id="cmTitle">구매 건 추가</h3>
@@ -457,6 +467,13 @@ function applyDocStages(c){
       c.stages[d.stage] = 'done';
     }
   });
+  enforceStagePrereqs(c);
+}
+// 단계 선제조건 강제: 품의진행 완료는 계약의 선제조건이므로, 계약완료면 품의도 자동 완료
+function enforceStagePrereqs(c){
+  if(c && c.stages && c.stages.contract === 'done' && c.stages.approval !== 'na'){
+    c.stages.approval = 'done';
+  }
 }
 const PAY_TERMS = {
   '30d': '30일 이내 계약금액의 100% 현금지급',
@@ -878,9 +895,36 @@ function cycleStage(id, key){
   const c = CASES.find(x=>x.id===id); if(!c) return;
   const cur = c.stages[key]||'todo';
   c.stages[key] = cur==='todo' ? 'done' : cur==='done' ? 'na' : 'todo';
+  enforceStagePrereqs(c);
   saveCases();
   renderCases(); renderStats();
 }
+
+/* ============== 업데이트 이력(변경 로그) ============== */
+const CHANGELOG = [
+  { date:'2026-08-04', items:[
+    '계약완료 시 품의진행 완료가 자동으로 완료됩니다(선제조건 반영)',
+    '업데이트 이력(변경 로그) 기능 추가'
+  ]},
+  { date:'2026-07-13', items:[
+    '관련문서에 전자세금계산서 항목 추가',
+    '문서 경로를 폴더 및 여러 파일로 입력 가능',
+    '문서(계약서 등) 경로 입력 시 해당 진행단계 자동 완료',
+    '2026년 구매계약 폴더 경로 37건 일괄 자동 입력'
+  ]},
+];
+function openChangelog(){
+  const body=document.getElementById('changelogBody');
+  body.innerHTML = CHANGELOG.map(e=>
+    `<div style="margin-bottom:16px;">
+       <div style="font-size:13px;font-weight:800;color:var(--blue);margin-bottom:6px;">${esc(e.date)}</div>
+       <ul style="margin:0;padding-left:18px;font-size:13px;color:var(--t2);line-height:1.75;">
+         ${e.items.map(it=>`<li>${esc(it)}</li>`).join('')}
+       </ul>
+     </div>`).join('');
+  document.getElementById('changelogModal').classList.add('show');
+}
+function closeChangelog(){ document.getElementById('changelogModal').classList.remove('show'); }
 
 /* ============== 월/구분 컨트롤 ============== */
 function syncMonthUI(){
