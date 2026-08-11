@@ -189,7 +189,7 @@
       <div class="pm-field"><label>이용월</label><input type="month" id="amUseMonth"></div>
     </div>
     <div class="pm-grid c2" style="margin-bottom:14px;">
-      <div class="pm-field"><label>이름</label><input type="text" id="amName" placeholder="예: 홍길동"></div>
+      <div class="pm-field"><label>이름</label><input type="text" id="amName" placeholder="예: 홍길동" list="amNameList" autocomplete="off" oninput="autofillFromName()"><datalist id="amNameList"></datalist></div>
       <div class="pm-field"><label>사번 <span style="color:var(--t3); font-weight:500;">(선택)</span></label><input type="text" id="amEmpNo" placeholder="동명이인 구분용"></div>
     </div>
     <div class="pm-grid c3" style="margin-bottom:14px;">
@@ -444,6 +444,7 @@ function openAppModal(id){
   const a=id?APPS.find(x=>x.id===id):null;
   document.getElementById('amTitle').textContent=a?'신청 수정':'신청 추가';
   fillFacilitySelect(document.getElementById('amFacility'));
+  rebuildEmpDir(); populateNameList();
   document.getElementById('amFacility').value = a?a.facility:(activeFac!=='all'?activeFac:'birch');
   document.getElementById('amUseMonth').value = a?a.useMonth:selMonth;
   document.getElementById('amName').value=a?a.name:'';
@@ -459,6 +460,35 @@ function openAppModal(id){
   setTimeout(()=>document.getElementById('amName').focus(),50);
 }
 function closeAppModal(){ document.getElementById('appModal').classList.remove('show'); editingId=null; }
+
+// ===== 이름 자동완성: 기존 신청(APPS)+이용이력(HIST)에서 사번·직책·부서·연락처·입사일 채우기 =====
+let EMP_DIR = {}; // 이름 -> {empNo, position, dept, contact, hireDate}
+function rebuildEmpDir(){
+  EMP_DIR = {};
+  const upd=(name,rec)=>{
+    name=(name||'').trim(); if(!name) return;
+    const cur=EMP_DIR[name]||{empNo:'',position:'',dept:'',contact:'',hireDate:''};
+    ['empNo','position','dept','contact','hireDate'].forEach(k=>{ const v=rec[k]; if(v&&String(v).trim()) cur[k]=String(v).trim(); });
+    EMP_DIR[name]=cur;
+  };
+  const byDate=arr=>arr.slice().sort((a,b)=>String(a.useMonth||a.checkIn||'').localeCompare(String(b.useMonth||b.checkIn||'')));
+  byDate(HIST).forEach(h=>upd(h.name,{empNo:h.empNo,position:h.position,dept:h.dept}));   // 이용이력: 부서·직책(있으면)
+  byDate(APPS).forEach(a=>upd(a.name,{empNo:a.empNo,position:a.position,dept:a.dept,contact:a.contact,hireDate:a.hireDate})); // 신청: 전체 필드, 최신 우선
+}
+function populateNameList(){
+  const dl=document.getElementById('amNameList'); if(!dl) return;
+  dl.innerHTML=Object.keys(EMP_DIR).sort((a,b)=>a.localeCompare(b,'ko')).map(n=>{
+    const d=EMP_DIR[n]; const lab=[d.dept,d.position].filter(Boolean).join(' ');
+    return `<option value="${esc(n)}">${lab?esc(lab):''}</option>`;
+  }).join('');
+}
+function autofillFromName(){
+  const rec=EMP_DIR[(document.getElementById('amName').value||'').trim()];
+  if(!rec) return;
+  const set=(id,v)=>{ if(v){ document.getElementById(id).value=v; } };
+  set('amEmpNo',rec.empNo); set('amPosition',rec.position); set('amDept',rec.dept);
+  set('amContact',rec.contact); set('amHireDate',rec.hireDate);
+}
 function saveAppModal(){
   const name=document.getElementById('amName').value.trim();
   const checkIn=document.getElementById('amCheckIn').value;
