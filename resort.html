@@ -153,8 +153,7 @@
     <button class="btn line sm" onclick="backupJSON()">💾 백업</button>
     <button class="btn line sm" onclick="document.getElementById('restoreFile').click()">📂 복원</button>
     <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="restoreJSON(this)">
-    <button class="btn line sm" onclick="document.getElementById('empMasterFile').click()" title="사번·부서·직책·입사일·연락처가 있는 사원명부 엑셀을 올리면 이름 자동완성이 전 직원으로 확장됩니다">📇 사원명부</button>
-    <input type="file" id="empMasterFile" accept=".xlsx,.xls" style="display:none" onchange="handleEmpMasterUpload(this)">
+    <button class="btn line sm" onclick="openSettings()">⚙️ 설정</button>
     <button class="btn line sm" onclick="resetData()">↺ 초기화</button>
   </div>
 </div>
@@ -208,6 +207,31 @@
     <div class="modal-actions">
       <button class="btn line" onclick="closeAppModal()">취소</button>
       <button class="btn" onclick="saveAppModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 모달 -->
+<div class="modal-overlay" id="settingsModal" onclick="if(event.target===this) closeSettings()">
+  <div class="modal">
+    <h3>⚙️ 설정</h3>
+    <p class="modal-sub">사원명부를 올리면 신청 추가에서 <b>이름만 입력해도</b> 사번·직책·부서·연락처·입사일이 자동으로 채워집니다.</p>
+    <div style="background:var(--bg); border-radius:14px; padding:16px;">
+      <div style="font-size:13px; font-weight:800; color:var(--t1); margin-bottom:8px;">📇 사원명부 (전 직원)</div>
+      <div id="empMasterStatus" style="font-size:13px; color:var(--t2); margin-bottom:12px;">사원명부 미등록</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" onclick="document.getElementById('empMasterFile').click()">📤 사원명부 업로드</button>
+        <button class="btn line" onclick="clearEmpMaster()">🗑 삭제</button>
+      </div>
+      <input type="file" id="empMasterFile" accept=".xlsx,.xls" style="display:none" onchange="handleEmpMasterUpload(this)">
+      <div style="font-size:11.5px; color:var(--t3); margin-top:12px; line-height:1.6;">
+        인식 컬럼: <b>사번 · 성명 · 부서 · 직위(직책) · 입사일 · 연락처</b> (있는 것만 자동 인식)<br>
+        한 번 올리면 <b>클라우드에 저장</b>되어 다른 PC·다음에 열 때도 자동 적용됩니다.<br>
+        ⚠️ '사원명부조회' 기본 파일에는 <b>입사일 컬럼이 없어</b> 입사일은 비어 있을 수 있습니다.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeSettings()">닫기</button>
     </div>
   </div>
 </div>
@@ -483,6 +507,23 @@ function rebuildEmpDir(){
   (EMP_MASTER||[]).forEach(m=>upd(m.name,{empNo:m.empno,position:m.position,dept:m.dept,contact:m.contact,hireDate:m.hireDate})); // 사원명부: 사번·부서·직책·입사일 최우선(빈 연락처는 위 값 유지)
 }
 
+// ===== 설정 모달 =====
+function openSettings(){ refreshEmpStatus(); document.getElementById('settingsModal').classList.add('show'); }
+function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
+function refreshEmpStatus(){
+  const el=document.getElementById('empMasterStatus'); if(!el) return;
+  const n=(EMP_MASTER||[]).length;
+  if(!n){ el.innerHTML='사원명부 <b>미등록</b> — 업로드하면 전 직원 이름 자동완성이 됩니다.'; return; }
+  const nHire=EMP_MASTER.filter(x=>x.hireDate).length, nCon=EMP_MASTER.filter(x=>x.contact).length;
+  el.innerHTML=`✅ 사원명부 <b>${n}명</b> 등록됨 · 입사일 ${nHire}명 · 연락처 ${nCon}명`;
+}
+function clearEmpMaster(){
+  if(!(EMP_MASTER&&EMP_MASTER.length)){ alert('등록된 사원명부가 없습니다.'); return; }
+  if(!confirm('등록된 사원명부를 삭제할까요?\n(이름 자동완성이 신청기록·이용이력 기준으로 축소됩니다)')) return;
+  EMP_MASTER=[]; saveEmpMaster(); refreshEmpStatus();
+  alert('사원명부를 삭제했습니다.');
+}
+
 // ===== 사원명부(전 직원) 업로드 → 이름 자동완성 전체 확장 =====
 function handleEmpMasterUpload(input){
   const file=input.files&&input.files[0]; if(!file) return;
@@ -513,7 +554,7 @@ function handleEmpMasterUpload(input){
           contact: c.contact>=0?String(r[c.contact]||'').trim():'' });
       }
       if(!list.length){ alert('유효한 사원 데이터를 찾지 못했습니다.'); input.value=''; return; }
-      EMP_MASTER=list; saveEmpMaster();
+      EMP_MASTER=list; saveEmpMaster(); refreshEmpStatus();
       const nHire=list.filter(x=>x.hireDate).length, nCon=list.filter(x=>x.contact).length;
       alert(`사원명부 ${list.length}명 불러왔습니다. (클라우드 저장됨)\n· 입사일 ${nHire}명 · 연락처 ${nCon}명 포함`
         + (nHire===0?'\n\n⚠️ 입사일 컬럼이 없어 입사일 자동입력은 안 됩니다. 입사일이 포함된 사원명부를 올려주세요.':''));
@@ -731,7 +772,7 @@ function exportResult(){
   XLSX.writeFile(wb, `휴양시설_선정결과_${selMonth.replace('-','')}.xlsx`);
 }
 
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeAppModal(); closeHistModal(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeAppModal(); closeHistModal(); closeSettings(); } });
 
 /* ============== 클라우드 로드 ============== */
 async function sbInit(){
