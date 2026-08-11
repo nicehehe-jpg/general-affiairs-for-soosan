@@ -404,7 +404,7 @@
 
     <div class="pm-section">👤 프로젝트 담당자</div>
     <div class="pm-grid c3" style="margin-bottom:14px;">
-      <div class="pm-field"><label>담당자 이름</label><input type="text" id="cmManager" placeholder="예: 홍길동"></div>
+      <div class="pm-field"><label>담당자 이름</label><input type="text" id="cmManager" placeholder="예: 홍길동" list="cmManagerList" autocomplete="off" oninput="autofillManagerDept()"><datalist id="cmManagerList"></datalist></div>
       <div class="pm-field"><label>부서</label><input type="text" id="cmDept" placeholder="예: 사업본부"></div>
       <div class="pm-field"><label>코스트센터</label><input type="text" id="cmCostCenter" placeholder="예: 사업본부"></div>
     </div>
@@ -961,9 +961,31 @@ function calcPayAmt(key) {
   document.getElementById('cm'+key+'Amt').value = amt || '';
 }
 
+// ===== 담당자 이름 → 부서 자동입력 (사원명부 전 직원 + 기존 구매건) =====
+let EMP_MASTER = (function(){ try{ const r=localStorage.getItem('resort_empmaster_v1'); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){} return []; })();
+let MGR_DIR = {}; // 이름 -> {dept, costCenter}
+function rebuildMgrDir(){
+  MGR_DIR = {};
+  const upd=(name,rec)=>{ name=(name||'').trim(); if(!name) return; const cur=MGR_DIR[name]||{dept:'',costCenter:''}; if(rec.dept&&String(rec.dept).trim()) cur.dept=String(rec.dept).trim(); if(rec.costCenter&&String(rec.costCenter).trim()) cur.costCenter=String(rec.costCenter).trim(); MGR_DIR[name]=cur; };
+  (EMP_MASTER||[]).forEach(m=>upd(m.name,{dept:m.dept}));  // 사원명부: 전 직원 부서
+  CASES.slice().sort((a,b)=>String(a.contractDate||'').localeCompare(String(b.contractDate||'')))
+       .forEach(c=>upd(c.manager,{dept:c.dept, costCenter:c.costCenter})); // 구매건: 부서·코스트센터(최신 우선)
+}
+function populateManagerList(){
+  const dl=document.getElementById('cmManagerList'); if(!dl) return;
+  dl.innerHTML=Object.keys(MGR_DIR).sort((a,b)=>a.localeCompare(b,'ko')).map(n=>`<option value="${esc(n)}">${esc(MGR_DIR[n].dept||'')}</option>`).join('');
+}
+function autofillManagerDept(){
+  const rec=MGR_DIR[(document.getElementById('cmManager').value||'').trim()];
+  if(!rec) return;
+  if(rec.dept) document.getElementById('cmDept').value=rec.dept;
+  const cc=document.getElementById('cmCostCenter'); if(rec.costCenter && !cc.value.trim()) cc.value=rec.costCenter;
+}
+
 function openCaseModal(id){
   editingCaseId = id || null;
   _cmAutoBonds = null; // 모달 열 때 초기화 (이전 자동입력 잔존 방지)
+  rebuildMgrDir(); populateManagerList();
   const c = id ? CASES.find(x=>x.id===id) : null;
   document.getElementById('cmTitle').textContent = c ? '구매 건 수정' : '구매 건 추가';
   document.getElementById('cmType').value = c ? c.type : (activeType!=='all' ? activeType : 'purchase');
@@ -1554,6 +1576,7 @@ function importExcel(input){
 }
 async function sbInit(){
   setSyncStatus('loading');
+  sbGet('resort_empmaster_v1').then(emp=>{ if(Array.isArray(emp)){ EMP_MASTER=emp; try{localStorage.setItem('resort_empmaster_v1',JSON.stringify(emp));}catch(e){} } }).catch(()=>{});
   const cloud = await sbGet(STORE);
   if(cloud===undefined){ setSyncStatus('offline'); return; }
   if(Array.isArray(cloud)){
