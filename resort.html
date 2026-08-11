@@ -153,6 +153,8 @@
     <button class="btn line sm" onclick="backupJSON()">💾 백업</button>
     <button class="btn line sm" onclick="document.getElementById('restoreFile').click()">📂 복원</button>
     <input type="file" id="restoreFile" accept="application/json" style="display:none" onchange="restoreJSON(this)">
+    <button class="btn line sm" onclick="document.getElementById('empMasterFile').click()" title="사번·부서·직책·입사일·연락처가 있는 사원명부 엑셀을 올리면 이름 자동완성이 전 직원으로 확장됩니다">📇 사원명부</button>
+    <input type="file" id="empMasterFile" accept=".xlsx,.xls" style="display:none" onchange="handleEmpMasterUpload(this)">
     <button class="btn line sm" onclick="resetData()">↺ 초기화</button>
   </div>
 </div>
@@ -314,9 +316,13 @@ function loadApps(){ try{ const r=localStorage.getItem(APP_KEY); if(r){ const p=
 function loadHist(){ try{ const r=localStorage.getItem(HIST_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){} return SEED_HIST.map(x=>({...x})); }
 function saveApps(){ try{ localStorage.setItem(APP_KEY, JSON.stringify(APPS)); }catch(e){} sbPush(APP_KEY, APPS); }
 function saveHist(){ try{ localStorage.setItem(HIST_KEY, JSON.stringify(HIST)); }catch(e){} sbPush(HIST_KEY, HIST); }
+const EMP_KEY = 'resort_empmaster_v1';
+function loadEmpMaster(){ try{ const r=localStorage.getItem(EMP_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){} return []; }
+function saveEmpMaster(){ try{ localStorage.setItem(EMP_KEY, JSON.stringify(EMP_MASTER)); }catch(e){} if(typeof sbPush==='function') sbPush(EMP_KEY, EMP_MASTER); }
 
 let APPS = loadApps();
 let HIST = loadHist();
+let EMP_MASTER = loadEmpMaster(); // [{empno,name,dept,position,hireDate,contact}] — 사원 전체 명부
 let selMonth = nextYM();
 let activeFac = 'all';
 let editingId = null;
@@ -473,7 +479,48 @@ function rebuildEmpDir(){
   };
   const byDate=arr=>arr.slice().sort((a,b)=>String(a.useMonth||a.checkIn||'').localeCompare(String(b.useMonth||b.checkIn||'')));
   byDate(HIST).forEach(h=>upd(h.name,{empNo:h.empNo,position:h.position,dept:h.dept}));   // 이용이력: 부서·직책(있으면)
-  byDate(APPS).forEach(a=>upd(a.name,{empNo:a.empNo,position:a.position,dept:a.dept,contact:a.contact,hireDate:a.hireDate})); // 신청: 전체 필드, 최신 우선
+  byDate(APPS).forEach(a=>upd(a.name,{empNo:a.empNo,position:a.position,dept:a.dept,contact:a.contact,hireDate:a.hireDate})); // 신청: 연락처 등
+  (EMP_MASTER||[]).forEach(m=>upd(m.name,{empNo:m.empno,position:m.position,dept:m.dept,contact:m.contact,hireDate:m.hireDate})); // 사원명부: 사번·부서·직책·입사일 최우선(빈 연락처는 위 값 유지)
+}
+
+// ===== 사원명부(전 직원) 업로드 → 이름 자동완성 전체 확장 =====
+function handleEmpMasterUpload(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false});
+      let hi=-1, col={};
+      for(let i=0;i<Math.min(rows.length,10);i++){
+        const cells=rows[i].map(v=>String(v==null?'':v).trim());
+        if(cells.includes('사번') || cells.some(c=>['성명','사원','이름'].includes(c))){ hi=i; cells.forEach((c,ci)=>{ if(c && col[c]===undefined) col[c]=ci; }); break; }
+      }
+      if(hi<0){ alert('헤더(사번/성명)를 찾지 못했습니다. 사번 또는 성명 컬럼이 있는 파일이어야 합니다.'); input.value=''; return; }
+      const find=(...keys)=>{ for(const k of keys){ for(const h in col){ if(h.includes(k)) return col[h]; } } return -1; };
+      const c={ empno:find('사번'), name:find('성명','사원','이름'), dept:find('부서'), pos:find('직위','직급','직책'), hire:find('입사'), contact:find('연락','휴대','핸드폰','전화','H.P','HP') };
+      const list=[];
+      for(let i=hi+1;i<rows.length;i++){
+        const r=rows[i]; if(!r) continue;
+        const name=c.name>=0?String(r[c.name]||'').trim():'';
+        const empno=c.empno>=0?String(r[c.empno]||'').trim():'';
+        if(!name && !empno) continue;
+        list.push({ empno, name,
+          dept: c.dept>=0?String(r[c.dept]||'').trim():'',
+          position: c.pos>=0?String(r[c.pos]||'').trim():'',
+          hireDate: c.hire>=0?_hxdate(r[c.hire]):'',
+          contact: c.contact>=0?String(r[c.contact]||'').trim():'' });
+      }
+      if(!list.length){ alert('유효한 사원 데이터를 찾지 못했습니다.'); input.value=''; return; }
+      EMP_MASTER=list; saveEmpMaster();
+      const nHire=list.filter(x=>x.hireDate).length, nCon=list.filter(x=>x.contact).length;
+      alert(`사원명부 ${list.length}명 불러왔습니다. (클라우드 저장됨)\n· 입사일 ${nHire}명 · 연락처 ${nCon}명 포함`
+        + (nHire===0?'\n\n⚠️ 입사일 컬럼이 없어 입사일 자동입력은 안 됩니다. 입사일이 포함된 사원명부를 올려주세요.':''));
+    }catch(err){ console.error(err); alert('가져오기 실패: 파일 형식을 확인해 주세요.\n'+(err&&err.message||err)); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
 }
 function populateNameList(){
   const dl=document.getElementById('amNameList'); if(!dl) return;
@@ -689,11 +736,12 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeAppModal();
 /* ============== 클라우드 로드 ============== */
 async function sbInit(){
   setSyncStatus('loading');
-  const [appsC, histC]=await Promise.all([sbGet(APP_KEY), sbGet(HIST_KEY)]);
+  const [appsC, histC, empC]=await Promise.all([sbGet(APP_KEY), sbGet(HIST_KEY), sbGet(EMP_KEY)]);
   if(appsC===undefined && histC===undefined){ setSyncStatus('offline'); return; }
   let changed=false;
   if(Array.isArray(appsC)){ APPS=appsC; try{localStorage.setItem(APP_KEY,JSON.stringify(APPS));}catch(e){} changed=true; } else if(appsC===null){ await sbSet(APP_KEY,APPS); }
   if(Array.isArray(histC)){ HIST=histC; try{localStorage.setItem(HIST_KEY,JSON.stringify(HIST));}catch(e){} changed=true; } else if(histC===null){ await sbSet(HIST_KEY,HIST); }
+  if(Array.isArray(empC)){ EMP_MASTER=empC; try{localStorage.setItem(EMP_KEY,JSON.stringify(EMP_MASTER));}catch(e){} }
   setSyncStatus('online'); if(changed) renderAll();
 }
 (function init(){ document.getElementById('monthPick').value=selMonth; renderAll(); sbInit(); })();
