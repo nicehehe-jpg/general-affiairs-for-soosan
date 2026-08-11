@@ -977,9 +977,8 @@ function populateManagerList(){
 }
 function autofillManagerDept(){
   const rec=MGR_DIR[(document.getElementById('cmManager').value||'').trim()];
-  if(!rec) return;
-  if(rec.dept) document.getElementById('cmDept').value=rec.dept;
-  const cc=document.getElementById('cmCostCenter'); if(rec.costCenter && !cc.value.trim()) cc.value=rec.costCenter;
+  if(!rec || !rec.dept) return;
+  document.getElementById('cmDept').value=rec.dept;  // 부서만 자동입력 (코스트센터는 프로젝트별로 다르므로 자동입력 안 함)
 }
 
 function openCaseModal(id){
