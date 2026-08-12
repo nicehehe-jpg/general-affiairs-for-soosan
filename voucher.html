@@ -96,7 +96,7 @@
       await gmSignIn(v);
       err.textContent=''; err.style.color='#F04452';
       document.getElementById('gate').style.display='none';
-      if(window.loadStoredRates) loadStoredRates().then(()=>{ if(window.loadStoredEmps) loadStoredEmps(); });  // 저장된 적용률·사원명부 자동 적용
+      if(window.loadStoredRates) loadStoredRates().then(()=>{ if(window.loadStoredEmps) loadStoredEmps(); }).then(()=>{ if(window.loadDashboardEmpMaster) loadDashboardEmpMaster(); });  // 저장된 적용률·사원명부(전표+대시보드) 자동 적용
     }catch(e){
       err.style.color='#F04452'; err.textContent='비밀번호가 올바르지 않습니다';
       document.getElementById('gatePw').value=''; document.getElementById('gatePw').focus();
@@ -561,7 +561,7 @@ async function ratePass(){
 async function resetRatePass(){
   localStorage.removeItem(RATE_PASS_LS);
   const p = ((await askPassword('새 적용률 암호를 입력하세요. (집·회사 PC 동일하게)'))||'').trim();
-  if(p){ localStorage.setItem(RATE_PASS_LS, p); loadStoredRates().then(()=>loadStoredEmps()); }
+  if(p){ localStorage.setItem(RATE_PASS_LS, p); loadStoredRates().then(()=>loadStoredEmps()).then(()=>loadDashboardEmpMaster()); }
 }
 
 function _b64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
@@ -722,6 +722,26 @@ async function loadStoredEmps(){
     statusEl.classList.add('err');
     statusEl.textContent = '🔒 저장된 사원명부 복호화 실패 — 암호가 다른 듯합니다. [🔑 적용률 암호 재설정]으로 다시 입력하세요.';
   }
+}
+
+// 대시보드 설정에서 올린 사원명부(resort_empmaster_v1, 평문 사번·성명·부서)를 이름→사번 매칭에 활용
+async function loadDashboardEmpMaster(){
+  try{
+    const list = await sbGet('resort_empmaster_v1');
+    if(!Array.isArray(list) || !list.length) return;
+    let added=0;
+    list.forEach(p=>{
+      const name=String((p&&p.name)||'').trim(), empno=String((p&&p.empno)||'').trim();
+      if(!name || !empno) return;
+      if(empByName[name]){ if(empByName[name].empno!==empno) empDupNames.add(name); }
+      else { empByName[name]={empno, dept:String((p&&p.dept)||'').trim()}; added++; }
+    });
+    const st=document.getElementById('empMasterStatus');
+    if(st && added>0 && Object.keys(empMaster).length===0){
+      st.classList.remove('err');
+      st.textContent = `✅ 대시보드 사원명부 연동 · ${Object.keys(empByName).length}명 (이름→사번 매칭)`;
+    }
+  }catch(e){}
 }
 
 async function clearStoredEmps(){
@@ -1532,7 +1552,7 @@ function generate(){
 document.getElementById('rateMasterFile').addEventListener('change', handleRateMasterUpload);
 document.getElementById('empMasterFile').addEventListener('change', handleEmpMasterUpload);
 // 이미 인증된 세션이면, 저장해 둔 적용률·사원명부를 자동으로 불러와 적용
-if(sessionStorage.getItem('gm_auth')==='ok') loadStoredRates().then(()=>loadStoredEmps());
+if(sessionStorage.getItem('gm_auth')==='ok') loadStoredRates().then(()=>loadStoredEmps()).then(()=>loadDashboardEmpMaster());
 document.getElementById('mgmtPdfFile').addEventListener('change', handleMgmtPdfUpload);
 document.getElementById('etcPdfFile').addEventListener('change', handleEtcPdfUpload);
 document.getElementById('driverXlsxFile').addEventListener('change', handleDriverUpload);
