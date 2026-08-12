@@ -13,6 +13,7 @@
 <script src="applog.js"></script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
   :root{
@@ -2073,9 +2074,9 @@ function handleEmpMasterUploadDash(input){
   const file=input.files&&input.files[0]; if(!file) return;
   if(typeof XLSX==='undefined'){ alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해 주세요.'); input.value=''; return; }
   const reader=new FileReader();
-  reader.onload=(e)=>{
+  reader.onload=async(e)=>{
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const wb=await readWorkbookSafeBuf(e.target.result,{type:'array',cellDates:true});
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false});
       let hi=-1, col={};
@@ -2116,6 +2117,19 @@ function handleEmpMasterUploadDash(input){
 const RATE_KEY = 'voucher_rate_master_enc';       // app_store 키 (voucher.html과 동일)
 const RATE_PASS_LS = 'gm_voucher_rate_pass';      // 적용률 암호 (voucher.html과 동일 localStorage 키 → 공유)
 function _rateToNum(s){ if(s==null) return null; const n=Number(String(s).replace(/[,\s]/g,'')); return isNaN(n)?null:n; }
+// 사내 시스템 xlsx의 불완전 styles.xml(속성없는 <xf>) 때문에 SheetJS가 터지는 경우 JSZip으로 보정 후 재시도
+async function readWorkbookSafeBuf(buf, opts){
+  opts = opts || {type:'array'};
+  try{ return XLSX.read(new Uint8Array(buf), opts); }
+  catch(e){
+    if(typeof JSZip==='undefined') throw e;
+    const zip = await JSZip.loadAsync(buf);
+    const sf = zip.file('xl/styles.xml');
+    if(sf){ let xml=await sf.async('string'); xml=xml.replace(/<((?:[a-zA-Z0-9]+:)?xf)>/g,'<$1 applyAlignment="0">'); zip.file('xl/styles.xml', xml); }
+    const fixed = await zip.generateAsync({type:'arraybuffer'});
+    return XLSX.read(new Uint8Array(fixed), opts);
+  }
+}
 function _rb64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
 async function _rDeriveKey(pass, salt){
   const base=await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
@@ -2154,7 +2168,7 @@ function handleRateMasterUploadDash(input){
   const reader=new FileReader();
   reader.onload=async(e)=>{
     try{
-      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const wb=await readWorkbookSafeBuf(e.target.result,{type:'array',cellDates:true});
       const aoa=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null});
       let hi=-1, col={};
       for(let i=0;i<aoa.length;i++){
