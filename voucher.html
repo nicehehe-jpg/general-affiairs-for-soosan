@@ -169,7 +169,8 @@
     <div style="font-size:12.5px;color:#333D4B;line-height:1.6;">📊 적용률 · 📇 사원명부는 <b>대시보드 설정 → 데이터 관리</b>에서 관리합니다. 여기서 <b>자동으로 불러와</b> 모든 전표 생성(선물지급·통신비·운전대행·전자도서관 등)에 적용됩니다. <a href="index.html" target="_blank" style="color:#3182F6;font-weight:700;">대시보드 열기 ↗</a></div>
     <div class="status-msg" id="rateMasterStatus" style="margin-top:8px;">적용률 확인 중…</div>
     <div class="status-msg" id="empMasterStatus">사원명부 확인 중…</div>
-    <div style="margin-top:7px;">
+    <div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button type="button" onclick="reloadMasters()" style="background:#EAF3FF;color:#3182F6;border:1px solid #C9DBFF;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 다시 불러오기</button>
       <button type="button" onclick="resetRatePass()" style="background:#F2F4F6;color:#4E5968;border:1px solid #E5E8EB;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🔑 적용률 암호 입력/재설정</button>
     </div>
   </div>
@@ -597,9 +598,9 @@ async function loadStoredRates(){
   if(!statusEl) return;
   let blob = null;
   try{ blob = await sbGet(RATE_KEY); }catch(e){}
-  if(!blob || !blob.ct) return;  // 저장된 적용률 없음 → 기존 안내 유지
-  const pass = await ratePass();
-  if(!pass){ statusEl.textContent = '🔒 저장된 적용률 있음 — 암호를 입력하면 자동 적용됩니다. [🔑 암호 재설정]'; return; }
+  if(!blob || !blob.ct){ statusEl.classList.remove('err'); statusEl.textContent = '적용률 미등록 — 대시보드 설정 → 데이터 관리에서 업로드하세요'; return; }
+  const pass = (localStorage.getItem(RATE_PASS_LS)||'').trim();  // 자동로드는 캐시된 암호만 사용(모달 안 띄움)
+  if(!pass){ statusEl.classList.remove('err'); statusEl.textContent = '🔒 적용률 있음 — 아래 [🔑 적용률 암호 입력/재설정] 버튼을 눌러 암호를 입력하세요(최초 1회)'; return; }
   try{
     const data = await decryptJSON(blob, pass);
     rateMaster       = data.rateMaster || {};
@@ -690,9 +691,9 @@ async function loadStoredEmps(){
   if(!statusEl) return;
   let blob = null;
   try{ blob = await sbGet(EMP_KEY); }catch(e){}
-  if(!blob || !blob.ct) return;  // 저장된 사원명부 없음 → 기존 안내 유지
-  const pass = await ratePass();
-  if(!pass){ statusEl.textContent = '🔒 저장된 사원명부 있음 — 암호를 입력하면 자동 적용됩니다.'; return; }
+  if(!blob || !blob.ct) return;  // 전표생성기 자체 사원명부 없음 → 대시보드 사원명부(loadDashboardEmpMaster)가 상태 처리
+  const pass = (localStorage.getItem(RATE_PASS_LS)||'').trim();  // 자동로드는 캐시된 암호만
+  if(!pass) return;  // 암호 없으면 대시보드 사원명부로 대체
   try{
     const data = await decryptJSON(blob, pass);
     empMaster = data.empMaster || {};
@@ -715,22 +716,31 @@ async function loadStoredEmps(){
 
 // 대시보드 설정에서 올린 사원명부(resort_empmaster_v1, 평문 사번·성명·부서)를 이름→사번 매칭에 활용
 async function loadDashboardEmpMaster(){
+  const st=document.getElementById('empMasterStatus');
   try{
     const list = await sbGet('resort_empmaster_v1');
-    if(!Array.isArray(list) || !list.length) return;
-    let added=0;
+    if(!Array.isArray(list) || !list.length){
+      if(st && /확인 중/.test(st.textContent||'')){ st.classList.remove('err'); st.textContent='사원명부 미등록 — 대시보드 설정에서 업로드하세요'; }
+      return;
+    }
     list.forEach(p=>{
       const name=String((p&&p.name)||'').trim(), empno=String((p&&p.empno)||'').trim();
       if(!name || !empno) return;
       if(empByName[name]){ if(empByName[name].empno!==empno) empDupNames.add(name); }
-      else { empByName[name]={empno, dept:String((p&&p.dept)||'').trim()}; added++; }
+      else { empByName[name]={empno, dept:String((p&&p.dept)||'').trim()}; }
     });
-    const st=document.getElementById('empMasterStatus');
-    if(st && added>0 && Object.keys(empMaster).length===0){
+    if(st && Object.keys(empMaster).length===0){
       st.classList.remove('err');
       st.textContent = `✅ 대시보드 사원명부 연동 · ${Object.keys(empByName).length}명 (이름→사번 매칭)`;
     }
-  }catch(e){}
+  }catch(e){ if(st && /확인 중/.test(st.textContent||'')) st.textContent='사원명부 로드 실패 (연결 확인)'; }
+}
+
+// 대시보드에서 적용률·사원명부를 방금 올린 경우, 새로고침 없이 다시 불러오기
+function reloadMasters(){
+  const r=document.getElementById('rateMasterStatus'); if(r){ r.classList.remove('err'); r.textContent='적용률 확인 중…'; }
+  const e=document.getElementById('empMasterStatus'); if(e){ e.classList.remove('err'); e.textContent='사원명부 확인 중…'; }
+  loadStoredRates().then(()=>loadStoredEmps()).then(()=>loadDashboardEmpMaster());
 }
 
 async function clearStoredEmps(){
