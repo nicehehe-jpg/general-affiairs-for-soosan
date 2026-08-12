@@ -411,6 +411,7 @@ let etcItems = [
 let driverEmployees = [
   {empno:'', name:'', dept:'경영지원팀', amount:0},
 ];
+let libUnmatched = []; // 전자도서관 적용률 미매칭(진단용)
 let libEmployees = [
   {empno:'', name:'', userid:'', dept:'경영지원팀', cc:'경영지원팀', amount:0},
 ];
@@ -975,6 +976,7 @@ async function handleLibUpload(ev){
     const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
     const head = findHeaderRow(aoa, ['회원그룹','아이디','대여금액']);
     if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(회원그룹/아이디/대여금액)를 찾지 못했습니다.'; return; }
+    const nameCol = ['이름','성명','사원','회원명','한글명'].map(k=>head.col[k]).find(v=>v!==undefined);
     const sums={}, names={};
     let firstYM='';
     for(let i=head.idx+1;i<aoa.length;i++){
@@ -987,7 +989,7 @@ async function handleLibUpload(ev){
       if(!userid || !amount) continue;
       if(!sums[userid]){
         sums[userid]=0;
-        names[userid] = head.col['이름']!==undefined ? String(r[head.col['이름']]||'').trim() : '';
+        names[userid] = nameCol!==undefined ? String(r[nameCol]||'').trim() : '';
       }
       sums[userid]+=amount;
       if(!firstYM && head.col['대출일']!==undefined && r[head.col['대출일']]!==null){
@@ -998,10 +1000,13 @@ async function handleLibUpload(ev){
     }
     const ym = document.getElementById('libYM').value || firstYM;
     const rows = [];
+    let libMatched = 0; libUnmatched = [];
     Object.entries(sums).forEach(([userid,amount])=>{
       const emp = empMaster[userid.toLowerCase()];
       const name = (emp && emp.name) || names[userid];
-      const empno = (emp && emp.empno) || rateMasterByName[name] || '';
+      // 사번 해석: 사원명부(아이디) → 적용률 이름 → 사원명부 이름
+      const empno = (emp && emp.empno) || rateMasterByName[name] || (empByName[name] && empByName[name].empno) || '';
+      if(lookupRates(empno, name, ym)) libMatched++; else libUnmatched.push(`사번:${empno||'-'}  이름:${name||'(없음)'}  아이디:${userid}`);
       splitByRateOrDept(amount, empno, name, '경영지원팀', ym).forEach(s=>{
         rows.push({empno, name, userid, dept:s.dept, cc:s.cc, amount:s.amount});
       });
@@ -1011,11 +1016,20 @@ async function handleLibUpload(ev){
     renderLibTable();
     if(firstYM && !document.getElementById('libYM').value) document.getElementById('libYM').value = firstYM;
     statusEl.classList.remove('err');
-    statusEl.textContent = `수산이앤에스 ${Object.keys(sums).length}명 불러왔습니다 (적용률 분할 ${rows.length}행). (시트: ${sheetName}, 아이디별 대여금액 합산)`;
+    const libTot = Object.keys(sums).length;
+    statusEl.innerHTML = `수산이앤에스 ${libTot}명 · <b style="color:#12B886">적용률 매칭 ${libMatched}명</b>`
+      + (libUnmatched.length ? ` · <b style="color:#F04452">미매칭 ${libUnmatched.length}명</b> <button type="button" onclick="showLibUnmatched()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:7px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">미매칭 보기</button>` : '')
+      + ` (${rows.length}행 · 시트: ${sheetName})`
+      + (libMatched===0 ? `<br><span style="color:#F04452;">⚠️ 매칭 0명 — 공통설정에서 <b>적용률</b>을 업로드했는지 확인하세요.</span>` : '');
   } catch(e){
     statusEl.classList.add('err');
     statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
   }
+}
+function showLibUnmatched(){
+  if(!libUnmatched.length){ alert('적용률 미매칭 인원이 없습니다.'); return; }
+  console.log('[전자도서관 · 적용률 미매칭]', libUnmatched);
+  alert(`적용률에 매칭되지 않은 인원 ${libUnmatched.length}명\n(이 인원은 코스트센터가 '경영지원팀'으로 대체됩니다 — 표에서 직접 수정 가능)\n\n원인: 적용률에 사번/이름이 없거나 표기가 다름\n\n${libUnmatched.slice(0,60).join('\n')}`);
 }
 
 // ===================== 표 렌더링 =====================
