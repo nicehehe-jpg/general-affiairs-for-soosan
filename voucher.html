@@ -165,23 +165,12 @@
     <label>기표일</label><input id="docDate" type="date">
     <label>출납예정일</label><input id="payDate" type="date">
   </div>
-  <div class="upload-box">
-    <label class="upl">📎 ① 급상여전표처리사원별적용률 업로드 (선택)</label>
-    <input type="file" id="rateMasterFile" accept=".xlsx,.xls">
-    <div class="hint">📌 <b>한 번 업로드하면 클라우드에 암호화 저장되어, 다음에 열 때 자동으로 적용</b>됩니다(집·회사 PC 공통). 업로드하면 ④ 법인운전대행, ⑤ 직책보임자 통신비에서 사번(또는 성명)이 일치하는 직원의 금액이 적용률에 따라 여러 코스트센터로 자동 분할됩니다. 업로드하지 않으면 기존처럼 표에서 직접 부서를 선택합니다.</div>
-    <div class="status-msg" id="rateMasterStatus">적용률 파일 미업로드</div>
-    <div style="margin-top:7px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button type="button" onclick="clearStoredRates()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🗑 저장된 적용률 삭제</button>
-      <button type="button" onclick="resetRatePass()" style="background:#F2F4F6;color:#4E5968;border:1px solid #E5E8EB;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🔑 적용률 암호 재설정</button>
-    </div>
-  </div>
-  <div class="upload-box">
-    <label class="upl">📎 ② 사원명부 업로드 (선택)</label>
-    <input type="file" id="empMasterFile" accept=".xlsx,.xls">
-    <div class="hint">📌 <b>한 번 업로드하면 클라우드에 암호화 저장되어, 다음에 열 때 자동으로 적용</b>됩니다(집·회사 PC 공통, 적용률과 같은 암호 사용). "사번", "아이디" 컬럼이 있는 사원명부를 올리면 ⑥ 전자도서관에서 아이디가 일치하는 직원의 사번·성명이 자동으로 채워져 적용률과 정확히 매칭됩니다.</div>
-    <div class="status-msg" id="empMasterStatus">사원명부 미업로드</div>
+  <div class="upload-box" style="background:#F1F5FF;border-color:#C9DBFF;">
+    <div style="font-size:12.5px;color:#333D4B;line-height:1.6;">📊 적용률 · 📇 사원명부는 <b>대시보드 설정 → 데이터 관리</b>에서 관리합니다. 여기서 <b>자동으로 불러와</b> 모든 전표 생성(선물지급·통신비·운전대행·전자도서관 등)에 적용됩니다. <a href="index.html" target="_blank" style="color:#3182F6;font-weight:700;">대시보드 열기 ↗</a></div>
+    <div class="status-msg" id="rateMasterStatus" style="margin-top:8px;">적용률 확인 중…</div>
+    <div class="status-msg" id="empMasterStatus">사원명부 확인 중…</div>
     <div style="margin-top:7px;">
-      <button type="button" onclick="clearStoredEmps()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🗑 저장된 사원명부 삭제</button>
+      <button type="button" onclick="resetRatePass()" style="background:#F2F4F6;color:#4E5968;border:1px solid #E5E8EB;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">🔑 적용률 암호 입력/재설정</button>
     </div>
   </div>
 </div>
@@ -1549,8 +1538,7 @@ function generate(){
   XLSX.writeFile(wb, `전표_${ymTag||'결과'}.xlsx`);
 }
 
-document.getElementById('rateMasterFile').addEventListener('change', handleRateMasterUpload);
-document.getElementById('empMasterFile').addEventListener('change', handleEmpMasterUpload);
+// 적용률·사원명부 업로드는 대시보드 설정으로 이관됨(여기서는 자동 로드만). 업로드 input 제거로 이벤트 연결도 제거.
 // 이미 인증된 세션이면, 저장해 둔 적용률·사원명부를 자동으로 불러와 적용
 if(sessionStorage.getItem('gm_auth')==='ok') loadStoredRates().then(()=>loadStoredEmps()).then(()=>loadDashboardEmpMaster());
 document.getElementById('mgmtPdfFile').addEventListener('change', handleMgmtPdfUpload);
