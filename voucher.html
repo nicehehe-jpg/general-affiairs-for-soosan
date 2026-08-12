@@ -246,7 +246,7 @@
     <div class="hint">부가세 불공제 처리: 입력한 이용금액(공급가액)에 10%를 가산한 금액이 비용/미지급금으로 처리됩니다. 부가세 행은 증빙(전자세금계산서 매입세액_불공제)만 표기되고 금액은 0원입니다.</div>
   </div>
   <table id="driverTable">
-    <thead><tr><th style="width:14%">사번</th><th style="width:18%">성명</th><th style="width:22%">귀속부서(적용률 미매칭시 사용)</th><th style="width:22%">이용금액(공급가액)</th><th style="width:8%"></th></tr></thead>
+    <thead><tr><th style="width:11%">사번</th><th style="width:14%">성명</th><th style="width:16%">귀속부서</th><th style="width:28%">코스트센터</th><th style="width:20%">이용금액(공급가액)</th><th style="width:6%"></th></tr></thead>
     <tbody></tbody>
   </table>
   <div class="actions"><button class="btn small" onclick="addDriverRow()">➕ 사원 추가</button></div>
@@ -266,7 +266,7 @@
     <label>대상월</label><input id="commYM" type="month">
   </div>
   <table id="commTable">
-    <thead><tr><th style="width:14%">사번</th><th style="width:16%">성명</th><th style="width:14%">직책</th><th style="width:22%">귀속부서(적용률 미매칭시 사용)</th><th style="width:20%">금액</th><th style="width:8%"></th></tr></thead>
+    <thead><tr><th style="width:10%">사번</th><th style="width:11%">성명</th><th style="width:10%">직책</th><th style="width:16%">귀속부서</th><th style="width:28%">코스트센터</th><th style="width:15%">금액</th><th style="width:6%"></th></tr></thead>
     <tbody></tbody>
   </table>
   <div class="actions">
@@ -381,8 +381,9 @@ let mgmtItems = [
   {name:'기타검사/공사비', suffix:'지급수수료_건물관리용역비', amount:0},
   {name:'조경관리비', suffix:'지급수수료_건물관리용역비', amount:0},
 ];
+let commUnmatched = []; // 통신비 적용률 미매칭(진단)
 let commEmployees = [
-  {empno:'', name:'', title:'', dept:'경영지원팀', amount:0},
+  {empno:'', name:'', title:'', dept:'경영지원팀', cc:'경영지원팀', amount:0},
 ];
 
 // 업무유형 → 계정과목 suffix 매핑 (기타 본사관리비)
@@ -398,8 +399,9 @@ const ETC_TYPE_MAP = {
 let etcItems = [
   {type:'정수기/비데', vendor:'', supply:0, vat:0, evidType:'세금계산서', memo:''},
 ];
+let driverUnmatched = []; // 운전대행 적용률 미매칭(진단)
 let driverEmployees = [
-  {empno:'', name:'', dept:'경영지원팀', amount:0},
+  {empno:'', name:'', dept:'경영지원팀', cc:'경영지원팀', amount:0},
 ];
 let libUnmatched = []; // 전자도서관 적용률 미매칭(진단용)
 let libEmployees = [
@@ -924,27 +926,37 @@ async function handleCommUpload(ev){
     const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
     const head = findHeaderRow(aoa, ['사번','지급총액']);
     if(!head){ statusEl.classList.add('err'); statusEl.textContent='헤더(사번/지급총액)를 찾지 못했습니다.'; return; }
-    const rows=[];
+    const persons=[];
     for(let i=head.idx+1;i<aoa.length;i++){
       const r=aoa[i];
       if(!r) continue;
       const empno = r[head.col['사번']];
       const amount = toNum(r[head.col['지급총액']]);
-      if(!empno && !amount) continue;
       if(!empno || !amount) continue;
-      rows.push({
+      persons.push({
         empno: String(empno).trim(),
         name: head.col['성명']!==undefined ? String(r[head.col['성명']]||'').trim() : '',
         title: head.col['직책']!==undefined ? String(r[head.col['직책']]||'').trim() : '',
-        dept: '경영지원팀',
         amount: amount,
       });
     }
-    if(rows.length===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행을 찾지 못했습니다.'; return; }
-    commEmployees = rows;
+    if(persons.length===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행을 찾지 못했습니다.'; return; }
+    // 적용률로 코스트센터 분할하여 표에 미리보기 (전자도서관과 동일)
+    const ym = document.getElementById('commYM').value || '';
+    const out=[]; let matched=0; commUnmatched=[];
+    persons.forEach(p=>{
+      if(lookupRates(p.empno, p.name, ym)) matched++; else commUnmatched.push(`사번:${p.empno||'-'}  이름:${p.name||'(없음)'}`);
+      splitByRateOrDept(p.amount, p.empno, p.name, '경영지원팀', ym).forEach(s=>{
+        out.push({empno:p.empno, name:p.name, title:p.title, dept:s.dept, cc:s.cc||s.dept, amount:s.amount});
+      });
+    });
+    commEmployees = out;
     renderCommTable();
     statusEl.classList.remove('err');
-    statusEl.textContent = `${rows.length}명 불러왔습니다. (시트: ${sheetName})`;
+    statusEl.innerHTML = `${persons.length}명 · <b style="color:#12B886">적용률 매칭 ${matched}명</b>`
+      + (commUnmatched.length ? ` · <b style="color:#F04452">미매칭 ${commUnmatched.length}명</b> <button type="button" onclick="showCommUnmatched()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:7px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">미매칭 보기</button>` : '')
+      + ` (${out.length}행 · 시트: ${sheetName})`
+      + (matched===0 ? `<br><span style="color:#F04452;">⚠️ 매칭 0명 — 공통설정에서 적용률이 로드됐는지 확인하세요.</span>` : '');
   } catch(e){
     statusEl.classList.add('err');
     statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
@@ -970,15 +982,23 @@ async function handleDriverUpload(ev){
       const nm = String(name).trim();
       sums[nm] = (sums[nm]||0) + fare;
     }
-    const rows = Object.entries(sums).map(([name,amount])=>{
-      const empno = rateMasterByName[name] || '';
-      return {empno, name, dept:'경영지원팀', amount};
+    const persons = Object.entries(sums).map(([name,amount])=>({ empno: rateMasterByName[name] || (empByName[name] && empByName[name].empno) || '', name, amount }));
+    if(persons.length===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행을 찾지 못했습니다.'; return; }
+    const ym = document.getElementById('driverYM').value || '';
+    const out=[]; let matched=0; driverUnmatched=[];
+    persons.forEach(p=>{
+      if(lookupRates(p.empno, p.name, ym)) matched++; else driverUnmatched.push(`이름:${p.name||'(없음)'}`);
+      splitByRateOrDept(p.amount, p.empno, p.name, '경영지원팀', ym).forEach(s=>{
+        out.push({empno:p.empno, name:p.name, dept:s.dept, cc:s.cc||s.dept, amount:s.amount});
+      });
     });
-    if(rows.length===0){ statusEl.classList.add('err'); statusEl.textContent='유효한 데이터 행을 찾지 못했습니다.'; return; }
-    driverEmployees = rows;
+    driverEmployees = out;
     renderDriverTable();
     statusEl.classList.remove('err');
-    statusEl.textContent = `${rows.length}명 불러왔습니다. (동일 인물 요금 합산)`;
+    statusEl.innerHTML = `${persons.length}명 · <b style="color:#12B886">적용률 매칭 ${matched}명</b>`
+      + (driverUnmatched.length ? ` · <b style="color:#F04452">미매칭 ${driverUnmatched.length}명</b> <button type="button" onclick="showDriverUnmatched()" style="background:#FFF0F0;color:#F04452;border:1px solid #FDD;border-radius:7px;padding:2px 9px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">미매칭 보기</button>` : '')
+      + ` (동일인물 합산 · ${out.length}행)`
+      + (matched===0 ? `<br><span style="color:#F04452;">⚠️ 매칭 0명 — 공통설정에서 적용률이 로드됐는지 확인하세요.</span>` : '');
   } catch(e){
     statusEl.classList.add('err');
     statusEl.textContent = '파일을 읽는 중 오류: '+e.message;
@@ -1080,22 +1100,29 @@ function addEtcRow(){ etcItems.push({type:'정수기/비데',vendor:'',supply:0,
 function renderDriverTable(){
   const tbody=document.querySelector('#driverTable tbody');
   tbody.innerHTML='';
-  const deptOptions = DEPTS.map(d=>`<option value="${d[0]}">${d[0]}</option>`).join('');
   driverEmployees.forEach((e,i)=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td><input value="${e.empno}" oninput="driverEmployees[${i}].empno=this.value"></td>
-      <td><input value="${e.name}" oninput="driverEmployees[${i}].name=this.value"></td>
-      <td><select onchange="driverEmployees[${i}].dept=this.value">${deptOptions}</select></td>
-      <td><input type="number" value="${e.amount}" oninput="driverEmployees[${i}].amount=Number(this.value)||0; renderDriverTable()"></td>
+      <td><input value="${(e.empno||'').replace(/"/g,'&quot;')}" oninput="driverEmployees[${i}].empno=this.value"></td>
+      <td><input value="${(e.name||'').replace(/"/g,'&quot;')}" oninput="driverEmployees[${i}].name=this.value"></td>
+      <td><input value="${(e.dept||'').replace(/"/g,'&quot;')}" oninput="driverEmployees[${i}].dept=this.value"></td>
+      <td><input value="${(e.cc||'').replace(/"/g,'&quot;')}" oninput="driverEmployees[${i}].cc=this.value"></td>
+      <td><input type="number" value="${e.amount}" oninput="driverEmployees[${i}].amount=Number(this.value)||0; driverTotalOnly()"></td>
       <td><button class="btn small danger" onclick="driverEmployees.splice(${i},1);renderDriverTable()">삭제</button></td>`;
-    tr.querySelector('select').value = e.dept;
     tbody.appendChild(tr);
   });
-  const total=driverEmployees.reduce((s,x)=>s+x.amount,0);
-  document.getElementById('driverTotalLine').textContent = `대리운전 합계: ${total.toLocaleString()}원`;
+  driverTotalOnly();
 }
-function addDriverRow(){ driverEmployees.push({empno:'',name:'',dept:'경영지원팀',amount:0}); renderDriverTable(); }
+function driverTotalOnly(){
+  const total=driverEmployees.reduce((s,x)=>s+(x.amount||0),0);
+  document.getElementById('driverTotalLine').textContent = `대리운전 합계(공급가액): ${total.toLocaleString()}원 · ${driverEmployees.length}행`;
+}
+function showDriverUnmatched(){
+  if(!driverUnmatched.length){ alert('적용률 미매칭 인원이 없습니다.'); return; }
+  console.log('[운전대행 · 적용률 미매칭]', driverUnmatched);
+  alert(`적용률에 매칭되지 않은 인원 ${driverUnmatched.length}명\n(코스트센터가 '경영지원팀'으로 대체됩니다 — 표에서 수정 가능)\n\n${driverUnmatched.slice(0,60).join('\n')}`);
+}
+function addDriverRow(){ driverEmployees.push({empno:'',name:'',dept:'경영지원팀',cc:'경영지원팀',amount:0}); renderDriverTable(); }
 
 function renderLibTable(){
   const tbody=document.querySelector('#libTable tbody');
@@ -1306,23 +1333,30 @@ function addMgmtRow(){ mgmtItems.push({name:'',suffix:'',amount:0}); renderMgmtT
 function renderCommTable(){
   const tbody=document.querySelector('#commTable tbody');
   tbody.innerHTML='';
-  const deptOptions = DEPTS.map(d=>`<option value="${d[0]}">${d[0]}</option>`).join('');
   commEmployees.forEach((e,i)=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td><input value="${e.empno}" oninput="commEmployees[${i}].empno=this.value"></td>
-      <td><input value="${e.name}" oninput="commEmployees[${i}].name=this.value"></td>
-      <td><input value="${e.title}" oninput="commEmployees[${i}].title=this.value"></td>
-      <td><select onchange="commEmployees[${i}].dept=this.value">${deptOptions}</select></td>
-      <td><input type="number" value="${e.amount}" oninput="commEmployees[${i}].amount=Number(this.value)||0; renderCommTable()"></td>
+      <td><input value="${(e.empno||'').replace(/"/g,'&quot;')}" oninput="commEmployees[${i}].empno=this.value"></td>
+      <td><input value="${(e.name||'').replace(/"/g,'&quot;')}" oninput="commEmployees[${i}].name=this.value"></td>
+      <td><input value="${(e.title||'').replace(/"/g,'&quot;')}" oninput="commEmployees[${i}].title=this.value"></td>
+      <td><input value="${(e.dept||'').replace(/"/g,'&quot;')}" oninput="commEmployees[${i}].dept=this.value"></td>
+      <td><input value="${(e.cc||'').replace(/"/g,'&quot;')}" oninput="commEmployees[${i}].cc=this.value"></td>
+      <td><input type="number" value="${e.amount}" oninput="commEmployees[${i}].amount=Number(this.value)||0; commTotalOnly()"></td>
       <td><button class="btn small danger" onclick="commEmployees.splice(${i},1);renderCommTable()">삭제</button></td>`;
-    tr.querySelector('select').value = e.dept;
     tbody.appendChild(tr);
   });
-  const total=commEmployees.reduce((s,x)=>s+x.amount,0);
-  document.getElementById('commTotalLine').textContent = `통신비 합계: ${total.toLocaleString()}원`;
+  commTotalOnly();
 }
-function addCommRow(){ commEmployees.push({empno:'',name:'',title:'',dept:'경영지원팀',amount:0}); renderCommTable(); }
+function commTotalOnly(){
+  const total=commEmployees.reduce((s,x)=>s+(x.amount||0),0);
+  document.getElementById('commTotalLine').textContent = `통신비 합계: ${total.toLocaleString()}원 · ${commEmployees.length}행`;
+}
+function showCommUnmatched(){
+  if(!commUnmatched.length){ alert('적용률 미매칭 인원이 없습니다.'); return; }
+  console.log('[통신비 · 적용률 미매칭]', commUnmatched);
+  alert(`적용률에 매칭되지 않은 인원 ${commUnmatched.length}명\n(이 인원은 코스트센터가 '경영지원팀'으로 대체됩니다 — 표에서 직접 수정 가능)\n\n${commUnmatched.slice(0,60).join('\n')}`);
+}
+function addCommRow(){ commEmployees.push({empno:'',name:'',title:'',dept:'경영지원팀',cc:'경영지원팀',amount:0}); renderCommTable(); }
 
 function allocate(amount, suffix, memo, vendor, docDate){
   const rows=[]; let alloc=0;
@@ -1443,9 +1477,9 @@ function generate(){
     const driverRows=[];
     driverEmployees.filter(e=>e.amount>0).forEach(e=>{
       const memo=`${fmtYM(driverYM)}분 운전대행(대리운전) 이용 - ${e.name}`;
-      const costAmt=Math.round(e.amount*1.1); // 부가세 불공제 → 이용금액의 10%를 비용에 가산
-      const rows = allocateByRateOrDept(costAmt, e.empno, e.name, e.dept, driverYM, '지급수수료_기타', memo, driverVendor, docDate);
-      driverRows.push(...rows);
+      const costAmt=Math.round(e.amount*1.1); // 부가세 불공제 → 공급가액의 10% 가산
+      const dtype = isHQ(e.dept, e.cc) ? '판관비' : '제조비용';
+      driverRows.push({계정과목:acct('지급수수료_기타',dtype),적요:memo,귀속부서:e.dept,코스트센터:e.cc||e.dept,차변금액:costAmt,대변금액:0,거래처:driverVendor,증빙:'',기표일:docDate,출납예정일:''});
       driverTotal+=costAmt;
     });
     if(driverTotal>0){
@@ -1470,8 +1504,8 @@ function generate(){
       commEmployees.filter(e=>e.amount>0).forEach(e=>{
         const nameTag=`${e.name} ${e.title}`.trim();
         const memo=`${dateFrom} ~ ${dateTo} 휴대폰사용지원비(${nameTag})`;
-        const rows = allocateByRateOrDept(e.amount, e.empno, e.name, e.dept, commYM, '복리후생비_휴대폰사용지원비', memo, commVendor, docDate);
-        commRows.push(...rows);
+        const dtype = isHQ(e.dept, e.cc) ? '판관비' : '제조비용';
+        commRows.push({계정과목:acct('복리후생비_휴대폰사용지원비',dtype),적요:memo,귀속부서:e.dept,코스트센터:e.cc||e.dept,차변금액:e.amount,대변금액:0,거래처:commVendor,증빙:'',기표일:docDate,출납예정일:''});
         commTotal+=e.amount;
       });
       if(commTotal>0){
