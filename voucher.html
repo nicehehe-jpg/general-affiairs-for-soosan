@@ -271,7 +271,9 @@
   </table>
   <div class="actions">
     <button class="btn small" onclick="addCommRow()">➕ 직원 추가</button>
+    <button class="btn gen" onclick="generateCommVoucher()">📥 전표입력 양식 다운로드 (통신비)</button>
   </div>
+  <div class="hint" style="margin-top:6px;">인원마다 <b>비용 행(코스트센터 분할) + 미지급금 행</b>이 생성됩니다(전표입력 양식). 아래 '엑셀 생성 및 다운로드'는 여러 업무 통합용입니다.</div>
   <div class="total-line" id="commTotalLine"></div>
 </div>
 
@@ -1357,6 +1359,50 @@ function showCommUnmatched(){
   alert(`적용률에 매칭되지 않은 인원 ${commUnmatched.length}명\n(이 인원은 코스트센터가 '경영지원팀'으로 대체됩니다 — 표에서 직접 수정 가능)\n\n${commUnmatched.slice(0,60).join('\n')}`);
 }
 function addCommRow(){ commEmployees.push({empno:'',name:'',title:'',dept:'경영지원팀',cc:'경영지원팀',amount:0}); renderCommTable(); }
+
+// 통신비 전용 전표입력(15컬럼) 다운로드 — 인원마다 비용 행 + 미지급금_일반 행(추가정보 '사원')
+function generateCommVoucher(){
+  const list = commEmployees.filter(e=>(e.amount||0)>0);
+  if(!list.length){ alert('통신비 데이터가 없습니다. 파일을 업로드하거나 행을 추가하세요.'); return; }
+  const commYM=document.getElementById('commYM').value;
+  if(!commYM){ alert('대상월을 선택하세요.'); return; }
+  const [y,m]=commYM.split('-').map(Number);
+  const lastDay=new Date(y,m,0).getDate();
+  const dateFrom=`${y}.${String(m).padStart(2,'0')}.01`;
+  const dateTo=`${y}.${String(m).padStart(2,'0')}.${String(lastDay).padStart(2,'0')}`;
+  // 인원별 그룹 (사번+성명+직책) — 분할 행을 한 사람으로 묶음
+  const byPerson={}, order=[];
+  list.forEach(e=>{
+    const k=`${e.empno}|${e.name}|${e.title}`;
+    if(!byPerson[k]){ byPerson[k]={empno:e.empno,name:e.name,title:e.title,rows:[]}; order.push(k); }
+    byPerson[k].rows.push(e);
+  });
+  const H=['행번호','계정과목','비용구분','차변금액','대변금액','적요','귀속부서','코스트센터','거래처','증빙','거래처번호','계정세목','거래처사업자번호','추가정보','관리항목정보'];
+  const aoa=[['전표입력'], H.slice()];
+  const pad=n=>String(n).padStart(4,'0');
+  let seq=0;
+  order.forEach(k=>{
+    const p=byPerson[k];
+    const nameTag=`${p.name} ${p.title}`.trim();
+    const memo=`${dateFrom} ~ ${dateTo} 휴대폰사용지원비(${nameTag})`;
+    let total=0;
+    p.rows.forEach(r=>{
+      const dtype=isHQ(r.dept,r.cc)?'판관비':'제조비용';
+      seq++; total+=r.amount;
+      aoa.push([pad(seq), acct('복리후생비_휴대폰사용지원비',dtype), dtype==='판관비'?'판관':'용역', r.amount, 0, memo, r.dept, r.cc||r.dept, '', '', '', '', '', '', '']);
+    });
+    // 인원별 미지급금 — 대표 코스트센터 = 금액이 가장 큰 분할
+    const rep=p.rows.slice().sort((a,b)=>(b.amount||0)-(a.amount||0))[0];
+    seq++;
+    aoa.push([pad(seq), '미지급금_일반', '', 0, total, memo, rep.dept, rep.cc||rep.dept, '', '', '', '', '', '사원', '']);
+  });
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:H.length-1}}];
+  ws['!cols']=[{wch:7},{wch:34},{wch:8},{wch:12},{wch:12},{wch:42},{wch:22},{wch:34},{wch:14},{wch:14},{wch:11},{wch:10},{wch:16},{wch:9},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '전표입력');
+  XLSX.writeFile(wb, `통신비 전표입력_${commYM.replace('-','')}.xlsx`);
+}
 
 function allocate(amount, suffix, memo, vendor, docDate){
   const rows=[]; let alloc=0;
