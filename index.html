@@ -1273,6 +1273,16 @@ async function sendAiMsg(){
     </div>
     <div style="font-size:11px; color:var(--t3); margin:-4px 0 4px; line-height:1.5;">사번·성명·부서·직위(직책)·입사일·연락처 컬럼을 인식합니다. 올리면 휴양시설 신청 등에서 이름만 입력해도 자동 채워집니다.</div>
 
+    <div class="set-row">
+      <div class="info">📊 적용률 (전표생성기 코스트센터)<br><span id="rateMasterState" style="color:var(--t3); font-size:11.5px;">확인 중…</span></div>
+      <div style="display:flex; gap:6px;">
+        <button class="set-btn" onclick="document.getElementById('rateMasterFileDash').click()">📤 업로드</button>
+        <button class="set-btn line" onclick="clearRateMasterDash()">🗑</button>
+      </div>
+      <input type="file" id="rateMasterFileDash" accept=".xlsx,.xls" style="display:none" onchange="handleRateMasterUploadDash(this)">
+    </div>
+    <div style="font-size:11px; color:var(--t3); margin:-4px 0 4px; line-height:1.5;">'급상여전표처리사원별적용률' 파일(사번·적용코스트센터·적용률 컬럼)을 올리면 <b>전표생성기</b>의 선물지급·통신비 등에서 코스트센터 자동분류에 사용됩니다. 개인정보라 <b>암호화되어 저장</b>됩니다(전표생성기와 동일 암호).</div>
+
     <div class="set-section">🔗 시스템 바로가기</div>
     <div class="set-links">
       <button class="set-link" onclick="window.open('todo.html','_blank')">✅ 할 일 관리</button>
@@ -2027,6 +2037,7 @@ function openSettings(){
   const pm=document.getElementById('setPwMsg'); if(pm) pm.innerHTML='';
   recheckCloud();
   refreshEmpMasterState();
+  refreshRateMasterState();
   document.getElementById('settingsModal').classList.add('show');
 }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
@@ -2094,6 +2105,91 @@ function handleEmpMasterUploadDash(input){
       const nH=list.filter(x=>x.hireDate).length, nC=list.filter(x=>x.contact).length;
       alert(`사원명부 ${list.length}명 저장 완료 (클라우드 동기화).\n· 입사일 ${nH}명 · 연락처 ${nC}명`
         + (nH===0?'\n\n⚠️ 입사일 컬럼이 없어 입사일은 채워지지 않습니다. 입사일 포함 파일을 올려주세요.':''));
+    }catch(err){ console.error(err); alert('가져오기 실패: '+(err&&err.message||err)); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ===== 적용률(급상여전표처리) — 전표생성기 코스트센터 자동분류에 사용 =====
+//   voucher.html과 동일한 키/암호화 방식으로 저장 → 전표생성기가 그대로 읽음
+const RATE_KEY = 'voucher_rate_master_enc';       // app_store 키 (voucher.html과 동일)
+const RATE_PASS_LS = 'gm_voucher_rate_pass';      // 적용률 암호 (voucher.html과 동일 localStorage 키 → 공유)
+function _rateToNum(s){ if(s==null) return null; const n=Number(String(s).replace(/[,\s]/g,'')); return isNaN(n)?null:n; }
+function _rb64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+async function _rDeriveKey(pass, salt){
+  const base=await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:150000, hash:'SHA-256'}, base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+async function _rEncryptJSON(obj, pass){
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await _rDeriveKey(pass, salt);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(JSON.stringify(obj)));
+  return { v:1, salt:_rb64(salt), iv:_rb64(iv), ct:_rb64(ct) };
+}
+async function ratePassDash(){
+  let p=(localStorage.getItem(RATE_PASS_LS)||'').trim();
+  if(!p){ p=(prompt('적용률 암호를 입력하세요.\n(전표생성기와 동일한 암호 — 집·회사 PC 공통. 암호화 전용)')||'').trim(); if(p) localStorage.setItem(RATE_PASS_LS, p); }
+  return p;
+}
+async function refreshRateMasterState(){
+  const el=document.getElementById('rateMasterState'); if(!el) return;
+  el.innerHTML='확인 중…';
+  try{
+    const blob = (typeof sbGet==='function') ? await sbGet(RATE_KEY) : null;
+    if(!blob || !blob.ct){ el.innerHTML='미등록 — 업로드하면 전표생성기에서 코스트센터 자동분류에 쓰입니다'; return; }
+    const m=blob.meta||{}; const d=m.uploadedAt?new Date(m.uploadedAt):null;
+    el.innerHTML=`✅ ${m.count||'?'}명 등록됨${(m.months&&m.months.length)?(' · '+m.months.join(', ')):''}${d?(' · 업로드 '+(d.getMonth()+1)+'/'+d.getDate()):''} (암호화 저장)`;
+  }catch(e){ el.innerHTML='상태 확인 실패'; }
+}
+async function clearRateMasterDash(){
+  if(!confirm('클라우드에 저장된 적용률을 삭제할까요?\n(전표생성기의 코스트센터 자동분류가 해제됩니다)')) return;
+  try{ if(typeof sbDel==='function') await sbDel(RATE_KEY); else if(typeof sbSet==='function') await sbSet(RATE_KEY, {}); }catch(e){}
+  refreshRateMasterState(); alert('적용률을 삭제했습니다.');
+}
+function handleRateMasterUploadDash(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  if(typeof XLSX==='undefined'){ alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해 주세요.'); input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const aoa=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null});
+      let hi=-1, col={};
+      for(let i=0;i<aoa.length;i++){
+        const row=(aoa[i]||[]).map(v=>v==null?'':String(v).trim());
+        if(row.includes('사번') && row.includes('적용률')){ hi=i; row.forEach((v,ci)=>{ if(v&&col[v]===undefined) col[v]=ci; }); break; }
+      }
+      if(hi<0){ alert('헤더(사번/적용률)를 찾지 못했습니다.\n\n급상여전표처리사원별적용률 파일인지 확인해 주세요.'); input.value=''; return; }
+      const rateMaster={}, rateMasterByName={}; let cnt=0; const monthsSet=new Set();
+      for(let i=hi+1;i<aoa.length;i++){
+        const r=aoa[i]; if(!r) continue;
+        const empno = (col['사번']!==undefined && r[col['사번']]!=null) ? String(r[col['사번']]).trim() : '';
+        const name = col['사원']!==undefined ? String(r[col['사원']]||'').trim() : '';
+        const dept = col['부서']!==undefined ? String(r[col['부서']]||'').trim() : '';
+        const cc = col['적용코스트센터']!==undefined ? String(r[col['적용코스트센터']]||'').trim() : '';
+        let ym = col['적용월']!==undefined ? r[col['적용월']] : null;
+        if(ym instanceof Date){ ym=`${ym.getFullYear()}-${String(ym.getMonth()+1).padStart(2,'0')}`; }
+        else if(ym!=null){ ym=String(ym).trim(); }
+        const rate = _rateToNum(col['적용률']!==undefined ? r[col['적용률']] : null);
+        if(!empno || !dept || rate===null) continue;
+        if(!rateMaster[empno]) rateMaster[empno]=[];
+        rateMaster[empno].push({name,dept,cc,ym,rate});
+        if(name && !rateMasterByName[name]) rateMasterByName[name]=empno;
+        if(ym) monthsSet.add(ym);
+        cnt++;
+      }
+      const people=Object.keys(rateMaster).length;
+      if(!people){ alert('유효한 적용률 데이터를 찾지 못했습니다.'); input.value=''; return; }
+      const pass=await ratePassDash();
+      if(!pass){ alert('암호가 입력되지 않아 저장하지 않았습니다.'); input.value=''; return; }
+      const blob=await _rEncryptJSON({rateMaster, rateMasterByName}, pass);
+      blob.meta={ count:people, rows:cnt, uploadedAt:new Date().toISOString(), months:[...monthsSet] };
+      const ok=(typeof sbSet==='function') ? await sbSet(RATE_KEY, blob) : false;
+      refreshRateMasterState();
+      alert(ok ? `적용률 저장 완료 (암호화·클라우드 동기화)\n· 사원 ${people}명 · ${[...monthsSet].join(', ')||'월정보 없음'}\n\n전표생성기(선물지급·통신비 등)에서 자동으로 적용됩니다.`
+               : '적용률을 읽었지만 클라우드 저장에 실패했습니다.\n로그인/연결 상태를 확인해 주세요.');
     }catch(err){ console.error(err); alert('가져오기 실패: '+(err&&err.message||err)); }
     input.value='';
   };
