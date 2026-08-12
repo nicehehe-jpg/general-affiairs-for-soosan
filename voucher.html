@@ -210,7 +210,7 @@
 </div>
 
 <div class="card hidden" id="etcCard">
-  <h2>🧰 ③ 기타 본사관리비 (정수기/비데/복합기/공기청정기/커피머신 렌탈, 전자도서관 등 - 부서 안분)</h2>
+  <h2>🧰 ③ 기타 본사관리비 (정수기/비데/복합기/공기청정기/커피머신 렌탈 등 - 부서 안분)</h2>
   <div class="upload-box">
     <label class="upl">📎 전자세금계산서 PDF 업로드 (여러 개 선택 가능, 자동 행 추가)</label>
     <input type="file" id="etcPdfFile" accept=".pdf" multiple>
@@ -394,7 +394,6 @@ const ETC_TYPE_MAP = {
   '복합기임차료':'지급임차료_사무용기기임차료',
   '공기청정기':'지급임차료_기타지급임차료',
   '커피머신렌탈':'지급임차료_기타지급임차료',
-  '전자도서관':'도서인쇄비_단행본구입',
   '휴양시설':'복리후생비_콘도및휴양시설',
   '기타':'지급수수료_기타',
 };
@@ -871,7 +870,6 @@ function parseTaxInvoiceText(text){
   else if(/정수기|비데/.test(text)) type='정수기/비데';
   else if(/공기청정기/.test(text)) type='공기청정기';
   else if(/커피머신/.test(text)) type='커피머신렌탈';
-  else if(/전자도서관/.test(text)) type='전자도서관';
   return {vendor, date, supply, vat, type};
 }
 
