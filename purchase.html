@@ -1175,11 +1175,13 @@ function onCmPdfFileChange(input) {
 })();
 
 /* PDF 텍스트 추출 (pdf.js) — 읽기순서(y↓, x→)로 줄 재구성 */
+let _cmPdfPages = []; // 발주서 PDF 페이지별 텍스트 (종류 판정: 2페이지 일반조건 제목 사용)
 async function extractPdfText(file){
   if(!window.pdfjsLib) throw new Error('PDF 라이브러리를 불러오지 못했습니다 (인터넷 연결 확인)');
   const buf = await file.arrayBuffer();
   const pdf = await window.pdfjsLib.getDocument({data: buf}).promise;
   const lines = [];
+  _cmPdfPages = [];
   for(let p=1; p<=pdf.numPages; p++){
     const page = await pdf.getPage(p);
     const tc = await page.getTextContent();
@@ -1187,14 +1189,25 @@ async function extractPdfText(file){
       .filter(it => it.str && it.str.trim())
       .map(it => ({ x: it.transform[4], y: it.transform[5], s: it.str }));
     items.sort((a,b) => (Math.abs(a.y-b.y) > 3 ? b.y-a.y : a.x-b.x));
+    const pageLines = [];
     let cur=null, curY=null;
     for(const it of items){
-      if(curY===null || Math.abs(it.y-curY) > 3){ if(cur!==null) lines.push(cur); cur=it.s; curY=it.y; }
+      if(curY===null || Math.abs(it.y-curY) > 3){ if(cur!==null) pageLines.push(cur); cur=it.s; curY=it.y; }
       else cur += ' ' + it.s;
     }
-    if(cur!==null) lines.push(cur);
+    if(cur!==null) pageLines.push(cur);
+    _cmPdfPages.push(pageLines.join('\n'));
+    lines.push(...pageLines);
   }
   return lines.join('\n');
+}
+/* 종류(구분) 판정: 2페이지 '일반조건' 제목으로 (구매계약일반조건→구매계약, 용역계약 일반조건→외주용역계약) */
+function detectTypeFromCond(){
+  const p2 = (_cmPdfPages[1] || '');
+  const head = p2.split('\n').slice(0,3).join(' ').replace(/\s+/g,''); // 2페이지 첫 문장(제목) 영역
+  if(/용역계약/.test(head)) return 'service';
+  if(/구매계약/.test(head)) return 'purchase';
+  return '';
 }
 
 /* 수산이앤에스 구매발주서 양식 파서 — 고정 라벨 기준 정규식 추출 (AI 미사용) */
@@ -1302,6 +1315,9 @@ async function runCmPdfOcr(){
     if(!parsed.contractName && !parsed.supplyAmt){
       throw new Error('발주서 양식을 인식하지 못했습니다');
     }
+    // 종류(구분): 2페이지 '일반조건' 제목으로 판정 → 계약명 키워드보다 우선
+    const condType = detectTypeFromCond();
+    if(condType) parsed.type = condType;
 
     // 폼에 채우기
     let filled = [];
