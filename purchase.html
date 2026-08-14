@@ -1203,10 +1203,15 @@ async function extractPdfText(file){
 }
 /* 종류(구분) 판정: 2페이지 '일반조건' 제목으로 (구매계약일반조건→구매계약, 용역계약 일반조건→외주용역계약) */
 function detectTypeFromCond(){
-  const p2 = (_cmPdfPages[1] || '');
-  const head = p2.split('\n').slice(0,3).join(' ').replace(/\s+/g,''); // 2페이지 첫 문장(제목) 영역
+  // 1순위: 2페이지 첫 문장(일반조건 제목)
+  const head = (_cmPdfPages[1] || '').split('\n').slice(0,3).join(' ').replace(/\s+/g,'');
   if(/용역계약/.test(head)) return 'service';
   if(/구매계약/.test(head)) return 'purchase';
+  // 2순위: 전 페이지에서 '○○계약 일반조건' 제목 탐색 (발주서가 여러 장이어도 대응)
+  for(const pg of _cmPdfPages){
+    const m = String(pg).replace(/\s+/g,'').match(/(용역|구매)계약일반조건/);
+    if(m) return m[1]==='용역' ? 'service' : 'purchase';
+  }
   return '';
 }
 
