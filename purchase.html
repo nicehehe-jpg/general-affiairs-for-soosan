@@ -1203,7 +1203,7 @@ async function extractPdfText(file){
 }
 /* 종류(구분) 판정: 2페이지 '일반조건' 제목으로 (구매계약일반조건→구매계약, 용역계약 일반조건→외주용역계약) */
 function detectTypeFromCond(){
-  // 1순위: 2페이지 첫 문장(일반조건 제목)
+  // 1순위: 2페이지 첫 문장(일반조건 제목) — 일반조건이 '텍스트'인 경우
   const head = (_cmPdfPages[1] || '').split('\n').slice(0,3).join(' ').replace(/\s+/g,'');
   if(/용역계약/.test(head)) return 'service';
   if(/구매계약/.test(head)) return 'purchase';
@@ -1212,7 +1212,10 @@ function detectTypeFromCond(){
     const m = String(pg).replace(/\s+/g,'').match(/(용역|구매)계약일반조건/);
     if(m) return m[1]==='용역' ? 'service' : 'purchase';
   }
-  return '';
+  // 3순위: 일반조건이 스캔 이미지라 텍스트가 없을 때 → 1페이지 발주서 품목이 '외주용역'이면 용역
+  const p1 = (_cmPdfPages[0] || '').replace(/\s+/g,'');
+  if(/외주용역/.test(p1)) return 'service';
+  return ''; // 판정 불가 → 기존 계약명 키워드 로직 유지
 }
 
 /* 수산이앤에스 구매발주서 양식 파서 — 고정 라벨 기준 정규식 추출 (AI 미사용) */
