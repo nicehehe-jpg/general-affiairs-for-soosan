@@ -525,6 +525,9 @@ function currentContract(c){ // 현재 유효 계약(최신 변경 or 원계약)
   return {supply:Number(c&&c.supply)||0, vat:Number(c&&c.vat)||0, dueDate:(c&&c.dueDate)||'', date:(c&&c.contractDate)||'', changed:false, count:0, types:[]};
 }
 function currentAmount(c){ const cc=currentContract(c); return cc.supply+cc.vat; }
+function bondAlert(c){ // 금액 변경인데 변경이행보증증권 미수령인 차수가 있으면 true
+  return amendmentsOf(c).some(a=>(a.types||[]).includes('amount') && !a.bondPerform);
+}
 
 const SEED = [
   { type:'purchase', name:'생산라인 A 자재 구매', vendor:'대성산업',     bizNo:'214-81-12345', vendorEmail:'sales@daesung.co.kr', payTermType:'30d', payTermEtc:'', dept:'사업본부',     manager:'김철수', costCenter:'사업본부',     supply:45000000, vat:4500000, contractDate:'2026-06-03', dueDate:'2026-07-15', note:'선급금 30% 조건', stages:{approval:'done',contract:'done',advanceBond:'done',performBond:'done',defectBond:'todo',payment:'todo'} },
@@ -785,6 +788,7 @@ function renderCases(){
             ${c.costType?`<span class="type-badge" style="background:var(--orange-bg); color:var(--orange);">${esc(c.costType)}</span>`:''}
             <span class="status-badge st-${st}">${STATUS_LABEL[st]}</span>
             ${od>0?`<span class="type-badge" style="background:var(--red-bg);color:var(--red);font-weight:800;">⚠️ 계약종료일 초과 +${od}일</span>`:''}
+            ${bondAlert(c)?`<span class="type-badge" style="background:var(--red-bg);color:var(--red);font-weight:800;">🔖 변경이행보증증권 미수령</span>`:''}
           </div>
           ${c.project?`<div class="case-meta"><span class="k">📁 과제</span> ${esc(c.project)}</div>`:''}
           <div class="case-meta"><span class="k">🏢</span> <b>${esc(c.vendor||'-')}</b>${c.bizNo?` <span class="k">(${esc(c.bizNo)})</span>`:''}${c.vendorEmail?` &nbsp;·&nbsp; <span class="k">사업자</span> ${esc(c.vendorEmail)}`:''}</div>
@@ -792,7 +796,7 @@ function renderCases(){
           <div class="case-meta"><span class="k">📅</span> ${period} &nbsp;·&nbsp; <span class="k">💰</span> <b>${won(amount)}</b> <span class="k">(공급 ${numFmt(cc.supply)} + 부가세 ${numFmt(cc.vat)})</span>${cc.changed?` <span class="type-badge" style="background:var(--orange-bg);color:var(--orange);font-weight:800;">📑 ${cc.count}차 변경</span>${cc.types.length?` <span style="font-size:11px;color:var(--orange);font-weight:700;">${amendTypeText(cc.types,' · ')}</span>`:''} <span style="font-weight:800;font-size:11.5px;color:${delta>=0?'var(--red)':'var(--blue)'};">${delta>=0?'▲':'▼'} ${numFmt(Math.abs(delta))}${origAmt?` (${delta>=0?'+':'-'}${Math.round(Math.abs(delta)/origAmt*100)}%)`:''}</span>`:''}</div>
           ${cc.changed ? `<details class="amend-hist"><summary>📑 변경계약 이력 (원계약 → ${cc.count}차)</summary>
             <div class="amend-item"><span class="amend-seq">원계약</span> ${c.contractDate||'-'}${c.dueDate?` ~ ${c.dueDate}`:''} · <b>${won(origAmt)}</b></div>
-            ${(()=>{ const am=amendmentsOf(c); return am.map((a,i)=>{ const amt=(Number(a.supply)||0)+(Number(a.vat)||0); const prev=i===0?origAmt:((Number(am[i-1].supply)||0)+(Number(am[i-1].vat)||0)); const d=amt-prev; const tt=amendTypeText(a.types,' '); const due=a.dueDate?` · 종료 ${a.dueDate}`:''; return `<div class="amend-item"><span class="amend-seq amend-chg">${i+1}차</span> ${a.date||'-'}${tt?` <span class="amend-tag">${tt}</span>`:''} · <b>${won(amt)}</b>${d?` <span style="font-weight:700;color:${d>=0?'var(--red)':'var(--blue)'};">(${d>=0?'+':''}${numFmt(d)})</span>`:''}${due}${a.reason?` <span class="k">— ${esc(a.reason)}</span>`:''}</div>`; }).join(''); })()}
+            ${(()=>{ const am=amendmentsOf(c); return am.map((a,i)=>{ const amt=(Number(a.supply)||0)+(Number(a.vat)||0); const prev=i===0?origAmt:((Number(am[i-1].supply)||0)+(Number(am[i-1].vat)||0)); const d=amt-prev; const tt=amendTypeText(a.types,' '); const due=a.dueDate?` · 종료 ${a.dueDate}`:''; const bond=(a.types||[]).includes('amount')?` <span style="font-weight:700;color:${a.bondPerform?'var(--t3)':'var(--red)'};">🔖${a.bondPerform?'보증갱신✓':'보증미수령'}</span>`:''; return `<div class="amend-item"><span class="amend-seq amend-chg">${i+1}차</span> ${a.date||'-'}${tt?` <span class="amend-tag">${tt}</span>`:''} · <b>${won(amt)}</b>${d?` <span style="font-weight:700;color:${d>=0?'var(--red)':'var(--blue)'};">(${d>=0?'+':''}${numFmt(d)})</span>`:''}${due}${bond}${a.reason?` <span class="k">— ${esc(a.reason)}</span>`:''}</div>`; }).join(''); })()}
           </details>` : ''}
           ${payScheduleLine(c)}
           ${payTermText(c)?`<div class="case-meta"><span class="k">💳</span> ${esc(payTermText(c))}</div>`:''}
@@ -1049,7 +1053,7 @@ function openCaseModal(id){
   document.getElementById('cmDueDate').value = c ? c.dueDate : '';
   document.getElementById('cmSupply').value = c ? c.supply : '';
   document.getElementById('cmVat').value = c ? c.vat : '';
-  _cmAmendments = (c && Array.isArray(c.amendments)) ? c.amendments.map(a=>({date:a.date||'', types:Array.isArray(a.types)?a.types.slice():[], supply:Number(a.supply)||0, vat:Number(a.vat)||0, dueDate:a.dueDate||'', reason:a.reason||''})) : [];
+  _cmAmendments = (c && Array.isArray(c.amendments)) ? c.amendments.map(a=>({date:a.date||'', types:Array.isArray(a.types)?a.types.slice():[], supply:Number(a.supply)||0, vat:Number(a.vat)||0, dueDate:a.dueDate||'', reason:a.reason||'', bondPerform:!!a.bondPerform})) : [];
   renderAmendments();
   document.getElementById('cmCostType').value = c ? (c.costType||'') : '';
   document.getElementById('cmProject').value = c ? (c.project||'') : '';
@@ -1095,6 +1099,7 @@ function renderAmendments(){
         ${periodOn?`<label style="font-size:11.5px;color:var(--orange);font-weight:700;">변경 계약종료일<input type="date" value="${a.dueDate||''}" onchange="_cmAmendments[${i}].dueDate=this.value" style="${inp}width:100%;box-sizing:border-box;"></label>`:''}
         <label style="font-size:11.5px;color:var(--t3);">세부 사유<input type="text" value="${(a.reason||'').replace(/"/g,'&quot;')}" placeholder="예: 물량 증가 / 기간 연장 사유" oninput="_cmAmendments[${i}].reason=this.value" style="${inp}width:100%;box-sizing:border-box;"></label>
       </div>
+      ${ty.includes('amount')?`<label style="display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;font-weight:700;cursor:pointer;color:${a.bondPerform?'var(--t2)':'var(--red)'};"><input type="checkbox" ${a.bondPerform?'checked':''} onchange="_cmAmendments[${i}].bondPerform=this.checked;renderAmendments()"> 🔖 변경이행보증증권 ${a.bondPerform?'수령 완료':'미수령 (금액 변경으로 갱신 필요)'}</label>`:''}
     </div>`;
   }).join('');
   const last=_cmAmendments[_cmAmendments.length-1];
@@ -1151,7 +1156,7 @@ function saveCaseModal(){
     docs: collectDocs(),
     amendments: _cmAmendments
       .filter(a=> a.date || Number(a.supply) || Number(a.vat) || a.dueDate || (a.reason||'').trim() || (Array.isArray(a.types)&&a.types.length))
-      .map(a=>({ date:a.date||'', types:(Array.isArray(a.types)?a.types:[]).slice(), supply:Number(a.supply)||0, vat:Number(a.vat)||0, dueDate:a.dueDate||'', reason:(a.reason||'').trim() })),
+      .map(a=>({ date:a.date||'', types:(Array.isArray(a.types)?a.types:[]).slice(), supply:Number(a.supply)||0, vat:Number(a.vat)||0, dueDate:a.dueDate||'', reason:(a.reason||'').trim(), bondPerform:!!a.bondPerform })),
   };
   if(editingCaseId){
     const c = CASES.find(x=>x.id===editingCaseId);
