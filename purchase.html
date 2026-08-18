@@ -106,6 +106,7 @@
   .amend-item{padding:4px 0 4px 14px; color:var(--t2); border-left:2px solid var(--line); margin:3px 0 0 4px;}
   .amend-seq{display:inline-block; min-width:44px; font-weight:800; color:var(--t3);}
   .amend-seq.amend-chg{color:var(--orange);}
+  .amend-tag{display:inline-block; font-size:11px; font-weight:700; color:var(--orange); background:var(--orange-bg); padding:1px 6px; border-radius:6px; margin:0 3px;}
   .doc-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px; padding-top:13px; border-top:1px solid var(--line);}
   .doc-row .doc-label{font-size:12px; color:var(--t3); font-weight:700; margin-right:2px;}
   .doc-chip{font-size:12px; font-weight:700; padding:7px 11px; border-radius:9px; border:1px solid var(--line); background:var(--bg); color:var(--t2); cursor:pointer; font-family:inherit;}
@@ -500,15 +501,28 @@ function payTermText(c){
 }
 
 /* ============== 변경계약 이력 ============== */
-// c.amendments = [{date, supply, vat, reason}, ...]  (차수 = 배열 순서). 없으면 원계약만.
+// c.amendments = [{date, types:['amount'|'period'|'etc'], supply, vat, dueDate, reason}, ...]
+const AMEND_TYPES = [
+  {k:'amount', label:'계약금액 변경', icon:'💰', short:'금액'},
+  {k:'period', label:'계약기간 변경', icon:'📅', short:'기간'},
+  {k:'etc',    label:'기타',         icon:'📝', short:'기타'},
+];
+function amendTypeText(types, sep){
+  const arr = Array.isArray(types)?types:[];
+  return AMEND_TYPES.filter(t=>arr.includes(t.k)).map(t=>t.icon+t.short).join(sep||' ');
+}
 function amendmentsOf(c){
-  return Array.isArray(c && c.amendments) ? c.amendments.filter(a=>a && (Number(a.supply)||Number(a.vat)||a.date||a.reason)) : [];
+  return Array.isArray(c && c.amendments) ? c.amendments.filter(a=>a && (Number(a.supply)||Number(a.vat)||a.date||a.dueDate||a.reason||(a.types&&a.types.length))) : [];
 }
 function origAmount(c){ return (Number(c&&c.supply)||0)+(Number(c&&c.vat)||0); }
 function currentContract(c){ // 현재 유효 계약(최신 변경 or 원계약)
   const am = amendmentsOf(c);
-  if(am.length){ const last=am[am.length-1]; return {supply:Number(last.supply)||0, vat:Number(last.vat)||0, date:last.date||(c&&c.contractDate)||'', changed:true, count:am.length}; }
-  return {supply:Number(c&&c.supply)||0, vat:Number(c&&c.vat)||0, date:(c&&c.contractDate)||'', changed:false, count:0};
+  const allTypes = [];
+  am.forEach(a=>{ (a.types||[]).forEach(t=>{ if(!allTypes.includes(t)) allTypes.push(t); }); });
+  if(am.length){ const last=am[am.length-1];
+    return {supply:Number(last.supply)||0, vat:Number(last.vat)||0, dueDate:last.dueDate||(c&&c.dueDate)||'', date:last.date||(c&&c.contractDate)||'', changed:true, count:am.length, types:allTypes};
+  }
+  return {supply:Number(c&&c.supply)||0, vat:Number(c&&c.vat)||0, dueDate:(c&&c.dueDate)||'', date:(c&&c.contractDate)||'', changed:false, count:0, types:[]};
 }
 function currentAmount(c){ const cc=currentContract(c); return cc.supply+cc.vat; }
 
@@ -726,10 +740,11 @@ function renderTabs(){
   });
 }
 function overdueDays(c){
-  if(!c || !c.dueDate) return 0;
+  const due = currentContract(c).dueDate;
+  if(!c || !due) return 0;
   const pay = (c.stages && c.stages.payment) || 'todo';
   if(pay==='done' || pay==='na') return 0;
-  const d = new Date(c.dueDate + 'T00:00:00');
+  const d = new Date(due + 'T00:00:00');
   if(isNaN(d.getTime())) return 0;
   const today = new Date(); today.setHours(0,0,0,0);
   const diff = Math.floor((today - d)/86400000);
@@ -753,7 +768,7 @@ function renderCases(){
     const amount = cc.supply + cc.vat;
     const origAmt = origAmount(c);
     const delta = amount - origAmt;
-    const period = `${c.contractDate||'-'}${c.dueDate? ' ~ '+c.dueDate : ''}`;
+    const period = `${c.contractDate||'-'}${cc.dueDate? ' ~ '+cc.dueDate : ''}`;
     const chips = STAGES.map(s=>{
       const state = c.stages[s.key]||'todo';
       const mark = state==='done' ? '✓ ' : state==='na' ? '— ' : '';
@@ -774,10 +789,10 @@ function renderCases(){
           ${c.project?`<div class="case-meta"><span class="k">📁 과제</span> ${esc(c.project)}</div>`:''}
           <div class="case-meta"><span class="k">🏢</span> <b>${esc(c.vendor||'-')}</b>${c.bizNo?` <span class="k">(${esc(c.bizNo)})</span>`:''}${c.vendorEmail?` &nbsp;·&nbsp; <span class="k">사업자</span> ${esc(c.vendorEmail)}`:''}</div>
           <div class="case-meta"><span class="k">👤</span> ${esc(c.manager||'-')} &nbsp;·&nbsp; <span class="k">🗂</span> ${esc(c.dept||'-')}${c.costCenter?` &nbsp;·&nbsp; <span class="k">CC</span> ${esc(c.costCenter)}`:''}</div>
-          <div class="case-meta"><span class="k">📅</span> ${period} &nbsp;·&nbsp; <span class="k">💰</span> <b>${won(amount)}</b> <span class="k">(공급 ${numFmt(cc.supply)} + 부가세 ${numFmt(cc.vat)})</span>${cc.changed?` <span class="type-badge" style="background:var(--orange-bg);color:var(--orange);font-weight:800;">📑 ${cc.count}차 변경</span> <span style="font-weight:800;font-size:11.5px;color:${delta>=0?'var(--red)':'var(--blue)'};">${delta>=0?'▲':'▼'} ${numFmt(Math.abs(delta))}${origAmt?` (${delta>=0?'+':'-'}${Math.round(Math.abs(delta)/origAmt*100)}%)`:''}</span>`:''}</div>
+          <div class="case-meta"><span class="k">📅</span> ${period} &nbsp;·&nbsp; <span class="k">💰</span> <b>${won(amount)}</b> <span class="k">(공급 ${numFmt(cc.supply)} + 부가세 ${numFmt(cc.vat)})</span>${cc.changed?` <span class="type-badge" style="background:var(--orange-bg);color:var(--orange);font-weight:800;">📑 ${cc.count}차 변경</span>${cc.types.length?` <span style="font-size:11px;color:var(--orange);font-weight:700;">${amendTypeText(cc.types,' · ')}</span>`:''} <span style="font-weight:800;font-size:11.5px;color:${delta>=0?'var(--red)':'var(--blue)'};">${delta>=0?'▲':'▼'} ${numFmt(Math.abs(delta))}${origAmt?` (${delta>=0?'+':'-'}${Math.round(Math.abs(delta)/origAmt*100)}%)`:''}</span>`:''}</div>
           ${cc.changed ? `<details class="amend-hist"><summary>📑 변경계약 이력 (원계약 → ${cc.count}차)</summary>
-            <div class="amend-item"><span class="amend-seq">원계약</span> ${c.contractDate||'-'} · <b>${won(origAmt)}</b></div>
-            ${(()=>{ const am=amendmentsOf(c); return am.map((a,i)=>{ const amt=(Number(a.supply)||0)+(Number(a.vat)||0); const prev=i===0?origAmt:((Number(am[i-1].supply)||0)+(Number(am[i-1].vat)||0)); const d=amt-prev; return `<div class="amend-item"><span class="amend-seq amend-chg">${i+1}차</span> ${a.date||'-'} · <b>${won(amt)}</b> <span style="font-weight:700;color:${d>=0?'var(--red)':'var(--blue)'};">(${d>=0?'+':''}${numFmt(d)})</span>${a.reason?` <span class="k">— ${esc(a.reason)}</span>`:''}</div>`; }).join(''); })()}
+            <div class="amend-item"><span class="amend-seq">원계약</span> ${c.contractDate||'-'}${c.dueDate?` ~ ${c.dueDate}`:''} · <b>${won(origAmt)}</b></div>
+            ${(()=>{ const am=amendmentsOf(c); return am.map((a,i)=>{ const amt=(Number(a.supply)||0)+(Number(a.vat)||0); const prev=i===0?origAmt:((Number(am[i-1].supply)||0)+(Number(am[i-1].vat)||0)); const d=amt-prev; const tt=amendTypeText(a.types,' '); const due=a.dueDate?` · 종료 ${a.dueDate}`:''; return `<div class="amend-item"><span class="amend-seq amend-chg">${i+1}차</span> ${a.date||'-'}${tt?` <span class="amend-tag">${tt}</span>`:''} · <b>${won(amt)}</b>${d?` <span style="font-weight:700;color:${d>=0?'var(--red)':'var(--blue)'};">(${d>=0?'+':''}${numFmt(d)})</span>`:''}${due}${a.reason?` <span class="k">— ${esc(a.reason)}</span>`:''}</div>`; }).join(''); })()}
           </details>` : ''}
           ${payScheduleLine(c)}
           ${payTermText(c)?`<div class="case-meta"><span class="k">💳</span> ${esc(payTermText(c))}</div>`:''}
@@ -1034,7 +1049,7 @@ function openCaseModal(id){
   document.getElementById('cmDueDate').value = c ? c.dueDate : '';
   document.getElementById('cmSupply').value = c ? c.supply : '';
   document.getElementById('cmVat').value = c ? c.vat : '';
-  _cmAmendments = (c && Array.isArray(c.amendments)) ? c.amendments.map(a=>({date:a.date||'', supply:Number(a.supply)||0, vat:Number(a.vat)||0, reason:a.reason||''})) : [];
+  _cmAmendments = (c && Array.isArray(c.amendments)) ? c.amendments.map(a=>({date:a.date||'', types:Array.isArray(a.types)?a.types.slice():[], supply:Number(a.supply)||0, vat:Number(a.vat)||0, dueDate:a.dueDate||'', reason:a.reason||''})) : [];
   renderAmendments();
   document.getElementById('cmCostType').value = c ? (c.costType||'') : '';
   document.getElementById('cmProject').value = c ? (c.project||'') : '';
@@ -1061,22 +1076,44 @@ let _cmAmendments = [];
 function renderAmendments(){
   const host=document.getElementById('cmAmendList'); if(!host) return;
   if(!_cmAmendments.length){ host.innerHTML='<div style="font-size:12px;color:var(--t3);padding:2px 0 4px;">변경계약 없음 (원계약만 적용). 변경이 생기면 아래 버튼으로 추가하세요.</div>'; return; }
-  host.innerHTML = _cmAmendments.map((a,i)=>`
-    <div style="display:grid; grid-template-columns:56px 1.15fr 1.3fr 1fr 1.7fr 34px; gap:7px; align-items:center; margin-bottom:7px;">
-      <div style="font-weight:800;color:var(--orange);text-align:center;">${i+1}차</div>
-      <input type="date" value="${a.date||''}" onchange="_cmAmendments[${i}].date=this.value" title="변경계약일" style="padding:8px;border:1px solid var(--line);border-radius:9px;font-family:inherit;background:var(--bg);">
-      <input type="number" step="1000" value="${a.supply||0}" placeholder="변경 공급가액" oninput="_cmAmendments[${i}].supply=Number(this.value)||0;_cmAmendments[${i}].vat=Math.round((Number(this.value)||0)*0.1);renderAmendments()" title="변경 후 공급가액" style="padding:8px;border:1px solid var(--line);border-radius:9px;font-family:inherit;background:var(--bg);text-align:right;">
-      <input type="number" step="100" value="${a.vat||0}" placeholder="부가세" oninput="_cmAmendments[${i}].vat=Number(this.value)||0" title="변경 후 부가세(자동 10%)" style="padding:8px;border:1px solid var(--line);border-radius:9px;font-family:inherit;background:var(--bg);text-align:right;">
-      <input type="text" value="${(a.reason||'').replace(/"/g,'&quot;')}" placeholder="변경 사유" oninput="_cmAmendments[${i}].reason=this.value" style="padding:8px;border:1px solid var(--line);border-radius:9px;font-family:inherit;background:var(--bg);">
-      <button type="button" onclick="_cmAmendments.splice(${i},1);renderAmendments()" title="삭제" style="width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--t3);font-weight:800;cursor:pointer;font-family:inherit;">✕</button>
-    </div>`).join('');
+  const inp='padding:8px;border:1px solid var(--line);border-radius:9px;font-family:inherit;background:var(--bg);';
+  host.innerHTML = _cmAmendments.map((a,i)=>{
+    const ty=Array.isArray(a.types)?a.types:[];
+    const periodOn=ty.includes('period');
+    return `<div style="border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:9px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px;">
+        <span style="font-weight:800;color:var(--orange);">${i+1}차 변경</span>
+        <label style="font-size:12px;color:var(--t3);display:inline-flex;align-items:center;gap:5px;">변경계약일 <input type="date" value="${a.date||''}" onchange="_cmAmendments[${i}].date=this.value" style="${inp}"></label>
+        <span style="display:inline-flex;gap:11px;font-size:12.5px;flex-wrap:wrap;">
+          ${AMEND_TYPES.map(t=>`<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" ${ty.includes(t.k)?'checked':''} onchange="toggleAmendType(${i},'${t.k}',this.checked)"> ${t.icon} ${t.label}</label>`).join('')}
+        </span>
+        <button type="button" onclick="_cmAmendments.splice(${i},1);renderAmendments()" title="삭제" style="margin-left:auto;width:32px;height:32px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--t3);font-weight:800;cursor:pointer;font-family:inherit;">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr ${periodOn?'1fr ':''}1.6fr;gap:7px;">
+        <label style="font-size:11.5px;color:var(--t3);">변경 공급가액<input type="number" step="1000" value="${a.supply||0}" oninput="_cmAmendments[${i}].supply=Number(this.value)||0;_cmAmendments[${i}].vat=Math.round((Number(this.value)||0)*0.1);renderAmendments()" style="${inp}width:100%;text-align:right;box-sizing:border-box;"></label>
+        <label style="font-size:11.5px;color:var(--t3);">부가세(자동10%)<input type="number" step="100" value="${a.vat||0}" oninput="_cmAmendments[${i}].vat=Number(this.value)||0" style="${inp}width:100%;text-align:right;box-sizing:border-box;"></label>
+        ${periodOn?`<label style="font-size:11.5px;color:var(--orange);font-weight:700;">변경 계약종료일<input type="date" value="${a.dueDate||''}" onchange="_cmAmendments[${i}].dueDate=this.value" style="${inp}width:100%;box-sizing:border-box;"></label>`:''}
+        <label style="font-size:11.5px;color:var(--t3);">세부 사유<input type="text" value="${(a.reason||'').replace(/"/g,'&quot;')}" placeholder="예: 물량 증가 / 기간 연장 사유" oninput="_cmAmendments[${i}].reason=this.value" style="${inp}width:100%;box-sizing:border-box;"></label>
+      </div>
+    </div>`;
+  }).join('');
   const last=_cmAmendments[_cmAmendments.length-1];
   const cur=(Number(last.supply)||0)+(Number(last.vat)||0);
-  host.innerHTML += `<div style="font-size:12.5px;color:var(--t2);font-weight:700;padding:3px 0 2px;">→ 현재 계약금액: ${won(cur)} <span style="color:var(--t3);font-weight:500;">(${_cmAmendments.length}차 변경 기준 · 카드·합계에 이 금액이 반영됩니다)</span></div>`;
+  const curDue=last.dueDate||document.getElementById('cmDueDate').value||'';
+  host.innerHTML += `<div style="font-size:12.5px;color:var(--t2);font-weight:700;padding:3px 0 2px;">→ 현재 계약금액: ${won(cur)}${curDue?` · 종료일 ${curDue}`:''} <span style="color:var(--t3);font-weight:500;">(${_cmAmendments.length}차 변경 기준 · 카드·합계에 반영)</span></div>`;
+}
+function toggleAmendType(i, key, on){
+  const a=_cmAmendments[i]; if(!a) return; if(!Array.isArray(a.types)) a.types=[];
+  a.types=a.types.filter(t=>t!==key);
+  if(on) a.types.push(key);
+  if(key==='period' && on && !a.dueDate){ a.dueDate=(i>0 && _cmAmendments[i-1].dueDate) || document.getElementById('cmDueDate').value || ''; }
+  renderAmendments();
 }
 function addAmendment(){
-  const prev = _cmAmendments.length ? (Number(_cmAmendments[_cmAmendments.length-1].supply)||0) : (parseInt(document.getElementById('cmSupply').value,10)||0);
-  _cmAmendments.push({date:'', supply:prev, vat:Math.round(prev*0.1), reason:''});
+  const prevA = _cmAmendments.length ? _cmAmendments[_cmAmendments.length-1] : null;
+  const prevSupply = prevA ? (Number(prevA.supply)||0) : (parseInt(document.getElementById('cmSupply').value,10)||0);
+  const prevDue = prevA ? (prevA.dueDate||'') : (document.getElementById('cmDueDate').value||'');
+  _cmAmendments.push({date:'', types:[], supply:prevSupply, vat:Math.round(prevSupply*0.1), dueDate:prevDue, reason:''});
   renderAmendments();
 }
 function saveCaseModal(){
@@ -1113,8 +1150,8 @@ function saveCaseModal(){
     note: document.getElementById('cmNote').value.trim(),
     docs: collectDocs(),
     amendments: _cmAmendments
-      .filter(a=> a.date || Number(a.supply) || Number(a.vat) || (a.reason||'').trim())
-      .map(a=>({ date:a.date||'', supply:Number(a.supply)||0, vat:Number(a.vat)||0, reason:(a.reason||'').trim() })),
+      .filter(a=> a.date || Number(a.supply) || Number(a.vat) || a.dueDate || (a.reason||'').trim() || (Array.isArray(a.types)&&a.types.length))
+      .map(a=>({ date:a.date||'', types:(Array.isArray(a.types)?a.types:[]).slice(), supply:Number(a.supply)||0, vat:Number(a.vat)||0, dueDate:a.dueDate||'', reason:(a.reason||'').trim() })),
   };
   if(editingCaseId){
     const c = CASES.find(x=>x.id===editingCaseId);
