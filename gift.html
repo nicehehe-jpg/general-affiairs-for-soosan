@@ -235,7 +235,7 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
         <button class="btn btn-primary" id="exportAllBtn" onclick="exportAll()">⬇️ 전체 엑셀 다운로드</button>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>#</th><th>사업소</th><th>부서</th><th>이름</th><th>사번</th><th>집주소</th><th>수령인</th><th>핸드폰번호</th><th>비고</th></tr></thead>
+        <table><thead><tr><th>#</th><th>사업소</th><th>부서</th><th>이름</th><th>사번</th><th>선물</th><th>집주소</th><th>수령인</th><th>핸드폰번호</th><th>비고</th></tr></thead>
         <tbody id="allTableBody"></tbody></table>
       </div>
     </div>
@@ -480,26 +480,25 @@ function parseSheet2(wb,fname){
          ||wb.SheetNames.find(n=>n==='주소')
          ||wb.SheetNames[0];
   const data=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+  const norm=s=>String(s).replace(/\*/g,'').replace(/\s+/g,'').trim(); // 별표(*)·공백 제거 후 매칭
   let headerRow=-1;
-  for(let i=0;i<Math.min(data.length,20);i++){
-    if(data[i].some(c=>{
-      const v=String(c).trim();
-      return v==='사원이름'||v==='성명'||v==='이름'||v==='사번';
-    })){headerRow=i;break;}
+  for(let i=0;i<Math.min(data.length,25);i++){
+    if((data[i]||[]).some(c=>{ const v=norm(c); return v==='사원이름'||v==='성명'||v==='이름'||v==='사번'; })){headerRow=i;break;}
   }
   if(headerRow===-1)headerRow=6;
   const headers=data[headerRow]||[];
   const cm={};
   headers.forEach((h,i)=>{
-    const s=String(h).trim();
-    if(s.includes('순번'))cm.seq=i;
-    if(s.includes('부서'))cm.dept=i;
-    if(s==='사원이름'||s==='성명'||s==='이름'||s.includes('사원이름'))cm.name=i;
-    if(s.includes('사번'))cm.empNo=i;
-    if(s.includes('집주소')||s.includes('수령주소')||s.includes('주소'))cm.addr=i;
-    if(s.includes('수령인'))cm.recipient=i;
-    if(s.includes('핸드폰')||s.includes('연락처'))cm.phone=i;
-    if(s.includes('비고'))cm.note=i;
+    const s=norm(h);
+    if(s.includes('순번')&&cm.seq===undefined)cm.seq=i;
+    if((s.includes('부서')||s.includes('소속')||s.includes('팀'))&&cm.dept===undefined)cm.dept=i;
+    if((s==='사원이름'||s==='성명'||s==='이름'||s.includes('사원이름'))&&cm.name===undefined)cm.name=i;
+    if(s.includes('사번')&&cm.empNo===undefined)cm.empNo=i;
+    if((s.includes('집주소')||s.includes('수령주소')||s.includes('배송주소')||s.includes('주소'))&&cm.addr===undefined)cm.addr=i;
+    if(s.includes('수령인')&&!s.includes('연락처')&&cm.recipient===undefined)cm.recipient=i;
+    if((s.includes('핸드폰')||s.includes('연락처')||s.includes('전화'))&&cm.phone===undefined)cm.phone=i;
+    if((s.includes('선물')||s.includes('품목'))&&!s.includes('안내')&&cm.gift===undefined)cm.gift=i;
+    if(s.includes('비고')&&cm.note===undefined)cm.note=i;
   });
   const rows=[];
   for(let i=headerRow+1;i<data.length;i++){
@@ -514,6 +513,7 @@ function parseSheet2(wb,fname){
       addr:String(row[cm.addr]??'').trim(),
       recipient:String(row[cm.recipient]??'').trim(),
       phone:normalizePhone(String(row[cm.phone]??'').trim()),
+      gift:String(row[cm.gift]??'').trim(),
       note:String(row[cm.note]??'').trim(),
       _source:fname,
     });
@@ -1035,7 +1035,7 @@ function renderAll(){
   });
   document.getElementById('allCountBadge').textContent=filtered.length+'명';
   const tb=document.getElementById('allTableBody');
-  if(!filtered.length){tb.innerHTML='<tr><td colspan="9"><div class="empty-state"><div class="icon">📋</div><div class="title">데이터 없음</div><div class="desc">사업소 파일을 업로드하고 취합 시작을 눌러주세요.</div></div></td></tr>';return;}
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="10"><div class="empty-state"><div class="icon">📋</div><div class="title">데이터 없음</div><div class="desc">사업소 파일을 업로드하고 취합 시작을 눌러주세요.</div></div></td></tr>';return;}
   tb.innerHTML=filtered.map((r,i)=>`
     <tr>
       <td style="color:var(--text3)">${i+1}</td>
@@ -1047,6 +1047,7 @@ function renderAll(){
       }</td>
       <td style="font-weight:600">${r.name}</td>
       <td style="font-family:monospace;font-size:12px">${r.empNo||'-'}</td>
+      <td style="font-size:12px;color:var(--text2)">${r.gift||'-'}</td>
       <td style="font-size:12px;color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.addr}">${r.addr||'-'}</td>
       <td>${r.recipient||'-'}</td>
       <td style="font-family:monospace;font-size:12px">${r.phone||'-'}</td>
@@ -1127,15 +1128,15 @@ function exportAll(){
       const wb=XLSX.utils.book_new();
 
       // ── 전체 취합 명단 시트 ─────────────────────────────────────────────
-      const headers=['순번','사업소','부서','이름','사번','집주소','수령인','핸드폰번호','비고'];
+      const headers=['순번','사업소','부서','이름','사번','선물','집주소','수령인','핸드폰번호','비고'];
       const data=allRows.map((r,i)=>[
         i+1,
         r._siteName||'',
         (r._siteName||'').includes('사업소')?r._siteName||'':r.dept||'',
-        r.name, r.empNo||'', r.addr||'', r.recipient||'', r.phone||'', r.note||''
+        r.name, r.empNo||'', r.gift||'', r.addr||'', r.recipient||'', r.phone||'', r.note||''
       ]);
       const ws=XLSX.utils.aoa_to_sheet([headers,...data]);
-      ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:9},{wch:10},{wch:34},{wch:9},{wch:15},{wch:10}];
+      ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:9},{wch:10},{wch:16},{wch:34},{wch:9},{wch:15},{wch:10}];
       applySheetStyle(ws,headers,data);
       XLSX.utils.book_append_sheet(wb,ws,'전체취합명단');
 
@@ -1143,14 +1144,14 @@ function exportAll(){
       const sg={};
       allRows.forEach(r=>{(sg[r._siteName||'기타']=sg[r._siteName||'기타']||[]).push(r);});
       Object.entries(sg).forEach(([site,rows])=>{
-        const sh=['순번','부서','이름','사번','집주소','수령인','핸드폰번호','비고'];
+        const sh=['순번','부서','이름','사번','선물','집주소','수령인','핸드폰번호','비고'];
         const sd=rows.map((r,i)=>[
           i+1,
           (r._siteName||'').includes('사업소')?r._siteName||'':r.dept||'',
-          r.name,r.empNo||'',r.addr||'',r.recipient||'',r.phone||'',r.note||''
+          r.name,r.empNo||'',r.gift||'',r.addr||'',r.recipient||'',r.phone||'',r.note||''
         ]);
         const sw=XLSX.utils.aoa_to_sheet([sh,...sd]);
-        sw['!cols']=[{wch:5},{wch:16},{wch:9},{wch:10},{wch:34},{wch:9},{wch:15},{wch:10}];
+        sw['!cols']=[{wch:5},{wch:16},{wch:9},{wch:10},{wch:16},{wch:34},{wch:9},{wch:15},{wch:10}];
         applySheetStyle(sw,sh,sd);
         XLSX.utils.book_append_sheet(wb,sw,site.replace(/[\/\\?*\[\]:]/g,'_').slice(0,28));
       });
