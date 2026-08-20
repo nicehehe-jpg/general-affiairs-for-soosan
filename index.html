@@ -999,7 +999,22 @@ async function toggleAiChat(){
   }
   const box = document.getElementById('aiChatBox');
   box.classList.toggle('open');
-  if(box.classList.contains('open')) document.getElementById('aiInput').focus();
+  if(box.classList.contains('open')){
+    document.getElementById('aiInput').focus();
+    if(!REGULATIONS.length){ try{ await loadRegulations(); }catch(e){} }
+    showRegStatus();
+  }
+}
+// 채팅 상단에 사내 규정 연결 상태를 자동 표시
+function showRegStatus(){
+  const msgs=document.getElementById('aiMessages'); if(!msgs) return;
+  const on=REGULATIONS.length>0;
+  const txt = on ? `📖 사내 규정 ${REGULATIONS.length}개 조각이 연결되었습니다. 규정을 물어보세요. (예: "청원휴가 규정이 어떻게 되나요")`
+                 : `📕 사내 규정이 아직 연결되지 않았습니다. 상단 로그인 상태를 확인해 주세요(규정이 업로드되지 않았을 수도 있습니다).`;
+  let el=document.getElementById('regStatusMsg');
+  if(!el){ el=document.createElement('div'); el.id='regStatusMsg'; el.className='ai-msg ai'; el.style.fontSize='11.5px'; el.style.opacity='.9'; msgs.appendChild(el); }
+  el.textContent=txt;
+  msgs.scrollTop=msgs.scrollHeight;
 }
 
 /* ===== 사내 규정 Q&A (Supabase 로그인 + 로컬 검색) ===== */
