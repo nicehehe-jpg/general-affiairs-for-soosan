@@ -389,7 +389,7 @@ let editingId = null;
 /* Gemini API 키 — 한 번만 입력하면 공용 클라우드에 '암호화'되어 저장, 모든 PC에서 자동 적용 */
 const GEMINI_CLOUD_KEY = 'gemini_api_key_enc';   // 클라우드엔 암호문만 저장
 const GEMINI_LEGACY_KEY = 'gemini_api_key';      // 구버전 평문 저장본(자동 마이그레이션)
-const GEMINI_MODEL = 'gemini-2.0-flash';         // 무료 티어, 비전(이미지·PDF) 지원
+const GEMINI_MODEL = 'gemini-3.6-flash';         // 무료 티어, 비전(이미지·PDF) 지원
 const RATE_PASS_LS = 'gm_voucher_rate_pass';     // 전표생성기 적용률과 동일 암호(공유)
 let GEMINI_KEY = localStorage.getItem('gm_gemini_key') || '';
 // --- AES-256-GCM (적용률·사원명부와 동일 방식) ---
