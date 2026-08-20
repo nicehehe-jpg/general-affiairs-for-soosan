@@ -247,6 +247,11 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
     <div class="card">
       <div class="card-title">🧾 자동 전표 생성 <span class="badge" id="voucherHeadBadge">인원 0명</span></div>
       <div id="voucherRateStatus" class="alert alert-info" style="margin-bottom:14px;">적용률 확인 중…</div>
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--text2)">빠른 설정:</span>
+        <button class="btn" onclick="applyVendorPreset('emart')">🛒 이마트 (과일·스팸참치·건강 / 법인카드)</button>
+        <button class="btn" onclick="applyVendorPreset('sls')">🐟 에스엘에스컴퍼니 (고등어 / 면세)</button>
+      </div>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;max-width:780px;">
         <div><label style="font-size:12px;font-weight:600;color:var(--text2)">거래처</label><input class="search-input" id="vVendor" value="이마트" style="width:100%"></div>
         <div><label style="font-size:12px;font-weight:600;color:var(--text2)">거래처 사업자번호</label><input class="search-input" id="vBizno" value="206-86-50913" style="width:100%"></div>
@@ -1364,6 +1369,25 @@ function voucherTargetRows(){
   const sel=new Set(); document.querySelectorAll('#vGiftTypes .vGiftType').forEach(c=>{ if(c.checked) sel.add(c.value); });
   if(!document.querySelectorAll('#vGiftTypes .vGiftType').length) return allRows.slice(); // 필터 미표시 시 전체
   return allRows.filter(r=>sel.has(voucherGiftKey(r)));
+}
+// 항상 쓰는 2개 업체 프리셋: 거래처·사업자번호·선물종류·결제방식 자동 세팅
+const VENDOR_PRESETS = {
+  emart: { vendor:'이마트', bizno:'206-86-50913', pay:'card', pick:(v)=>!/고등어/.test(v) && v!=='(없음)' }, // 고등어 외 전부
+  sls:   { vendor:'에스엘에스컴퍼니', bizno:'101-86-51693', pay:'taxfree', pick:(v)=>/고등어/.test(v) },       // 고등어만
+};
+function applyVendorPreset(which){
+  const p=VENDOR_PRESETS[which]; if(!p) return;
+  renderGiftTypeFilter();
+  document.getElementById('vVendor').value=p.vendor;
+  document.getElementById('vBizno').value=p.bizno;
+  document.getElementById('vPay').value=p.pay;
+  const boxes=document.querySelectorAll('#vGiftTypes .vGiftType');
+  boxes.forEach(c=>{ c.checked=p.pick(c.value); });
+  document.getElementById('vSupply').value=''; document.getElementById('vTotal').value='';
+  voucherRecalcHint();
+  const sel=[...boxes].filter(c=>c.checked).map(c=>c.value).join(', ')||'(해당 종류 없음)';
+  const el=document.getElementById('voucherSummary');
+  if(el) el.innerHTML=`🧾 <b>${p.vendor}</b> 설정됨 · 대상 선물: ${sel} · <span style="color:var(--text3)">공급가액·총금액 입력 후 다운로드</span>`;
 }
 function voucherRecalcHint(){
   const supply=Number(document.getElementById('vSupply').value)||0;
