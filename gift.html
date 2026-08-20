@@ -254,10 +254,14 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
         <div><label style="font-size:12px;font-weight:600;color:var(--text2)">공급가액 (부가세 제외)</label><input class="search-input" id="vSupply" type="number" placeholder="예: 30462781" style="width:100%" oninput="voucherRecalcHint()"></div>
         <div><label style="font-size:12px;font-weight:600;color:var(--text2)">총금액 (부가세 포함·결제액)</label><input class="search-input" id="vTotal" type="number" placeholder="예: 33604400" style="width:100%" oninput="voucherRecalcHint()"></div>
         <div><label style="font-size:12px;font-weight:600;color:var(--text2)">결제/증빙</label>
-          <select class="filter-select" id="vPay" style="width:100%"><option value="card">법인카드 (카드매입부가세·법인카드미지급금)</option><option value="tax">세금계산서 (일반매입부가세·미지급금_일반)</option></select></div>
+          <select class="filter-select" id="vPay" style="width:100%" onchange="voucherRecalcHint()"><option value="card">법인카드 (카드매입부가세·법인카드미지급금)</option><option value="tax">세금계산서 과세 (일반매입부가세·미지급금_일반)</option><option value="taxfree">계산서 면세 (부가세 없음·미지급금_일반)</option></select></div>
         <div style="display:flex;align-items:flex-end"><div id="vHint" style="font-size:12px;color:var(--text3)"></div></div>
       </div>
-      <div style="margin-top:10px;font-size:12px;color:var(--text3);line-height:1.6;">📌 전체 취합 명단 인원을 <b>공급가액 ÷ 인원</b>으로 균등 배분하고, 각 인원을 <b>적용률(사번)</b>로 코스트센터에 분할·집계합니다. 부가세 = 총금액 − 공급가액. 계정과목은 <b>코스트센터 기준</b>(사업소·프로젝트=제조비용, 본사관리=판관비, 기술연구소=경상연구개발비).</div>
+      <div style="margin-top:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">🎁 이 전표에 포함할 선물 종류 <span style="font-weight:400;color:var(--text3)">(업체가 다르면 종류를 나눠 각각 생성 — 선택한 종류의 인원만 집계)</span></div>
+        <div id="vGiftTypes" style="display:flex;flex-wrap:wrap;gap:8px;"><span style="color:var(--text3);font-size:12px">취합 후 표시됩니다.</span></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text3);line-height:1.6;">📌 선택한 인원을 <b>공급가액 ÷ 인원</b>으로 균등 배분하고, 각 인원을 <b>적용률(사번)</b>로 코스트센터에 분할·집계합니다. 과세는 부가세 = 총금액 − 공급가액, 면세는 부가세 0. 계정과목은 <b>코스트센터 기준</b>(사업소·프로젝트=제조비용, 본사관리=판관비, 기술연구소=경상연구개발비).</div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="genGiftVoucher()">📥 전표입력 양식 다운로드</button>
         <button class="btn" onclick="ensureGiftRates(true)">🔄 적용률 새로고침</button>
@@ -304,7 +308,7 @@ function switchTab(btn){
   btn.classList.add('active');
   document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
   if(btn.dataset.panel==='compare' && !masterRows.length && typeof applyCentralEmpMaster==='function') applyCentralEmpMaster();
-  if(btn.dataset.panel==='voucher'){ if(typeof voucherRecalcHint==='function') voucherRecalcHint(); if(typeof ensureGiftRates==='function') ensureGiftRates(); }
+  if(btn.dataset.panel==='voucher'){ if(typeof renderGiftTypeFilter==='function') renderGiftTypeFilter(); if(typeof voucherRecalcHint==='function') voucherRecalcHint(); if(typeof ensureGiftRates==='function') ensureGiftRates(); }
 }
 
 let refEditMode=false;
@@ -1342,16 +1346,36 @@ async function ensureGiftRates(force){
     return true;
   }catch(e){ localStorage.removeItem(RATE_PASS_LS); setVRateStatus('warn','⚠️ 적용률 복호화 실패 — 암호가 다릅니다. [🔄 적용률 새로고침]으로 다시 입력하세요.'); return false; }
 }
+function _vEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function voucherGiftKey(r){ return String(r.gift||'').trim() || '(없음)'; }
+function renderGiftTypeFilter(){
+  const host=document.getElementById('vGiftTypes'); if(!host) return;
+  const counts={}; allRows.forEach(r=>{ const k=voucherGiftKey(r); counts[k]=(counts[k]||0)+1; });
+  const types=Object.keys(counts).sort();
+  if(!types.length){ host.innerHTML='<span style="color:var(--text3);font-size:12px">취합 후 표시됩니다.</span>'; return; }
+  const prev={}; host.querySelectorAll('.vGiftType').forEach(c=>prev[c.value]=c.checked);
+  host.innerHTML=types.map(t=>{
+    const none=(t==='(없음)');
+    const checked=(t in prev)?prev[t]:!none;
+    return `<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;"><input type="checkbox" class="vGiftType" value="${_vEsc(t)}" ${checked?'checked':''} onchange="voucherRecalcHint()"> ${_vEsc(t)} <b>${counts[t]}명</b></label>`;
+  }).join('');
+}
+function voucherTargetRows(){
+  const sel=new Set(); document.querySelectorAll('#vGiftTypes .vGiftType').forEach(c=>{ if(c.checked) sel.add(c.value); });
+  if(!document.querySelectorAll('#vGiftTypes .vGiftType').length) return allRows.slice(); // 필터 미표시 시 전체
+  return allRows.filter(r=>sel.has(voucherGiftKey(r)));
+}
 function voucherRecalcHint(){
   const supply=Number(document.getElementById('vSupply').value)||0;
   const total=Number(document.getElementById('vTotal').value)||0;
-  const head=allRows.length;
-  const vat=Math.max(0,total-supply);
+  const pay=document.getElementById('vPay').value;
+  const head=voucherTargetRows().length;
+  const vat = pay==='taxfree' ? 0 : Math.max(0,total-supply);
   const unit=head?supply/head:0;
   document.getElementById('voucherHeadBadge').textContent=`인원 ${head}명`;
   document.getElementById('vHint').innerHTML = head&&supply
     ? `1인 <b>${Math.round(unit).toLocaleString()}</b>원 · 부가세 <b>${vat.toLocaleString()}</b>원`
-    : (head?'공급가액을 입력하세요':'먼저 전체 취합 명단을 만드세요');
+    : (head?'공급가액을 입력하세요':'선물 종류를 선택하세요');
 }
 async function genGiftVoucher(){
   if(!allRows.length){ alert('먼저 사업소 파일을 업로드하고 [⚡ 취합 시작]을 눌러 전체 취합 명단을 만들어 주세요.'); return; }
@@ -1359,13 +1383,16 @@ async function genGiftVoucher(){
   const supply=Number(document.getElementById('vSupply').value)||0;
   const total=Number(document.getElementById('vTotal').value)||0;
   if(supply<=0){ alert('공급가액을 입력하세요.'); return; }
-  const vat=Math.max(0,total-supply);
-  const head=allRows.length;
+  const targetRows=voucherTargetRows();
+  const head=targetRows.length;
+  if(!head){ alert('선택한 선물 종류에 해당하는 인원이 없습니다.'); return; }
+  const pay=document.getElementById('vPay').value;
+  const vat = pay==='taxfree' ? 0 : Math.max(0,total-supply);
   const unit=supply/head;
   const ym=giftDefaultYMv();
   const agg={}; let unmatched=0;
   const add=(dept,cc,amt)=>{ const o=giftOwner(dept,cc); const k=o.귀속부서+'|'+o.코스트센터; if(!agg[k]) agg[k]={귀속부서:o.귀속부서,코스트센터:o.코스트센터,amt:0}; agg[k].amt+=amt; };
-  allRows.forEach(r=>{
+  targetRows.forEach(r=>{
     const dep=(r._siteName&&r._siteName.includes('사업소'))? r._siteName : (r.dept||r._siteName||'');
     const rates=lookupRatesGift(r.empNo, r.name, ym);
     if(rates&&rates.length){ let alloc=0; rates.forEach((rt,i)=>{ const portion=(i===rates.length-1)?unit-alloc:Math.round(unit*rt.rate/100); alloc+=portion; add(rt.dept, rt.cc||rt.dept, portion); }); }
@@ -1376,15 +1403,17 @@ async function genGiftVoucher(){
     .sort((x,y)=>String(x.귀속부서).localeCompare(String(y.귀속부서),'ko')||String(x.코스트센터).localeCompare(String(y.코스트센터),'ko'));
   // 반올림 보정: 합계를 공급가액과 정확히 일치
   const sum=rows.reduce((s,r)=>s+r.금액,0); const diff=supply-sum; if(diff!==0 && rows.length) rows[rows.length-1].금액+=diff;
-  const pay=document.getElementById('vPay').value;
-  const vatAcct=pay==='card'?'카드매입부가세':'일반매입부가세';
-  const payAcct=pay==='card'?'법인카드미지급금':'미지급금_일반';
-  const evid=pay==='card'?'신용카드(일반)':'전자세금계산서(일반)';
+  // 결제/증빙: 법인카드(과세) / 세금계산서(과세) / 계산서(면세)
+  let vatAcct,payAcct,evid;
+  if(pay==='card'){ vatAcct='카드매입부가세'; payAcct='법인카드미지급금'; evid='신용카드(일반)'; }
+  else if(pay==='taxfree'){ vatAcct='일반매입부가세'; payAcct='미지급금_일반'; evid='전자계산서(면세)'; }
+  else { vatAcct='일반매입부가세'; payAcct='미지급금_일반'; evid='전자세금계산서(일반)'; }
   const vendor=document.getElementById('vVendor').value||''; const bizno=document.getElementById('vBizno').value||''; const memo=document.getElementById('vMemo').value||'';
   const H=['행번호','계정과목','비용구분','차변금액','대변금액','적요','귀속부서','코스트센터','거래처','증빙','거래처번호','계정세목','거래처사업자번호','추가정보','관리항목정보'];
   const aoa=[['전표입력'],H.slice()]; const pad=n=>String(n).padStart(4,'0'); let seq=0;
   rows.forEach(r=>{ seq++; aoa.push([pad(seq),r.계정과목,r.비용구분,r.금액,0,memo,r.귀속부서,r.코스트센터,vendor,'','','',bizno,'','']); });
-  if(vat>0){ seq++; aoa.push([pad(seq),vatAcct,'',vat,0,memo,'','',vendor,evid,'','',bizno,'','']); }
+  if(pay==='taxfree'){ seq++; aoa.push([pad(seq),vatAcct,'',0,0,memo,'','',vendor,evid,'','',bizno,'','']); }   // 면세: 부가세 0행(증빙 전자계산서)
+  else if(vat>0){ seq++; aoa.push([pad(seq),vatAcct,'',vat,0,memo,'','',vendor,evid,'','',bizno,'','']); }
   seq++; aoa.push([pad(seq),payAcct,'',0,supply+vat,memo,'','',vendor,'','','',bizno,'','']);
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:H.length-1}}];
   ws['!cols']=[{wch:7},{wch:34},{wch:8},{wch:12},{wch:12},{wch:28},{wch:20},{wch:34},{wch:14},{wch:16},{wch:11},{wch:10},{wch:16},{wch:9},{wch:12}];
