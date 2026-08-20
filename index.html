@@ -1022,22 +1022,32 @@ async function regRefresh(){
   localStorage.removeItem(REG_AUTH); return false;
 }
 async function loadRegulations(){
-  let a=regGetAuth(); if(!a) return false;
   const url=SB_URL+'/rest/v1/regulations?select=title,page,text&limit=2000';
-  let r=await fetch(url,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+a.access_token}});
-  if(r.status===401){ if(await regRefresh()){ a=regGetAuth(); r=await fetch(url,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+a.access_token}}); } }
-  if(!r.ok){ REGULATIONS=[]; regUpdateBtn(); return false; }
-  REGULATIONS=await r.json(); regUpdateBtn(); return REGULATIONS.length>0;
+  // 1) 메인 로그인 세션(gm_session)으로 시도 — 별도 규정 로그인 불필요
+  try{
+    let r=await fetch(url,{headers:gmAuthHeaders()});
+    if(r.status===401 && await gmRefresh()) r=await fetch(url,{headers:gmAuthHeaders()});
+    if(r.ok){ const rows=await r.json(); if(Array.isArray(rows) && rows.length){ REGULATIONS=rows; regUpdateBtn(); return true; } }
+  }catch(e){}
+  // 2) (구버전 호환) 별도 규정 세션이 남아있으면 폴백
+  try{
+    let a=regGetAuth();
+    if(a && a.access_token){
+      let r=await fetch(url,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+a.access_token}});
+      if(r.status===401 && await regRefresh()){ a=regGetAuth(); r=await fetch(url,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+a.access_token}}); }
+      if(r.ok){ REGULATIONS=await r.json(); regUpdateBtn(); return REGULATIONS.length>0; }
+    }
+  }catch(e){}
+  REGULATIONS=[]; regUpdateBtn(); return false;
 }
 function regUpdateBtn(){ const b=document.getElementById('regLoginBtn'); if(!b) return; const on=REGULATIONS.length>0;
-  b.textContent=on?'🔒':'🔓'; b.title=on?('규정 로그인됨 ('+REGULATIONS.length+'조각) · 클릭=로그아웃'):'규정 로그인(규정 질문 사용)'; }
+  b.textContent=on?'📖':'📕'; b.title=on?('사내 규정 연결됨 ('+REGULATIONS.length+'조각) · 클릭=다시 불러오기'):'사내 규정 불러오기 (AI가 규정 근거로 답변)'; }
 async function regLogin(){
-  if(REGULATIONS.length){ if(confirm('규정 로그아웃 할까요?')){ localStorage.removeItem(REG_AUTH); REGULATIONS=[]; regUpdateBtn(); } return; }
-  const email=prompt('규정 로그인 — 이메일:'); if(!email) return;
-  const pw=prompt('비밀번호:'); if(!pw) return;
-  try{ await regSignIn(email.trim(),pw); const ok=await loadRegulations();
-    alert(ok?('규정 로그인 완료 ('+REGULATIONS.length+'개 조각 로드). 이제 규정도 물어보세요.'):'로그인은 됐지만 규정을 불러오지 못했습니다.');
-  }catch(e){ alert('규정 로그인 실패: '+e.message); }
+  const b=document.getElementById('regLoginBtn'); const old=b?b.textContent:''; if(b) b.textContent='⏳';
+  const ok=await loadRegulations();
+  if(b && b.textContent==='⏳') b.textContent=old;
+  alert(ok?('사내 규정 '+REGULATIONS.length+'개 조각을 불러왔습니다.\nAI 어시스턴트에게 규정을 물어보세요. (예: "청원휴가 규정이 어떻게 되나요")')
+          :'규정을 불러오지 못했습니다.\n· 메인 화면 로그인(우상단) 상태를 확인해 주세요.\n· 규정이 아직 업로드되지 않았을 수도 있습니다.');
 }
 const REG_STOP=new Set(['은','는','이','가','을','를','의','에','에서','와','과','도','로','으로','및','또는','등','에게','한','무엇','어떻게','얼마','며칠','몇','누구','언제','어디','왜','대해','대한','관련','경우','알려줘','알려주세요','있나요','없나요','되나요','인가요','일까요','까요','나요','하나요','규정','지침','관리','운영','기준','사항','이내','이상','이하','관하여','대하여','어떤','무슨']);
 function regGrams(q){
@@ -1067,7 +1077,7 @@ function regContext(q){
   return '\n\n[사내 규정 발췌] 아래는 질문과 관련된 사내 규정 일부다. 규정·지침에 관한 질문이면 반드시 이 발췌만 근거로 답하고(지어내지 말 것), 발췌에 없으면 "규정에서 찾지 못했습니다"라고 하라. 규정 답변의 마지막 줄엔 반드시 "출처: <규정 파일명>"을 표기하라.\n'
     + chunks.map(c=>'['+c.title+' p.'+c.page+']\n'+c.text).join('\n\n');
 }
-window.addEventListener('load', function(){ try{ regUpdateBtn(); if(regGetAuth()) loadRegulations().catch(function(){}); }catch(e){} });
+window.addEventListener('load', function(){ try{ regUpdateBtn(); loadRegulations().catch(function(){}); }catch(e){} });
 
 function getSystemContext(){
   const today = new Date().toISOString().split('T')[0];
@@ -1155,6 +1165,7 @@ async function sendAiMsg(){
   aiHistory.push({ role:'user', content: msg });
 
   try {
+    if(!REGULATIONS.length){ try{ await loadRegulations(); }catch(e){} }   // 규정 미로딩 시 메인 세션으로 즉시 로드
     const sys = getSystemContext() + regContext(msg);
     const contents = aiHistory.map(m=>({ role: m.role==='assistant'?'model':'user', parts:[{text:m.content}] }));
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_AI_MODEL}:generateContent?key=${encodeURIComponent(getGeminiKey())}`;
