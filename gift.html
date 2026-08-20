@@ -247,10 +247,20 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
     <div class="card">
       <div class="card-title">🧾 자동 전표 생성 <span class="badge" id="voucherHeadBadge">인원 0명</span></div>
       <div id="voucherRateStatus" class="alert alert-info" style="margin-bottom:14px;">적용률 확인 중…</div>
-      <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-size:12px;font-weight:700;color:var(--text2)">빠른 설정:</span>
-        <button class="btn" onclick="applyVendorPreset('emart')">🛒 이마트 (과일·스팸참치·건강 / 법인카드)</button>
-        <button class="btn" onclick="applyVendorPreset('sls')">🐟 에스엘에스컴퍼니 (고등어 / 면세)</button>
+      <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--text2)">업체 프리셋:</span>
+        <span id="vPresetBtns" style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center;"></span>
+      </div>
+      <div id="vPresetForm" style="display:none;margin:6px 0 12px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);max-width:820px;">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px 12px;">
+          <div><label style="font-size:11px;color:var(--text2)">표시이름</label><input class="search-input" id="npLabel" placeholder="예: 🎁 롯데백화점" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text2)">거래처</label><input class="search-input" id="npVendor" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text2)">사업자번호</label><input class="search-input" id="npBizno" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text2)">결제/증빙</label><select class="filter-select" id="npPay" style="width:100%"><option value="card">법인카드</option><option value="tax">세금계산서 과세</option><option value="taxfree">계산서 면세</option></select></div>
+          <div><label style="font-size:11px;color:var(--text2)">포함 선물 키워드 (쉼표·비우면 전체)</label><input class="search-input" id="npPick" placeholder="예: 한우, 정육" style="width:100%"></div>
+          <div><label style="font-size:11px;color:var(--text2)">제외 선물 키워드 (쉼표)</label><input class="search-input" id="npDrop" placeholder="예: 고등어" style="width:100%"></div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:8px;"><button class="btn btn-primary" onclick="addPreset()">저장</button><button class="btn" onclick="togglePresetForm(false)">취소</button></div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;max-width:780px;">
         <div><label style="font-size:12px;font-weight:600;color:var(--text2)">거래처</label><input class="search-input" id="vVendor" value="이마트" style="width:100%"></div>
@@ -313,7 +323,7 @@ function switchTab(btn){
   btn.classList.add('active');
   document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
   if(btn.dataset.panel==='compare' && !masterRows.length && typeof applyCentralEmpMaster==='function') applyCentralEmpMaster();
-  if(btn.dataset.panel==='voucher'){ if(typeof renderGiftTypeFilter==='function') renderGiftTypeFilter(); if(typeof voucherRecalcHint==='function') voucherRecalcHint(); if(typeof ensureGiftRates==='function') ensureGiftRates(); }
+  if(btn.dataset.panel==='voucher'){ if(typeof renderPresetButtons==='function') renderPresetButtons(); if(typeof loadPresetsCloud==='function') loadPresetsCloud(); if(typeof renderGiftTypeFilter==='function') renderGiftTypeFilter(); if(typeof voucherRecalcHint==='function') voucherRecalcHint(); if(typeof ensureGiftRates==='function') ensureGiftRates(); }
 }
 
 let refEditMode=false;
@@ -1370,24 +1380,57 @@ function voucherTargetRows(){
   if(!document.querySelectorAll('#vGiftTypes .vGiftType').length) return allRows.slice(); // 필터 미표시 시 전체
   return allRows.filter(r=>sel.has(voucherGiftKey(r)));
 }
-// 항상 쓰는 2개 업체 프리셋: 거래처·사업자번호·선물종류·결제방식 자동 세팅
-const VENDOR_PRESETS = {
-  emart: { vendor:'이마트', bizno:'206-86-50913', pay:'card', pick:(v)=>!/고등어/.test(v) && v!=='(없음)' }, // 고등어 외 전부
-  sls:   { vendor:'에스엘에스컴퍼니', bizno:'101-86-51693', pay:'taxfree', pick:(v)=>/고등어/.test(v) },       // 고등어만
-};
-function applyVendorPreset(which){
-  const p=VENDOR_PRESETS[which]; if(!p) return;
+// ===== 업체 프리셋 (편집 가능·클라우드+로컬 저장) =====
+const GIFT_PRESET_KEY='gift_vendor_presets_v1';
+const DEFAULT_PRESETS=[
+  {label:'🛒 이마트', vendor:'이마트', bizno:'206-86-50913', pay:'card', pick:[], drop:['고등어']},
+  {label:'🐟 에스엘에스컴퍼니', vendor:'에스엘에스컴퍼니', bizno:'101-86-51693', pay:'taxfree', pick:['고등어'], drop:[]},
+];
+let VENDOR_PRESET_LIST=(function(){ try{ const r=localStorage.getItem(GIFT_PRESET_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){} return DEFAULT_PRESETS.map(x=>({...x})); })();
+async function sbSetGift(key,value){ try{ const url=`${SB_REST}?on_conflict=key`; const body=JSON.stringify({key,value,updated_at:new Date().toISOString()}); const opt=()=>({method:'POST',headers:{..._gmHeaders(),Prefer:'resolution=merge-duplicates'},body}); let r=await fetch(url,opt()); if(r.status===401 && await _gmRefresh()) r=await fetch(url,opt()); return r.ok; }catch(e){ return false; } }
+function savePresets(){ try{ localStorage.setItem(GIFT_PRESET_KEY, JSON.stringify(VENDOR_PRESET_LIST)); }catch(e){} sbSetGift(GIFT_PRESET_KEY, VENDOR_PRESET_LIST); }
+async function loadPresetsCloud(){ try{ const c=await sbGetGift(GIFT_PRESET_KEY); if(Array.isArray(c)&&c.length){ VENDOR_PRESET_LIST=c; try{localStorage.setItem(GIFT_PRESET_KEY,JSON.stringify(c));}catch(e){} renderPresetButtons(); } }catch(e){} }
+function renderPresetButtons(){
+  const host=document.getElementById('vPresetBtns'); if(!host) return;
+  host.innerHTML = VENDOR_PRESET_LIST.map((p,i)=>
+    `<span style="display:inline-flex;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:8px;overflow:hidden;">`
+    +`<button class="btn" style="border:none;background:none;border-radius:0" onclick="applyPreset(${i})">${_vEsc(p.label||p.vendor)}</button>`
+    +`<button class="btn" title="삭제" style="border:none;background:none;border-radius:0;padding:6px 8px;color:#F04452" onclick="deletePreset(${i})">✕</button></span>`
+  ).join('') + `<button class="btn" onclick="togglePresetForm(true)">➕ 업체 추가</button>`;
+}
+function togglePresetForm(show){ const f=document.getElementById('vPresetForm'); if(f) f.style.display = show? 'block':'none'; if(show){ ['npLabel','npVendor','npBizno','npPick','npDrop'].forEach(id=>{const el=document.getElementById(id); if(el)el.value='';}); } }
+function addPreset(){
+  const vendor=(document.getElementById('npVendor').value||'').trim();
+  if(!vendor){ alert('거래처를 입력하세요.'); return; }
+  const splitKw=s=>String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+  VENDOR_PRESET_LIST.push({
+    label:(document.getElementById('npLabel').value||'').trim()||vendor,
+    vendor, bizno:(document.getElementById('npBizno').value||'').trim(),
+    pay:document.getElementById('npPay').value,
+    pick:splitKw(document.getElementById('npPick').value),
+    drop:splitKw(document.getElementById('npDrop').value),
+  });
+  savePresets(); renderPresetButtons(); togglePresetForm(false);
+}
+function deletePreset(i){ const p=VENDOR_PRESET_LIST[i]; if(!p) return; if(!confirm(`프리셋 '${p.label||p.vendor}'을(를) 삭제할까요?`)) return; VENDOR_PRESET_LIST.splice(i,1); savePresets(); renderPresetButtons(); }
+function applyPreset(i){
+  const p=VENDOR_PRESET_LIST[i]; if(!p) return;
   renderGiftTypeFilter();
-  document.getElementById('vVendor').value=p.vendor;
-  document.getElementById('vBizno').value=p.bizno;
-  document.getElementById('vPay').value=p.pay;
-  const boxes=document.querySelectorAll('#vGiftTypes .vGiftType');
-  boxes.forEach(c=>{ c.checked=p.pick(c.value); });
+  document.getElementById('vVendor').value=p.vendor||'';
+  document.getElementById('vBizno').value=p.bizno||'';
+  document.getElementById('vPay').value=p.pay||'card';
+  const pick=p.pick||[], drop=p.drop||[];
+  document.querySelectorAll('#vGiftTypes .vGiftType').forEach(c=>{
+    const v=c.value; if(v==='(없음)'){ c.checked=false; return; }
+    const inc = !pick.length || pick.some(k=>k&&v.includes(k));
+    const exc = drop.some(k=>k&&v.includes(k));
+    c.checked = inc && !exc;
+  });
   document.getElementById('vSupply').value=''; document.getElementById('vTotal').value='';
   voucherRecalcHint();
-  const sel=[...boxes].filter(c=>c.checked).map(c=>c.value).join(', ')||'(해당 종류 없음)';
+  const sel=[...document.querySelectorAll('#vGiftTypes .vGiftType')].filter(c=>c.checked).map(c=>c.value).join(', ')||'(해당 종류 없음)';
   const el=document.getElementById('voucherSummary');
-  if(el) el.innerHTML=`🧾 <b>${p.vendor}</b> 설정됨 · 대상 선물: ${sel} · <span style="color:var(--text3)">공급가액·총금액 입력 후 다운로드</span>`;
+  if(el) el.innerHTML=`🧾 <b>${_vEsc(p.vendor)}</b> 설정됨 · 대상 선물: ${sel} · <span style="color:var(--text3)">공급가액·총금액 입력 후 다운로드</span>`;
 }
 function voucherRecalcHint(){
   const supply=Number(document.getElementById('vSupply').value)||0;
