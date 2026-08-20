@@ -297,6 +297,7 @@ tr:hover td{background:#FAFBFC;}
     </div>
     <div id="ak-status" style="font-size:12px; height:18px; margin-bottom:4px;"></div>
     <div class="modal-btns">
+      <button class="btn btn-line" onclick="resetApiKey()" style="color:var(--red,#d33);">🗑 기존 키 삭제</button>
       <button class="btn btn-line" onclick="closeModal('apiKeyModal')">닫기</button>
       <button class="btn btn-blue" onclick="confirmApiKey()">저장</button>
     </div>
@@ -405,11 +406,18 @@ function _apiPass(promptIfMissing){
 function hasApiKey(){ return GEMINI_KEY.length>=20; }
 async function saveApiKey(k){
   GEMINI_KEY=k.trim();
-  try{ localStorage.setItem('gm_gemini_key', GEMINI_KEY); }catch(e){}   // 이 PC 로컬 작업본
-  const pass=_apiPass(true);
-  if(pass){ try{ const blob=await _enc({key:GEMINI_KEY}, pass); await sbSet(GEMINI_CLOUD_KEY, blob); }catch(e){} }  // 클라우드엔 암호문만
+  try{ localStorage.setItem('gm_gemini_key', GEMINI_KEY); }catch(e){}   // 이 PC 로컬 작업본(즉시 적용)
+  const pass=_apiPass(false);   // 프롬프트 없이 캐시된 암호만 사용(있으면 클라우드 암호화 저장, 없으면 로컬만)
+  try{ if(pass && GEMINI_KEY){ const blob=await _enc({key:GEMINI_KEY}, pass); await sbSet(GEMINI_CLOUD_KEY, blob); await sbSet(GEMINI_LEGACY_KEY, ''); } }catch(e){}
+}
+async function clearApiKey(){   // 옛 키를 로컬·클라우드에서 완전히 제거
+  GEMINI_KEY='';
+  try{ localStorage.removeItem('gm_gemini_key'); }catch(e){}
+  try{ await sbSet(GEMINI_CLOUD_KEY, ''); await sbSet(GEMINI_LEGACY_KEY, ''); }catch(e){}
+  if(typeof updateApiKeyStatus==='function') updateApiKeyStatus();
 }
 async function loadCloudApiKey(){
+  if(GEMINI_KEY.length>=20){ if(typeof updateApiKeyStatus==='function') updateApiKeyStatus(); return; }  // 로컬 키가 있으면 클라우드로 덮어쓰지 않음
   try{
     const blob=await sbGet(GEMINI_CLOUD_KEY);
     if(blob && blob.ct){                       // 암호화 저장본 → 캐시된 암호로만 자동 복호화
@@ -725,11 +733,20 @@ async function startOCR(){
       document.getElementById(it.id+'-s').textContent='✓ 완료';
     }catch(e){
       document.getElementById(it.id+'-s').className='status status-err';
-      if(e&&e.message==='API_KEY_MISSING'){
+      const msg = (e&&e.message||String(e))||'';
+      const authFail = /API_?KEY|credential|authentication|not valid|PERMISSION|invalid.?auth|OAuth/i.test(msg);
+      if(msg==='API_KEY_MISSING'){
         document.getElementById(it.id+'-s').textContent='🔑 API 키 필요';
         openApiKeyModal(); break;
+      } else if(authFail){
+        document.getElementById(it.id+'-s').textContent='🔑 키 거부됨 — 새 키 필요';
+        await clearApiKey();                    // 거부된 옛 키 자동 제거(로컬+클라우드)
+        openApiKeyModal();
+        document.getElementById('ak-status').textContent='이 키가 거부되었습니다. 새 키를 입력하세요.';
+        document.getElementById('ak-status').style.color='var(--red,#d33)';
+        break;
       } else {
-        document.getElementById(it.id+'-s').textContent='⚠ 실패: '+(e&&e.message||e);
+        document.getElementById(it.id+'-s').textContent='⚠ 실패: '+msg;
       }
       console.error(e);
     }
@@ -944,6 +961,13 @@ function confirmApiKey(){
   st.style.color='var(--green)';
   st.textContent='✓ 저장 완료! (모든 PC에 자동 공유됩니다)';
   setTimeout(()=>closeModal('apiKeyModal'),900);
+}
+async function resetApiKey(){
+  const st=document.getElementById('ak-status');
+  await clearApiKey();
+  document.getElementById('ak-input').value='';
+  st.style.color='var(--t3)';
+  st.textContent='기존 키를 삭제했습니다. 새 키를 붙여넣고 저장하세요.';
 }
 function updateApiKeyStatus(){
   const el=document.getElementById('apiKeyCnt');
