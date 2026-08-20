@@ -2008,7 +2008,7 @@ function renderTaskList(){
 
 function setActive(key){
   activeCat = key;
-  activeFilter = 'all';
+  activeFilter = (key==='purchase') ? 'doing' : 'all';   // 구매업무는 기본 '진행중'으로 진입
   openMenuId = null;
   if(key==='monthly') selectedMonth = CURRENT_YM;
   document.querySelectorAll('.nav-item[data-cat]').forEach(el=>{
