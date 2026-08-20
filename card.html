@@ -284,15 +284,15 @@ tr:hover td{background:#FAFBFC;}
 <!-- API 키 설정 모달 -->
 <div class="modal-bg hide" id="apiKeyModal">
   <div class="modal">
-    <h3>🔑 Claude API 키 설정</h3>
+    <h3>🔑 Gemini API 키 설정 (무료)</h3>
     <p style="font-size:12.5px; color:var(--t2); margin-bottom:16px; line-height:1.7;">
-      영수증 OCR 기능을 사용하려면 Anthropic API 키가 필요합니다.<br>
-      키는 <b>이 PC 브라우저에만 저장</b>되며 외부로 전송되지 않습니다.<br>
-      발급: <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--blue);">console.anthropic.com</a>
+      영수증 자동인식에 <b>무료</b> Google Gemini 키를 사용합니다.<br>
+      <b>한 번만 입력</b>하면 공용 클라우드에 저장되어 <b>모든 PC에서 자동 적용</b>됩니다(재입력 없음).<br>
+      무료 발급: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--blue);">aistudio.google.com/apikey</a>
     </p>
     <div class="field">
-      <label>API 키 (sk-ant-... 로 시작)</label>
-      <input id="ak-input" type="password" placeholder="sk-ant-api03-..."
+      <label>API 키 (AIza... 로 시작)</label>
+      <input id="ak-input" type="password" placeholder="AIzaSy..."
         style="font-family:monospace; font-size:12px; letter-spacing:.5px;">
     </div>
     <div id="ak-status" style="font-size:12px; height:18px; margin-bottom:4px;"></div>
@@ -301,7 +301,7 @@ tr:hover td{background:#FAFBFC;}
       <button class="btn btn-blue" onclick="confirmApiKey()">저장</button>
     </div>
     <div style="font-size:11px; color:var(--t3); margin-top:14px; text-align:center;">
-      💡 영수증 1장당 약 1~3원 수준의 API 비용이 발생합니다
+      💡 Gemini 무료 티어로 처리됩니다 (영수증 물량 기준 비용 0원)
     </div>
   </div>
 </div>
@@ -385,10 +385,13 @@ let activeCardId = 'all';
 let pendingFiles = [];
 let editingId = null;
 
-/* API 키 — localStorage에만 저장, 외부 전송 없음 */
-let ANTHROPIC_KEY = localStorage.getItem('gm_anthropic_key') || '';
-function saveApiKey(k){ ANTHROPIC_KEY=k.trim(); localStorage.setItem('gm_anthropic_key', ANTHROPIC_KEY); }
-function hasApiKey(){ return ANTHROPIC_KEY.startsWith('sk-ant'); }
+/* Gemini API 키 — 한 번만 입력하면 공용 클라우드에 저장되어 모든 PC에서 자동 적용 */
+const GEMINI_CLOUD_KEY = 'gemini_api_key';
+const GEMINI_MODEL = 'gemini-2.0-flash';   // 무료 티어, 비전(이미지·PDF) 지원
+let GEMINI_KEY = localStorage.getItem('gm_gemini_key') || '';
+function saveApiKey(k){ GEMINI_KEY=k.trim(); try{ localStorage.setItem('gm_gemini_key', GEMINI_KEY); }catch(e){} try{ sbSet(GEMINI_CLOUD_KEY, GEMINI_KEY); }catch(e){} } // 클라우드 동기화 → 다른 PC 자동 적용
+function hasApiKey(){ return GEMINI_KEY.length>=20; }
+async function loadCloudApiKey(){ try{ const k=await sbGet(GEMINI_CLOUD_KEY); if(typeof k==='string' && k.length>=20){ GEMINI_KEY=k; try{ localStorage.setItem('gm_gemini_key', k); }catch(e){} if(typeof updateApiKeyStatus==='function') updateApiKeyStatus(); } }catch(e){} }
 
 const PUSH_KEY_CARDS    = 'card_cards_v1';
 const PUSH_KEY_VOUCHERS = 'card_vouchers_v1';
@@ -494,9 +497,13 @@ async function init(){
     setSyncBadge('saved');
   }catch(e){ setSyncBadge('offline'); }
 
-  // API 키 미설정 시 안내
+  // 공용 클라우드에 저장된 Gemini 키 불러오기(다른 PC/관리자가 설정했으면 자동 적용)
+  await loadCloudApiKey();
+  updateApiKeyStatus();
+
+  // 키 미설정 시 안내(최초 1회만 설정하면 됨)
   if(!hasApiKey()){
-    setTimeout(()=>{ if(confirm('Claude API 키가 설정되지 않았습니다.\nOCR 기능을 사용하려면 API 키가 필요합니다.\n지금 설정하시겠어요?')){ openApiKeyModal(); } }, 1000);
+    setTimeout(()=>{ if(confirm('영수증 자동인식에 쓸 Gemini 키가 없습니다.\n무료 키를 한 번만 설정하면 모든 PC에 공유됩니다.\n지금 설정하시겠어요?')){ openApiKeyModal(); } }, 1000);
   }
 }
 
@@ -616,40 +623,34 @@ async function fileToBase64(file){
 async function ocrOneFile(file){
   const isPDF = file.type==='application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   const b64 = await fileToBase64(file);
-  const mediaType = isPDF ? 'application/pdf' : (file.type||'image/jpeg');
-  const docBlock = isPDF
-    ? {type:'document', source:{type:'base64', media_type:'application/pdf', data:b64}}
-    : {type:'image',    source:{type:'base64', media_type:mediaType,         data:b64}};
+  const mimeType = isPDF ? 'application/pdf' : (file.type||'image/jpeg');
 
-  const prompt = `이 영수증(또는 카드전표)에서 다음 정보를 추출해서 JSON으로만 답해주세요. 다른 말은 하지 마세요.
+  const prompt = `이 영수증(또는 카드 매출전표) 이미지에서 정보를 추출해 JSON으로만 답하라. 설명·다른 말 금지.
 {
   "date": "YYYY-MM-DD",
-  "merchant": "사용처(상호명)",
-  "amount": 숫자(공급가액, 부가세 제외),
-  "vat": 숫자(부가세, 없으면 금액의 1/11 반올림),
+  "merchant": "실제 가맹점(상호명)",
+  "amount": 공급가액 숫자(부가세 제외),
+  "vat": 부가세 숫자,
   "note": "적요(업종 또는 품목 간단히)"
 }
-부가세가 명시돼 있으면 그 값을 쓰고, 없으면 총액의 1/11을 계산해서 넣어주세요.
-금액은 부가세를 뺀 공급가액으로 넣어주세요. 날짜가 없으면 오늘 날짜(${today()})를 넣어주세요.`;
+상호 규칙: 실제로 물건·서비스를 판 가맹점 이름만. 결제대행사/PG(이니시스·KG·나이스페이·토스페이먼츠·다날·스마트로·~페이), 구매자(수산이앤에스), 문서제목(매출전표·영수증·신용카드·온라인 등)은 상호가 아니다. 브랜드가 잘못 적혔으면 정식 명칭으로 교정. 확신 없으면 빈 문자열.
+부가세가 명시돼 있으면 그 값, 없으면 총액의 1/11을 반올림. amount는 부가세를 뺀 공급가액. 날짜가 없으면 ${today()}.`;
 
   if(!hasApiKey()) throw new Error('API_KEY_MISSING');
-  const resp = await fetch('https://api.anthropic.com/v1/messages',{
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`;
+  const resp = await fetch(url,{
     method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
+    headers:{ 'Content-Type':'application/json' },
     body: JSON.stringify({
-      model:'claude-sonnet-4-6',
-      max_tokens:500,
-      messages:[{ role:'user', content:[ docBlock, {type:'text', text:prompt} ] }]
+      contents:[{ parts:[ {inline_data:{mime_type:mimeType, data:b64}}, {text:prompt} ] }],
+      generationConfig:{ temperature:0, responseMimeType:'application/json', maxOutputTokens:600 }
     })
   });
-  if(!resp.ok){ const e=await resp.json().catch(()=>{}); throw new Error((e&&e.error&&e.error.message)||'API 오류 '+resp.status); }
+  if(!resp.ok){ const e=await resp.json().catch(()=>({})); throw new Error((e&&e.error&&e.error.message)||('Gemini API 오류 '+resp.status)); }
   const data = await resp.json();
-  const text = (data.content||[]).map(c=>c.text||'').join('').trim();
+  const cand = (data.candidates||[])[0]||{};
+  const text = (((cand.content||{}).parts)||[]).map(p=>p.text||'').join('').trim();
+  if(!text){ throw new Error(cand.finishReason ? ('응답 없음('+cand.finishReason+')') : '응답이 비어 있습니다'); }
   const clean = text.replace(/```json|```/g,'').trim();
   return JSON.parse(clean);
 }
@@ -894,20 +895,21 @@ function exportExcel(){
 
 /* ======== API 키 모달 ======== */
 function openApiKeyModal(){
-  document.getElementById('ak-input').value = ANTHROPIC_KEY ? '••••••••••••••••' : '';
+  document.getElementById('ak-input').value = GEMINI_KEY ? '••••••••••••••••' : '';
   document.getElementById('ak-status').textContent = '';
   document.getElementById('apiKeyModal').classList.remove('hide');
   setTimeout(()=>{ const el=document.getElementById('ak-input'); if(el){ el.value=''; el.focus(); } },100);
 }
 function confirmApiKey(){
   const v=document.getElementById('ak-input').value.trim();
-  if(!v){ document.getElementById('ak-status').style.color='var(--red)'; document.getElementById('ak-status').textContent='키를 입력해 주세요'; return; }
-  if(!v.startsWith('sk-ant')){ document.getElementById('ak-status').style.color='var(--red)'; document.getElementById('ak-status').textContent='올바른 API 키 형식이 아닙니다 (sk-ant 로 시작)'; return; }
+  const st=document.getElementById('ak-status');
+  if(!v){ st.style.color='var(--red)'; st.textContent='키를 입력해 주세요'; return; }
+  if(v.length<20){ st.style.color='var(--red)'; st.textContent='올바른 Gemini API 키가 아닙니다 (AIza… 로 시작)'; return; }
   saveApiKey(v);
   updateApiKeyStatus();
-  document.getElementById('ak-status').style.color='var(--green)';
-  document.getElementById('ak-status').textContent='✓ 저장 완료!';
-  setTimeout(()=>closeModal('apiKeyModal'),800);
+  st.style.color='var(--green)';
+  st.textContent='✓ 저장 완료! (모든 PC에 자동 공유됩니다)';
+  setTimeout(()=>closeModal('apiKeyModal'),900);
 }
 function updateApiKeyStatus(){
   const el=document.getElementById('apiKeyCnt');
