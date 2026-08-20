@@ -139,6 +139,7 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
     <button class="tab" data-panel="summary" onclick="switchTab(this)">📊 사업소별 현황</button>
     <button class="tab" data-panel="compare" onclick="switchTab(this)">🔍 명단 비교</button>
     <button class="tab" data-panel="all" onclick="switchTab(this)">📋 전체 취합 명단</button>
+    <button class="tab" data-panel="voucher" onclick="switchTab(this)">🧾 자동 전표</button>
   </div>
 
   <!-- UPLOAD -->
@@ -240,6 +241,34 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
       </div>
     </div>
   </div>
+
+  <!-- VOUCHER (자동 전표) -->
+  <div class="tab-panel" id="panel-voucher">
+    <div class="card">
+      <div class="card-title">🧾 자동 전표 생성 <span class="badge" id="voucherHeadBadge">인원 0명</span></div>
+      <div id="voucherRateStatus" class="alert alert-info" style="margin-bottom:14px;">적용률 확인 중…</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;max-width:780px;">
+        <div><label style="font-size:12px;font-weight:600;color:var(--text2)">거래처</label><input class="search-input" id="vVendor" value="이마트" style="width:100%"></div>
+        <div><label style="font-size:12px;font-weight:600;color:var(--text2)">거래처 사업자번호</label><input class="search-input" id="vBizno" value="206-86-50913" style="width:100%"></div>
+        <div style="grid-column:1/3"><label style="font-size:12px;font-weight:600;color:var(--text2)">적요</label><input class="search-input" id="vMemo" value="2026년 설 명절 선물 구매" style="width:100%"></div>
+        <div><label style="font-size:12px;font-weight:600;color:var(--text2)">공급가액 (부가세 제외)</label><input class="search-input" id="vSupply" type="number" placeholder="예: 30462781" style="width:100%" oninput="voucherRecalcHint()"></div>
+        <div><label style="font-size:12px;font-weight:600;color:var(--text2)">총금액 (부가세 포함·결제액)</label><input class="search-input" id="vTotal" type="number" placeholder="예: 33604400" style="width:100%" oninput="voucherRecalcHint()"></div>
+        <div><label style="font-size:12px;font-weight:600;color:var(--text2)">결제/증빙</label>
+          <select class="filter-select" id="vPay" style="width:100%"><option value="card">법인카드 (카드매입부가세·법인카드미지급금)</option><option value="tax">세금계산서 (일반매입부가세·미지급금_일반)</option></select></div>
+        <div style="display:flex;align-items:flex-end"><div id="vHint" style="font-size:12px;color:var(--text3)"></div></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--text3);line-height:1.6;">📌 전체 취합 명단 인원을 <b>공급가액 ÷ 인원</b>으로 균등 배분하고, 각 인원을 <b>적용률(사번)</b>로 코스트센터에 분할·집계합니다. 부가세 = 총금액 − 공급가액. 계정과목은 <b>코스트센터 기준</b>(사업소·프로젝트=제조비용, 본사관리=판관비, 기술연구소=경상연구개발비).</div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="genGiftVoucher()">📥 전표입력 양식 다운로드</button>
+        <button class="btn" onclick="ensureGiftRates(true)">🔄 적용률 새로고침</button>
+      </div>
+      <div id="voucherSummary" style="margin-top:12px;font-size:13px;font-weight:700;color:var(--text1)"></div>
+      <div class="table-wrap" style="margin-top:10px;">
+        <table><thead><tr><th>#</th><th>귀속부서</th><th>코스트센터</th><th>계정과목</th><th>비용구분</th><th style="text-align:right">금액</th></tr></thead>
+        <tbody id="voucherPreviewBody"><tr><td colspan="6"><div class="empty-state"><div class="icon">🧾</div><div class="title">미리보기 없음</div><div class="desc">공급가액·총금액 입력 후 '전표입력 양식 다운로드'를 누르면 표시됩니다.</div></div></td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -275,6 +304,7 @@ function switchTab(btn){
   btn.classList.add('active');
   document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
   if(btn.dataset.panel==='compare' && !masterRows.length && typeof applyCentralEmpMaster==='function') applyCentralEmpMaster();
+  if(btn.dataset.panel==='voucher'){ if(typeof voucherRecalcHint==='function') voucherRecalcHint(); if(typeof ensureGiftRates==='function') ensureGiftRates(); }
 }
 
 let refEditMode=false;
@@ -1256,6 +1286,118 @@ async function applyCentralEmpMaster(force){
 }
 // 페이지 로드 시 중앙 사원명부 자동 적용
 applyCentralEmpMaster();
+
+// ===== 🧾 자동 전표 생성 (적용률 기반 코스트센터 분할) — 전표생성기 엔진 이식 =====
+const RATE_KEY='voucher_rate_master_enc';
+const RATE_PASS_LS='gm_voucher_rate_pass';
+const HQ_DEPTS=['경영지원팀','경영지원본부','재무기획팀','IT팀','신사옥건축경비']; // 판관비로 분류할 코스트센터
+// --- 복호화(AES-256-GCM) ---
+function _b64(buf){ let s=''; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function _unb64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+async function _deriveKey(pass, salt){ const base=await crypto.subtle.importKey('raw', new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']); return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']); }
+async function decryptJSON(blob, pass){ const key=await _deriveKey(pass,_unb64(blob.salt)); const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_unb64(blob.iv)},key,_unb64(blob.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
+// --- 적용률 마스터 ---
+let giftRateMaster={}, giftRateByName={}, giftRateByNorm={};
+function normSabun(s){ return String(s==null?'':s).trim().replace(/\D/g,'').replace(/^0+/,''); }
+function acct(suffix, dtype){ return dtype==='판관비' ? `판관비_${suffix}` : `제조비용_${suffix}`; }
+function giftOwner(dept, cc){
+  cc=String(cc||'').trim(); const dep=String(dept||'').trim();
+  const 코스트센터 = cc || dep || '(미지정)';
+  let 귀속부서;
+  if(!dep || /본사근무/.test(dep)) 귀속부서 = cc || '(미지정)';
+  else 귀속부서 = dep.split(/\s+/)[0] || dep;
+  return {귀속부서, 코스트센터};
+}
+function giftAcct(dept, cc){
+  const c=String(cc||dept||'').trim();
+  if(c.includes('기술연구소')) return {계정과목:'판관비_경상연구개발비_복리후생비_기념품지급', 비용구분:'판관'};
+  const dtype = HQ_DEPTS.includes(c) ? '판관비' : '제조비용';
+  let base='복리후생비_기념품지급';
+  if(dtype==='제조비용' && c.includes('국책과제')) base='경상연구개발비_복리후생비_기념품지급';
+  return {계정과목: acct(base,dtype), 비용구분: dtype==='판관비'?'판관':'용역'};
+}
+function lookupRatesGift(empno, name, ym){
+  let e=null;
+  if(empno && giftRateMaster[empno]) e=giftRateMaster[empno];
+  if(!e && empno){ const alt=giftRateByNorm[normSabun(empno)]; if(alt&&giftRateMaster[alt]) e=giftRateMaster[alt]; }
+  if(!e && name && giftRateByName[name]) e=giftRateMaster[giftRateByName[name]];
+  if(!e||!e.length) return null;
+  let f = ym ? e.filter(x=>x.ym===ym) : e; if(!f.length) f=e; return f;
+}
+function giftDefaultYMv(){ const cnt={}; Object.values(giftRateMaster).forEach(a=>a.forEach(e=>{ if(e.ym)cnt[e.ym]=(cnt[e.ym]||0)+1; })); let b='',n=-1; for(const k in cnt){ if(cnt[k]>n){n=cnt[k];b=k;} } return b; }
+function setVRateStatus(kind, msg){ const el=document.getElementById('voucherRateStatus'); if(!el) return; el.className='alert '+(kind==='ok'?'alert-info':'alert-warn'); el.innerHTML=msg; }
+async function ensureGiftRates(force){
+  if(!force && Object.keys(giftRateMaster).length) return true;
+  const blob = await sbGetGift(RATE_KEY);
+  if(!blob || !blob.ct){ setVRateStatus('warn','⚠️ 적용률이 등록되지 않았습니다. 총무관리시스템 <b>설정 → 적용률</b> 또는 전표생성기에서 먼저 업로드하세요.'); return false; }
+  let pass=(localStorage.getItem(RATE_PASS_LS)||'').trim();
+  if(!pass){ pass=(prompt('적용률 암호를 입력하세요.\n(전표생성기·설정과 동일한 암호)')||'').trim(); if(pass) localStorage.setItem(RATE_PASS_LS,pass); }
+  if(!pass){ setVRateStatus('warn','⚠️ 적용률 암호가 필요합니다. [🔄 적용률 새로고침]으로 다시 시도하세요.'); return false; }
+  try{
+    const data=await decryptJSON(blob, pass);
+    giftRateMaster=data.rateMaster||{}; giftRateByName=data.rateMasterByName||{};
+    giftRateByNorm={}; Object.keys(giftRateMaster).forEach(e=>{ const n=normSabun(e); if(n&&!giftRateByNorm[n]) giftRateByNorm[n]=e; });
+    const months=[...new Set([].concat(...Object.values(giftRateMaster)).map(x=>x.ym).filter(Boolean))];
+    setVRateStatus('ok', `✅ 적용률 적용 중 · 사원 ${Object.keys(giftRateMaster).length}명 · ${months.join(', ')||'월정보 없음'}`);
+    return true;
+  }catch(e){ localStorage.removeItem(RATE_PASS_LS); setVRateStatus('warn','⚠️ 적용률 복호화 실패 — 암호가 다릅니다. [🔄 적용률 새로고침]으로 다시 입력하세요.'); return false; }
+}
+function voucherRecalcHint(){
+  const supply=Number(document.getElementById('vSupply').value)||0;
+  const total=Number(document.getElementById('vTotal').value)||0;
+  const head=allRows.length;
+  const vat=Math.max(0,total-supply);
+  const unit=head?supply/head:0;
+  document.getElementById('voucherHeadBadge').textContent=`인원 ${head}명`;
+  document.getElementById('vHint').innerHTML = head&&supply
+    ? `1인 <b>${Math.round(unit).toLocaleString()}</b>원 · 부가세 <b>${vat.toLocaleString()}</b>원`
+    : (head?'공급가액을 입력하세요':'먼저 전체 취합 명단을 만드세요');
+}
+async function genGiftVoucher(){
+  if(!allRows.length){ alert('먼저 사업소 파일을 업로드하고 [⚡ 취합 시작]을 눌러 전체 취합 명단을 만들어 주세요.'); return; }
+  const ok=await ensureGiftRates(); if(!ok){ alert('적용률을 먼저 불러와야 합니다. 상단 안내를 확인하세요.'); return; }
+  const supply=Number(document.getElementById('vSupply').value)||0;
+  const total=Number(document.getElementById('vTotal').value)||0;
+  if(supply<=0){ alert('공급가액을 입력하세요.'); return; }
+  const vat=Math.max(0,total-supply);
+  const head=allRows.length;
+  const unit=supply/head;
+  const ym=giftDefaultYMv();
+  const agg={}; let unmatched=0;
+  const add=(dept,cc,amt)=>{ const o=giftOwner(dept,cc); const k=o.귀속부서+'|'+o.코스트센터; if(!agg[k]) agg[k]={귀속부서:o.귀속부서,코스트센터:o.코스트센터,amt:0}; agg[k].amt+=amt; };
+  allRows.forEach(r=>{
+    const dep=(r._siteName&&r._siteName.includes('사업소'))? r._siteName : (r.dept||r._siteName||'');
+    const rates=lookupRatesGift(r.empNo, r.name, ym);
+    if(rates&&rates.length){ let alloc=0; rates.forEach((rt,i)=>{ const portion=(i===rates.length-1)?unit-alloc:Math.round(unit*rt.rate/100); alloc+=portion; add(rt.dept, rt.cc||rt.dept, portion); }); }
+    else { unmatched++; add(dep, dep, unit); }
+  });
+  let rows=Object.values(agg).map(a=>{ const c=giftAcct(a.귀속부서,a.코스트센터); return {계정과목:c.계정과목,비용구분:c.비용구분,귀속부서:a.귀속부서,코스트센터:a.코스트센터,금액:Math.round(a.amt)}; })
+    .filter(r=>r.금액!==0)
+    .sort((x,y)=>String(x.귀속부서).localeCompare(String(y.귀속부서),'ko')||String(x.코스트센터).localeCompare(String(y.코스트센터),'ko'));
+  // 반올림 보정: 합계를 공급가액과 정확히 일치
+  const sum=rows.reduce((s,r)=>s+r.금액,0); const diff=supply-sum; if(diff!==0 && rows.length) rows[rows.length-1].금액+=diff;
+  const pay=document.getElementById('vPay').value;
+  const vatAcct=pay==='card'?'카드매입부가세':'일반매입부가세';
+  const payAcct=pay==='card'?'법인카드미지급금':'미지급금_일반';
+  const evid=pay==='card'?'신용카드(일반)':'전자세금계산서(일반)';
+  const vendor=document.getElementById('vVendor').value||''; const bizno=document.getElementById('vBizno').value||''; const memo=document.getElementById('vMemo').value||'';
+  const H=['행번호','계정과목','비용구분','차변금액','대변금액','적요','귀속부서','코스트센터','거래처','증빙','거래처번호','계정세목','거래처사업자번호','추가정보','관리항목정보'];
+  const aoa=[['전표입력'],H.slice()]; const pad=n=>String(n).padStart(4,'0'); let seq=0;
+  rows.forEach(r=>{ seq++; aoa.push([pad(seq),r.계정과목,r.비용구분,r.금액,0,memo,r.귀속부서,r.코스트센터,vendor,'','','',bizno,'','']); });
+  if(vat>0){ seq++; aoa.push([pad(seq),vatAcct,'',vat,0,memo,'','',vendor,evid,'','',bizno,'','']); }
+  seq++; aoa.push([pad(seq),payAcct,'',0,supply+vat,memo,'','',vendor,'','','',bizno,'','']);
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:H.length-1}}];
+  ws['!cols']=[{wch:7},{wch:34},{wch:8},{wch:12},{wch:12},{wch:28},{wch:20},{wch:34},{wch:14},{wch:16},{wch:11},{wch:10},{wch:16},{wch:9},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'전표입력');
+  const d=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `전표입력_선물지급_${d}.xlsx`);
+  document.getElementById('voucherSummary').innerHTML=`✅ 생성 완료 · 인원 ${head}명 · 1인 ${Math.round(unit).toLocaleString()}원 · 공급가 ${supply.toLocaleString()} · 부가세 ${vat.toLocaleString()} · 총 ${(supply+vat).toLocaleString()} · 코스트센터 ${rows.length}개`+(unmatched?` · ⚠️ 적용률 미매칭 ${unmatched}명(명단 부서로 처리)`:'');
+  const tb=document.getElementById('voucherPreviewBody');
+  tb.innerHTML=rows.map((r,i)=>`<tr><td style="color:var(--text3)">${i+1}</td><td>${r.귀속부서}</td><td style="font-size:12px">${r.코스트센터}</td><td style="font-size:12px">${r.계정과목}</td><td>${r.비용구분}</td><td style="text-align:right;font-weight:600">${r.금액.toLocaleString()}</td></tr>`).join('')
+    + `<tr style="background:var(--surface2)"><td></td><td colspan="3" style="font-weight:700">${vatAcct} / ${payAcct}</td><td></td><td style="text-align:right;font-weight:700">부가세 ${vat.toLocaleString()} · 미지급 ${(supply+vat).toLocaleString()}</td></tr>`;
+}
+// 자동 전표 탭 열 때 적용률 로드 + 인원 갱신
+document.addEventListener('DOMContentLoaded', ()=>{}); // (no-op placeholder)
 </script>
 </body>
 </html>
