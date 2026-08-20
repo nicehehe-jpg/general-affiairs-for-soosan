@@ -274,6 +274,7 @@ function switchTab(btn){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('panel-'+btn.dataset.panel).classList.add('active');
+  if(btn.dataset.panel==='compare' && !masterRows.length && typeof applyCentralEmpMaster==='function') applyCentralEmpMaster();
 }
 
 let refEditMode=false;
@@ -781,7 +782,7 @@ function processAll(){
   document.getElementById('statSubmitted').textContent=submitted.length;
   document.getElementById('statMissing').textContent=SITES.length-submitted.length;
   updateRefTableStats();
-  if(masterRows.length>0){buildCompare();}else{document.getElementById('statIssues').textContent='-';}
+  if(masterRows.length>0){buildCompare();}else{document.getElementById('statIssues').textContent='-'; if(typeof applyCentralEmpMaster==='function') applyCentralEmpMaster();}
   renderSummary();renderAll();renderCompare();
   document.getElementById('headerMeta').textContent=`총 ${allRows.length}명 취합 · ${siteFiles.length}개 파일`;
   // Switch to summary
@@ -954,11 +955,11 @@ function renderCompare(){
     `총 ${compareData.length}명 · 문제 ${compareData.filter(c=>c.status!=='ok').length}건`+(ignoredCount?` · 미반영 ${ignoredCount}명`:'');
   if(!compareData.length){
     document.getElementById('compareAlert').innerHTML=
-      '<div class="alert alert-warn">⚠️ 사원명부 파일을 업로드해야 비교가 가능합니다.</div>';
+      '<div class="alert alert-warn">⚠️ 비교할 사원명부가 없습니다. 총무관리시스템 <b>설정 → 사원명부</b>에 등록돼 있으면 자동으로 불러옵니다. 없으면 위 \'최종 인원 명단\'에 파일을 올려주세요.</div>';
     document.getElementById('compareTableBody').innerHTML=
       '<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div>'
       +'<div class="title">비교 명단 없음</div>'
-      +'<div class="desc">취합 후 사원명부 파일을 업로드하세요.</div></div></td></tr>';
+      +'<div class="desc">설정에 등록된 사원명부를 자동 사용하거나, 파일을 업로드하세요.</div></div></td></tr>';
     return;
   }
   document.getElementById('compareAlert').innerHTML='';
@@ -1215,6 +1216,46 @@ function setupDrop(areaId,handler){
 }
 setupDrop('dropSite',handleSiteFiles);
 setupDrop('dropMaster',handleMasterFile);
+
+// ===== 중앙 설정 사원명부 자동 사용 (별도 업로드 불필요) =====
+// 총무관리시스템 설정에서 등록한 사원명부를 같은 출처 localStorage / 클라우드(Supabase)에서 불러온다.
+const SB_URL='https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+const SB_REST=SB_URL+'/rest/v1/app_store';
+const GM_SESSION='gm_session';
+const CENTRAL_EMP_KEY='resort_empmaster_v1';
+function _gmSession(){ try{ return JSON.parse(localStorage.getItem(GM_SESSION)||'null'); }catch(e){ return null; } }
+function _gmHeaders(){ const s=_gmSession(); const t=(s&&s.access_token)||''; return {apikey:SB_KEY, Authorization:'Bearer '+t, 'Content-Type':'application/json'}; }
+async function _gmRefresh(){ const s=_gmSession(); if(!s||!s.refresh_token) return false; try{ const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.refresh_token})}); const d=await r.json().catch(()=>({})); if(d.access_token){ try{localStorage.setItem(GM_SESSION,JSON.stringify({access_token:d.access_token,refresh_token:d.refresh_token}));}catch(e){} return true; } }catch(e){} return false; }
+async function sbGetGift(key){ try{ const url=`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`; let r=await fetch(url,{headers:_gmHeaders()}); if(r.status===401 && await _gmRefresh()) r=await fetch(url,{headers:_gmHeaders()}); if(!r.ok) return undefined; const rows=await r.json(); return rows.length?rows[0].value:null; }catch(e){ return undefined; } }
+
+async function getCentralEmpMaster(){
+  // 1) localStorage(같은 출처 공유) 우선
+  try{ const r=localStorage.getItem(CENTRAL_EMP_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)&&p.length) return p; } }catch(e){}
+  // 2) 클라우드(로그인 세션 있으면)
+  const c=await sbGetGift(CENTRAL_EMP_KEY);
+  if(Array.isArray(c)&&c.length){ try{localStorage.setItem(CENTRAL_EMP_KEY,JSON.stringify(c));}catch(e){} return c; }
+  return null;
+}
+let centralEmpApplied=false;
+async function applyCentralEmpMaster(force){
+  if(masterRows.length && !force) return true;   // 파일로 직접 올린 명단이 있으면 유지
+  const arr=await getCentralEmpMaster();
+  if(!arr||!arr.length) return false;
+  masterRows = arr.map(m=>{
+    const empNoRaw=String(m.empno==null?'':m.empno).trim();
+    const dept=String(m.dept==null?'':m.dept).trim();
+    return {name:String(m.name==null?'':m.name).trim(), empNo:empNoRaw, empNoNorm:empNoRaw.replace(/^0+/,''), dept, mappedSite:dept?matchSite(dept):null, rank:String(m.position==null?'':m.position).trim()};
+  }).filter(r=>r.name && r.name!=='선택');
+  centralEmpApplied=true;
+  const el=document.getElementById('masterFileList');
+  if(el) el.innerHTML=`<div class="file-item"><span class="fname">🔗 중앙 설정 사원명부 ${masterRows.length}명 자동 사용 중</span><button class="fremove" onclick="clearMaster()">×</button></div>`;
+  const dm=document.getElementById('dropMaster'); if(dm) dm.classList.add('has-files');
+  if(typeof allRows!=='undefined' && allRows.length){ buildCompare(); renderSummary(); renderCompare(); }
+  return true;
+}
+// 페이지 로드 시 중앙 사원명부 자동 적용
+applyCentralEmpMaster();
 </script>
 </body>
 </html>
