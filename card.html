@@ -287,7 +287,7 @@ tr:hover td{background:#FAFBFC;}
     <h3>🔑 Gemini API 키 설정 (무료)</h3>
     <p style="font-size:12.5px; color:var(--t2); margin-bottom:16px; line-height:1.7;">
       영수증 자동인식에 <b>무료</b> Google Gemini 키를 사용합니다.<br>
-      <b>한 번만 입력</b>하면 공용 클라우드에 저장되어 <b>모든 PC에서 자동 적용</b>됩니다(재입력 없음).<br>
+      <b>한 번만 입력</b>하면 <b>암호화(AES-256)되어</b> 공용 클라우드에 저장되고 <b>모든 PC에서 자동 적용</b>됩니다(재입력 없음).<br>
       무료 발급: <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--blue);">aistudio.google.com/apikey</a>
     </p>
     <div class="field">
@@ -385,13 +385,47 @@ let activeCardId = 'all';
 let pendingFiles = [];
 let editingId = null;
 
-/* Gemini API 키 — 한 번만 입력하면 공용 클라우드에 저장되어 모든 PC에서 자동 적용 */
-const GEMINI_CLOUD_KEY = 'gemini_api_key';
-const GEMINI_MODEL = 'gemini-2.0-flash';   // 무료 티어, 비전(이미지·PDF) 지원
+/* Gemini API 키 — 한 번만 입력하면 공용 클라우드에 '암호화'되어 저장, 모든 PC에서 자동 적용 */
+const GEMINI_CLOUD_KEY = 'gemini_api_key_enc';   // 클라우드엔 암호문만 저장
+const GEMINI_LEGACY_KEY = 'gemini_api_key';      // 구버전 평문 저장본(자동 마이그레이션)
+const GEMINI_MODEL = 'gemini-2.0-flash';         // 무료 티어, 비전(이미지·PDF) 지원
+const RATE_PASS_LS = 'gm_voucher_rate_pass';     // 전표생성기 적용률과 동일 암호(공유)
 let GEMINI_KEY = localStorage.getItem('gm_gemini_key') || '';
-function saveApiKey(k){ GEMINI_KEY=k.trim(); try{ localStorage.setItem('gm_gemini_key', GEMINI_KEY); }catch(e){} try{ sbSet(GEMINI_CLOUD_KEY, GEMINI_KEY); }catch(e){} } // 클라우드 동기화 → 다른 PC 자동 적용
+// --- AES-256-GCM (적용률·사원명부와 동일 방식) ---
+function _b64(b){ let s=''; const a=new Uint8Array(b); for(let i=0;i<a.length;i++) s+=String.fromCharCode(a[i]); return btoa(s); }
+function _unb64(s){ return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+async function _deriveKey(pass, salt){ const base=await crypto.subtle.importKey('raw', new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']); return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']); }
+async function _enc(obj, pass){ const salt=crypto.getRandomValues(new Uint8Array(16)); const iv=crypto.getRandomValues(new Uint8Array(12)); const key=await _deriveKey(pass,salt); const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(obj))); return {v:1, salt:_b64(salt), iv:_b64(iv), ct:_b64(ct)}; }
+async function _dec(blob, pass){ const key=await _deriveKey(pass,_unb64(blob.salt)); const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_unb64(blob.iv)},key,_unb64(blob.ct)); return JSON.parse(new TextDecoder().decode(pt)); }
+function _apiPass(promptIfMissing){
+  let p=(localStorage.getItem(RATE_PASS_LS)||'').trim();
+  if(!p && promptIfMissing){ p=(prompt('키를 암호화 저장할 암호를 입력하세요.\n(전표생성기 적용률과 동일한 암호 — 집·회사 PC 공통)')||'').trim(); if(p) localStorage.setItem(RATE_PASS_LS,p); }
+  return p;
+}
 function hasApiKey(){ return GEMINI_KEY.length>=20; }
-async function loadCloudApiKey(){ try{ const k=await sbGet(GEMINI_CLOUD_KEY); if(typeof k==='string' && k.length>=20){ GEMINI_KEY=k; try{ localStorage.setItem('gm_gemini_key', k); }catch(e){} if(typeof updateApiKeyStatus==='function') updateApiKeyStatus(); } }catch(e){} }
+async function saveApiKey(k){
+  GEMINI_KEY=k.trim();
+  try{ localStorage.setItem('gm_gemini_key', GEMINI_KEY); }catch(e){}   // 이 PC 로컬 작업본
+  const pass=_apiPass(true);
+  if(pass){ try{ const blob=await _enc({key:GEMINI_KEY}, pass); await sbSet(GEMINI_CLOUD_KEY, blob); }catch(e){} }  // 클라우드엔 암호문만
+}
+async function loadCloudApiKey(){
+  try{
+    const blob=await sbGet(GEMINI_CLOUD_KEY);
+    if(blob && blob.ct){                       // 암호화 저장본 → 캐시된 암호로만 자동 복호화
+      const pass=_apiPass(false);
+      if(pass){ try{ const d=await _dec(blob, pass); if(d && d.key && d.key.length>=20){ GEMINI_KEY=d.key; try{localStorage.setItem('gm_gemini_key',d.key);}catch(e){} } }catch(e){} }
+    } else {                                   // 구버전 평문키 → 읽어서 즉시 암호화 재저장(마이그레이션)
+      const legacy=await sbGet(GEMINI_LEGACY_KEY);
+      if(typeof legacy==='string' && legacy.length>=20){
+        GEMINI_KEY=legacy; try{localStorage.setItem('gm_gemini_key',legacy);}catch(e){}
+        const pass=_apiPass(false);
+        if(pass){ try{ const blob2=await _enc({key:legacy}, pass); await sbSet(GEMINI_CLOUD_KEY, blob2); await sbSet(GEMINI_LEGACY_KEY, ''); }catch(e){} }
+      }
+    }
+    if(typeof updateApiKeyStatus==='function') updateApiKeyStatus();
+  }catch(e){}
+}
 
 const PUSH_KEY_CARDS    = 'card_cards_v1';
 const PUSH_KEY_VOUCHERS = 'card_vouchers_v1';
