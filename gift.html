@@ -7,6 +7,7 @@
 <script>window.APP_LOG_NAME='선물지급';</script>
 <script src="applog.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -156,9 +157,8 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
   <!-- UPLOAD -->
   <div class="tab-panel active" id="panel-upload">
     <div class="card">
-      <div class="card-title">📅 연간 선물 일정 · 양식 다운로드</div>
-      <div class="alert alert-info">각 사업소에 배포할 <b>빈 양식(엑셀)</b>을 내려받아 담당자에게 전달하세요. 담당자가 채워 회신하면 아래 <b>파일 업로드</b>에 올려 취합합니다.</div>
-      <div id="giftEventList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:8px"></div>
+      <div class="card-title">📅 연간 선물 일정 · 양식</div>
+      <div id="giftEventList" style="display:flex;flex-direction:column;max-height:210px;overflow-y:auto;margin-top:4px"></div>
     </div>
     <div class="card">
       <div class="card-title">📁 파일 업로드 <span class="badge" id="uploadedCountBadge">0개 업로드됨</span></div>
@@ -1248,50 +1248,49 @@ function downloadWB(wb, filename){
 }
 
 /* ===== 연간 선물 일정 & 배포용 양식(엑셀) ===== */
+// occasion = 원본 양식(추석)의 "추석" 자리에 넣을 이벤트명
 const GIFT_EVENTS = [
-  {month:'1월',  name:'설 명절 선물'},
-  {month:'4월',  name:'어버이날 선물'},
-  {month:'4월',  name:'창립기념일 선물'},
-  {month:'6월',  name:'하계 복날 기념 삼계탕 선물', gift:'삼계탕'},
-  {month:'8월',  name:'추석 명절 선물'},
-  {month:'10월', name:'직원자녀 수능 합격기원품 선물'},
+  {month:'1월',  name:'설 명절 선물',              occasion:'설 명절'},
+  {month:'4월',  name:'어버이날 선물',             occasion:'어버이날'},
+  {month:'4월',  name:'창립기념일 선물',           occasion:'창립기념일'},
+  {month:'6월',  name:'하계 복날 삼계탕 선물',     occasion:'하계 복날'},
+  {month:'8월',  name:'추석 명절 선물',            occasion:'추석'},
+  {month:'10월', name:'직원자녀 수능 합격기원품',  occasion:'수능 합격기원'},
 ];
+const GIFT_FORM_URL='gift_form.xlsx';   // 표준 배송정보 제출서(원본, 추석 기준)
 function renderGiftEvents(){
   const el=document.getElementById('giftEventList'); if(!el) return;
   el.innerHTML=GIFT_EVENTS.map((ev,i)=>`
-    <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12px;color:var(--primary);font-weight:700">${ev.month}</div>
-        <div style="font-weight:600;color:var(--text1);line-height:1.3">${ev.name}</div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="downloadGiftTemplate(${i})" title="빈 양식 엑셀 다운로드">📥 양식</button>
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 6px;border-bottom:1px solid var(--border)">
+      <span style="min-width:36px;font-size:12px;font-weight:700;color:var(--primary)">${ev.month}</span>
+      <span style="flex:1;font-size:13px;color:var(--text1)">${ev.name}</span>
+      <button class="btn btn-secondary btn-sm" onclick="downloadGiftTemplate(${i})" title="배송정보 제출서 양식 다운로드">📥 양식</button>
     </div>`).join('');
 }
-function downloadGiftTemplate(idx){
+// 원본 양식(gift_form.xlsx)을 그대로 두고 sharedStrings의 '추석'만 이벤트명으로 교체해 다운로드
+async function downloadGiftTemplate(idx){
   const ev=GIFT_EVENTS[idx]; if(!ev){return;}
   const year=new Date().getFullYear();
-  const title=`${year}년 ${ev.month} ${ev.name} 지급 대상자 명단`;
-  const HDR=['순번','부서','이름','사번','선물','집주소','수령인','핸드폰번호','비고'];
-  const aoa=[
-    [title],
-    ['※ 각 사업소 담당자는 아래 표에 대상자를 입력해 제출해 주세요. (사번은 정확히 기재 · 없는 칸은 비워두셔도 됩니다)'],
-    ['사업소명(부서):',''],
-    [],
-    HDR,
-  ];
-  for(let i=1;i<=25;i++) aoa.push([i,'','','',ev.gift||'','','','','']);
-  const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols']=[{wch:5},{wch:16},{wch:10},{wch:11},{wch:16},{wch:34},{wch:10},{wch:15},{wch:16}];
-  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}}];
-  // 스타일: 제목·안내·헤더
-  if(ws['A1']) ws['A1'].s={font:{bold:true,sz:15},alignment:{horizontal:'center',vertical:'center'}};
-  if(ws['A2']) ws['A2'].s={font:{sz:11,color:{rgb:'8B95A1'}},alignment:{horizontal:'center'}};
-  if(ws['A3']) ws['A3'].s={font:{bold:true,sz:11}};
-  const hr=5; // 헤더 엑셀 행번호(1-base)
-  ['A','B','C','D','E','F','G','H','I'].forEach(col=>{ const ad=col+hr; if(ws[ad]) ws[ad].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:11},fill:{fgColor:{rgb:'3182F6'}},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'C9D2DD'}},bottom:{style:'thin',color:{rgb:'C9D2DD'}},left:{style:'thin',color:{rgb:'C9D2DD'}},right:{style:'thin',color:{rgb:'C9D2DD'}}}}; });
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'명단');
-  downloadWB(wb, `${title}_양식.xlsx`);
+  const fname=`${year}년 ${ev.name} 배송정보 제출서_OOO사업소.xlsx`;
+  try{
+    if(typeof JSZip==='undefined') throw new Error('nozip');
+    const buf=await (await fetch(GIFT_FORM_URL,{cache:'no-store'})).arrayBuffer();
+    const zip=await JSZip.loadAsync(buf);
+    const ssPath='xl/sharedStrings.xml';
+    if(zip.file(ssPath)){
+      let xml=await zip.file(ssPath).async('string');
+      if(ev.occasion!=='추석') xml=xml.split('추석').join(ev.occasion);   // 텍스트만 교체(이미지·서식 보존)
+      xml=xml.split('2026').join(String(year));                            // 연도 최신화
+      zip.file(ssPath, xml);
+    }
+    const out=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(out);
+    const a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1000);
+  }catch(err){
+    console.error(err);
+    alert('양식을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.\n('+(err&&err.message||err)+')');
+  }
 }
 
 function exportAll(){
