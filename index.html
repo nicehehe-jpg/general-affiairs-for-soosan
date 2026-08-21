@@ -1236,6 +1236,15 @@ async function sendAiMsg(){
       .nv-in{border:none;background:transparent;width:100%;padding:5px 2px;font-size:13.5px;color:var(--t1);outline:none;font-family:inherit;}
       .nv-btn{border:1px solid var(--line);background:var(--bg);color:var(--t2);border-radius:7px;padding:5px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
       .nv-btn:hover{background:var(--card);}
+      .rte-sel{font-size:12px;padding:4px 5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--t1);font-family:inherit;cursor:pointer;}
+      .rte-btn{min-width:28px;height:28px;border:1px solid transparent;background:transparent;color:var(--t1);border-radius:6px;padding:0 6px;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;}
+      .rte-btn:hover{background:var(--bg);border-color:var(--line);}
+      .rte-div{width:1px;height:18px;background:var(--line);margin:0 3px;}
+      #dmToolbar{position:relative;}
+      #dmBody:empty:before{content:attr(data-placeholder);color:var(--t3);}
+      #dmBody a{color:var(--blue);}
+      #rteCharPop span{display:inline-block;width:30px;height:28px;line-height:28px;text-align:center;cursor:pointer;border-radius:6px;font-size:15px;}
+      #rteCharPop span:hover{background:var(--bg);}
     </style>
     <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);">
       <!-- 받는사람 -->
@@ -1287,7 +1296,41 @@ async function sendAiMsg(){
           <span style="font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;" onclick="openSignatureModal()">✏️ 서명 관리</span>
         </span>
       </label>
-      <textarea id="dmBody" style="flex:1;width:100%;min-height:220px;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:none;line-height:1.7;" placeholder="메일 내용을 입력하세요..."></textarea>
+      <div id="dmToolbar" style="display:flex;flex-wrap:wrap;gap:3px;align-items:center;border:1.5px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;padding:5px 8px;background:var(--card);">
+        <select onchange="rteFont(this.value);this.selectedIndex=0;" title="글꼴" class="rte-sel">
+          <option value="">글꼴</option>
+          <option value="'맑은 고딕',Malgun Gothic">맑은 고딕</option>
+          <option value="굴림,Gulim">굴림</option>
+          <option value="돋움,Dotum">돋움</option>
+          <option value="바탕,Batang">바탕</option>
+          <option value="Arial">Arial</option>
+          <option value="'Times New Roman'">Times New Roman</option>
+        </select>
+        <select onchange="rteSize(this.value);this.selectedIndex=0;" title="글자 크기" class="rte-sel">
+          <option value="">크기</option>
+          <option value="12">12</option><option value="13">13</option><option value="14">14</option>
+          <option value="16">16</option><option value="18">18</option><option value="20">20</option>
+          <option value="24">24</option><option value="28">28</option><option value="32">32</option>
+        </select>
+        <span class="rte-div"></span>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'bold')" title="굵게" style="font-weight:900;">B</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'italic')" title="기울임" style="font-style:italic;">I</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'underline')" title="밑줄" style="text-decoration:underline;">U</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'strikeThrough')" title="취소선" style="text-decoration:line-through;">S</button>
+        <label class="rte-btn" title="글자색" style="position:relative;">🎨<input type="color" onchange="rteColor(this.value)" style="position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer;"></label>
+        <span class="rte-div"></span>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'justifyLeft')" title="왼쪽 정렬">⬅</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'justifyCenter')" title="가운데 정렬">↔</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'justifyRight')" title="오른쪽 정렬">➡</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'insertUnorderedList')" title="글머리 목록">•≡</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'insertOrderedList')" title="번호 목록">1.≡</button>
+        <span class="rte-div"></span>
+        <button class="rte-btn" onmousedown="return rteLink(event)" title="링크 삽입">🔗</button>
+        <button class="rte-btn" onmousedown="return rteSpecial(event)" title="특수문자">Ω</button>
+        <button class="rte-btn" onmousedown="return rteCmd(event,'removeFormat')" title="서식 지우기">🧹</button>
+        <div id="rteCharPop" style="display:none;position:absolute;z-index:20;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:8px;max-width:280px;"></div>
+      </div>
+      <div id="dmBody" contenteditable="true" style="flex:1;min-height:200px;overflow-y:auto;padding:12px 13px;border:1.5px solid var(--line);border-radius:0 0 10px 10px;font-size:13.5px;color:var(--t1);background:var(--bg);outline:none;line-height:1.7;" data-placeholder="메일 내용을 입력하세요..."></div>
       <div id="dmSigImgNote" style="font-size:11.5px;color:var(--t3);margin-top:5px;display:none;"></div>
     </div>
     <details style="margin-top:10px;flex-shrink:0;">
@@ -1335,6 +1378,29 @@ async function sendAiMsg(){
     <div class="modal-actions">
       <button class="set-btn line" onclick="closeSignatureModal()">취소</button>
       <button class="set-btn" onclick="saveSignatureModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI 다듬기 원문 비교 모달 -->
+<div class="modal-overlay" id="aiCompareModal" onclick="if(event.target===this)closeAiCompare()">
+  <div class="modal" style="max-width:920px;width:92vw;max-height:88vh;display:flex;flex-direction:column;">
+    <h3 style="margin:0 0 4px;">✨ AI 다듬기 · 원문 비교</h3>
+    <p style="font-size:12px;color:var(--t3);margin:0 0 14px;">왼쪽은 내가 쓴 원문, 오른쪽은 AI가 다듬은 결과입니다. 필요하면 오른쪽을 직접 수정한 뒤 적용하세요.</p>
+    <div style="display:flex;gap:12px;flex:1;min-height:0;">
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div style="font-size:12.5px;font-weight:700;color:var(--t2);margin-bottom:6px;">📝 내 원문</div>
+        <div id="aiCmpOrig" style="flex:1;overflow:auto;white-space:pre-wrap;border:1.5px solid var(--line);border-radius:10px;padding:12px;font-size:13px;color:var(--t2);background:var(--bg);line-height:1.7;min-height:220px;"></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+        <div style="font-size:12.5px;font-weight:700;color:#6C5CE7;margin-bottom:6px;">✨ AI 다듬은 결과 <span style="font-weight:400;color:var(--t3);">(수정 가능)</span></div>
+        <textarea id="aiCmpNew" style="flex:1;resize:none;border:1.5px solid #6C5CE7;border-radius:10px;padding:12px;font-size:13px;color:var(--t1);background:var(--bg);line-height:1.7;font-family:inherit;outline:none;min-height:220px;"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="set-btn line" onclick="aiCompareReRefine()">🔄 다시 다듬기</button>
+      <button class="set-btn line" onclick="closeAiCompare()">원문 유지</button>
+      <button class="set-btn" onclick="aiCompareApply()" style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff;">✨ AI 버전 적용</button>
     </div>
   </div>
 </div>
@@ -3439,13 +3505,50 @@ function renderAttachList() {
   </div>`).join('');
 }
 
+/* ===== 본문 서식 편집기 (rich text) ===== */
+let _rteRange = null;
+function dmBodyEl() { return document.getElementById('dmBody'); }
+function dmGetBodyHtml() { const e = dmBodyEl(); return e ? e.innerHTML : ''; }
+function dmGetBodyText() { const e = dmBodyEl(); return e ? (e.innerText || '') : ''; }
+function dmSetBodyHtml(h) { const e = dmBodyEl(); if (e) e.innerHTML = h || ''; }
+function dmSetBodyText(t) {
+  const e = dmBodyEl(); if (!e) return; e.innerHTML = '';
+  (t || '').split('\n').forEach((line, i) => { if (i) e.appendChild(document.createElement('br')); e.appendChild(document.createTextNode(line)); });
+}
+function _rteSaveSel() { const s = window.getSelection(); if (s && s.rangeCount && dmBodyEl() && dmBodyEl().contains(s.anchorNode)) _rteRange = s.getRangeAt(0); }
+function _rteRestore() { const e = dmBodyEl(); if (!e) return; e.focus(); if (_rteRange) { try { const s = window.getSelection(); s.removeAllRanges(); s.addRange(_rteRange); } catch (_) {} } }
+function rteInit() {
+  const e = dmBodyEl(); if (!e || e._rteInit) return; e._rteInit = true;
+  try { document.execCommand('styleWithCSS', false, true); } catch (_) {}
+  ['keyup', 'mouseup', 'blur'].forEach(ev => e.addEventListener(ev, _rteSaveSel));
+}
+function rteCmd(e, cmd) { if (e) e.preventDefault(); _rteRestore(); document.execCommand(cmd, false, null); _rteSaveSel(); return false; }
+function rteFont(v) { if (!v) return; _rteRestore(); document.execCommand('fontName', false, v); _rteSaveSel(); }
+function rteSize(px) {
+  if (!px) return; _rteRestore();
+  document.execCommand('fontSize', false, '7');
+  dmBodyEl().querySelectorAll('font[size="7"]').forEach(f => { f.removeAttribute('size'); f.style.fontSize = px + 'px'; });
+  _rteSaveSel();
+}
+function rteColor(c) { _rteRestore(); try { document.execCommand('styleWithCSS', false, true); } catch (_) {} document.execCommand('foreColor', false, c); _rteSaveSel(); }
+function rteLink(e) { if (e) e.preventDefault(); _rteSaveSel(); const url = prompt('링크 주소(URL)를 입력하세요', 'https://'); if (!url) return false; _rteRestore(); document.execCommand('createLink', false, url); _rteSaveSel(); return false; }
+const RTE_CHARS = ['·', '※', '★', '☆', '▶', '◀', '■', '□', '●', '○', '◎', '→', '←', '↑', '↓', '↔', '≥', '≤', '±', '×', '÷', '℃', '％', '＃', '＠', 'ⓒ', '™', '☎', '✓', '✔', '✕', '♥', '♡', '◆', '◇', '『', '』', '「', '」', '【', '】', '（', '）'];
+function rteSpecial(e) {
+  if (e) e.preventDefault(); _rteSaveSel();
+  const pop = document.getElementById('rteCharPop');
+  if (pop.style.display !== 'none') { pop.style.display = 'none'; return false; }
+  pop.innerHTML = RTE_CHARS.map((ch, i) => `<span onmousedown="return rteInsertChar(event,${i})">${ch}</span>`).join('');
+  pop.style.display = 'block'; pop.style.top = '38px'; pop.style.left = '8px';
+  return false;
+}
+function rteInsertChar(e, i) { if (e) e.preventDefault(); _rteRestore(); document.execCommand('insertText', false, RTE_CHARS[i]); _rteSaveSel(); document.getElementById('rteCharPop').style.display = 'none'; return false; }
+
 /* ===== 본문 AI 다듬기 (Gemini) ===== */
 let _dmBodyBeforeAi = null;
 async function dmRefineBody() {
   if (!getGeminiKey()) { try { await loadGeminiKeyFromCloud(); } catch (e) {} }
   if (!getGeminiKey()) { alert('AI 다듬기를 사용하려면 Gemini API 키가 필요합니다.\n우측 하단 🤖 AI 어시스턴트에서 키를 먼저 설정해 주세요.'); return; }
-  const ta = document.getElementById('dmBody');
-  const text = (ta.value || '').trim();
+  const text = dmGetBodyText().trim();
   if (!text) { alert('다듬을 본문 내용을 먼저 입력해 주세요.'); return; }
   const btn = document.getElementById('dmAiBtn'); const orig = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = '✨ 다듬는 중…'; }
@@ -3464,18 +3567,23 @@ async function dmRefineBody() {
     if (r.status === 401 || r.status === 403) { localStorage.removeItem('gm_gemini_key'); alert('Gemini 키가 유효하지 않습니다. 🤖 AI 어시스턴트에서 키를 다시 설정해 주세요.'); return; }
     const out = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
     if (!out) { alert('AI 다듬기 실패: ' + ((data.error && data.error.message) || '응답을 받지 못했습니다.')); return; }
-    _dmBodyBeforeAi = ta.value;           // 되돌리기용 원문 보관
-    ta.value = out;
-    if (btn) { btn.textContent = '↩ 원문 되돌리기'; btn.onclick = dmUndoRefine; btn.disabled = false; }
-    return;
+    openAiCompare(text, out);   // 원문 ↔ AI 비교 창
   } catch (e) { alert('AI 다듬기 오류: ' + (e.message || e)); }
-  finally { if (btn && btn.textContent === '✨ 다듬는 중…') { btn.disabled = false; btn.textContent = orig; } }
+  finally { if (btn) { btn.disabled = false; btn.textContent = orig || '✨ AI 다듬기'; } }
 }
-function dmUndoRefine() {
-  const ta = document.getElementById('dmBody'); const btn = document.getElementById('dmAiBtn');
-  if (_dmBodyBeforeAi != null) ta.value = _dmBodyBeforeAi;
-  _dmBodyBeforeAi = null;
-  if (btn) { btn.textContent = '✨ AI 다듬기'; btn.onclick = dmRefineBody; }
+function openAiCompare(original, refined) {
+  document.getElementById('aiCmpOrig').textContent = original;
+  document.getElementById('aiCmpNew').value = refined;
+  document.getElementById('aiCompareModal').classList.add('show');
+}
+function closeAiCompare() { document.getElementById('aiCompareModal').classList.remove('show'); }
+function aiCompareApply() {
+  dmSetBodyText(document.getElementById('aiCmpNew').value);   // 본문에 반영
+  closeAiCompare();
+}
+function aiCompareReRefine() {   // AI 결과가 마음에 안 들면 다시 다듬기
+  closeAiCompare();
+  dmRefineBody();
 }
 
 function heroSearch() {
@@ -3499,7 +3607,9 @@ function openDashMailModal() {
   renderRecipientTags();
   document.getElementById('dmTo').value = '';
   document.getElementById('dmSubject').value = '';
-  document.getElementById('dmBody').value = '';   // 클린한 빈 본문 (서명은 발송 시 자동 추가)
+  dmSetBodyHtml('');   // 클린한 빈 본문 (서명은 발송 시 자동 추가)
+  rteInit();
+  const rp = document.getElementById('rteCharPop'); if (rp) rp.style.display = 'none';
   document.getElementById('acDropdown').classList.remove('show');
   document.getElementById('dmCc').value = '';
   document.getElementById('ccWrap').style.display = 'none';
@@ -3634,15 +3744,10 @@ function dmInsertTasks() {
     if (t.due) block += ` · 마감 ${t.due}`;
   });
   block += `\n${'─'.repeat(30)}`;
-  const ta = document.getElementById('dmBody');
-  // 서명 앞에 업무 목록 삽입
-  const sigIdx = ta.value.indexOf('\n\n--\n');
-  if (sigIdx !== -1) {
-    ta.value = ta.value.slice(0, sigIdx) + block + ta.value.slice(sigIdx);
-  } else {
-    ta.value += block;
-  }
-  ta.focus();
+  const e = dmBodyEl();
+  const escBlock = block.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+  e.innerHTML = e.innerHTML + escBlock;   // 본문 끝에 업무 현황 추가
+  e.focus();
 }
 
 function dmSend() {
@@ -3659,24 +3764,23 @@ function dmSend() {
   const cc = dmCcRecipients.map(r => r.email).join(',');
   const attachments = dmAttachments.map(a => ({ name: a.name, type: a.type, dataUrl: a.dataUrl }));
 
-  // 본문(사용자 입력) + 서명 텍스트 자동 추가
+  // 본문(리치 에디터 HTML) + 서명 자동 추가
   const sig = getSignature();
-  const userBody = document.getElementById('dmBody').value;
-  let sigPart = sig.text || '';
-  if (sigPart && userBody && !/^\s*\n/.test(sigPart)) sigPart = '\n\n' + sigPart;   // 필요 시 구분 여백
-  const body = (userBody + sigPart) || userBody;
-
-  // 서명 이미지가 있으면 HTML 본문 + CID 이미지로 전송(수신자 메일에 인라인 표시)
   const escHtml = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  let html = null, images = null;
+  const userHtml = dmGetBodyHtml();
+  const userText = dmGetBodyText();
+  const sigText = sig.text || '';
+  // 평문 파트(아웃룩 폴백·대체 텍스트)
+  const body = userText + (sigText ? ((userText.trim() ? '\n\n' : '') + sigText) : '');
+  // HTML 파트(서식 유지 — 항상 생성)
+  let inner = userHtml + (sigText ? '<br><br>' + escHtml(sigText).replace(/\n/g, '<br>') : '');
+  let images = null;
   if (sig.imageDataUrl) {
-    const w = sigDisplayWidth(sig);   // 표시 폭(px) — 기본 원본의 2/3
-    html = "<div style=\"font-family:'맑은 고딕',Malgun Gothic,sans-serif;white-space:pre-wrap;font-size:14px;color:#191F28;\">"
-      + escHtml(body).replace(/\n/g, '<br>')
-      + `<br><br><img src="cid:sigimg" alt="signature" width="${w}" style="width:${w}px;max-width:100%;">`
-      + '</div>';
+    const w = sigDisplayWidth(sig);
+    inner += `<br><br><img src="cid:sigimg" alt="signature" width="${w}" style="width:${w}px;max-width:100%;">`;
     images = [{ cid: 'sigimg', dataUrl: sig.imageDataUrl, name: sig.imageName || 'signature.png' }];
   }
+  const html = "<div style=\"font-family:'맑은 고딕',Malgun Gothic,sans-serif;font-size:14px;color:#191F28;line-height:1.7;\">" + inner + "</div>";
 
   // 사내 발송기가 켜져 있으면 바로 발송, 아니면 아웃룩으로 열기(참조는 지원, 이미지·첨부는 발송기에서만)
   const openOutlook = () => {
