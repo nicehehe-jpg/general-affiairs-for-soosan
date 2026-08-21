@@ -1649,6 +1649,7 @@ function saveTasks(){
 let TASKS = loadTasks();
 let activeCat = 'all';
 let activeFilter = 'all';
+let purchaseSort = 'contract';   // 구매업무 정렬: 'contract'(최근 계약순) | 'due'(계약종료일순)
 let openMenuId = null;
 
 function renderAll(){
@@ -1832,6 +1833,36 @@ function openAppLink(title){
   if(cfg) window.open(cfg.url, '_blank');
 }
 
+// 구매계약 단계(purchase.html STAGES와 동일)
+const PC_STAGES = [
+  {key:'approval',    label:'품의진행 완료'},
+  {key:'contract',    label:'계약 완료'},
+  {key:'advanceBond', label:'선급보증증권'},
+  {key:'performBond', label:'계약이행보증증권'},
+  {key:'defectBond',  label:'하자보증증권이행'},
+  {key:'payment',     label:'지급 완료'},
+];
+// 진행중 구매계약의 단계 진행바 + 칩 (첨부 이미지와 동일 형태)
+function pcStageHTML(t){
+  const stages = t._stages || {};
+  const applicable = PC_STAGES.filter(s => (stages[s.key]||'todo')!=='na');
+  const done = applicable.filter(s => stages[s.key]==='done').length;
+  const pct = applicable.length ? Math.round(done/applicable.length*100) : 0;
+  const chip=(txt,bg,color,extra='')=>`<span style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:14px;background:${bg};color:${color};${extra}">${txt}</span>`;
+  const chips = PC_STAGES.map(s=>{
+    const state = stages[s.key]||'todo';
+    if(state==='na')   return chip('─ '+s.label,'var(--bg)','var(--t3)','text-decoration:line-through;opacity:.65');
+    if(state==='done') return chip('✓ '+s.label,'var(--green-bg)','var(--green)');
+    return chip(s.label,'var(--bg)','var(--t2)');
+  }).join('');
+  const period = (t._contractDate||'-') + (t._dueDate ? ' ~ '+t._dueDate : '');
+  return `<div style="flex-basis:100%;width:100%;margin-top:9px">
+    <div style="font-size:11.5px;color:var(--t3);margin-bottom:6px">📄 계약기간: ${period}</div>
+    <div style="height:6px;border-radius:4px;background:var(--bg);overflow:hidden;margin-bottom:8px"><div style="height:100%;width:${pct}%;background:var(--blue);border-radius:4px;transition:width .3s"></div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${chips}<span style="font-size:11px;font-weight:700;color:var(--t2);margin-left:auto;white-space:nowrap">${done}/${applicable.length} 단계 · ${pct}%</span></div>
+  </div>`;
+}
+
 function taskRowHTML(t){
   const st = effStatus(t);
   const stClass = st==='done' ? 'st-done' : st==='doing' ? 'st-doing' : 'st-wait';
@@ -1840,8 +1871,10 @@ function taskRowHTML(t){
   const appCfg = APP_LINKS[t.title];
   const isMonthly = t.cat==='monthly';
   const dueLabel = isMonthly ? monthlyDueDate(t, selectedMonth) : (t.due||'');
+  const isPC = !!t._isPurchaseCase;
   const row = document.createElement('div');
   row.className = 'task-row' + (st==='done' ? ' is-done' : '');
+  if(isPC) row.style.flexWrap = 'wrap';
   row.innerHTML = `
     <span class="chk ${st==='done'?'done':''}" data-act="toggle">${st==='done'?'✓':''}</span>
     <span class="ttl">${t.title}</span>
@@ -1855,6 +1888,7 @@ function taskRowHTML(t){
       <button class="icon-btn" data-act="menu" title="상태 변경">⋯</button>
       <button class="icon-btn" data-act="del" title="삭제">🗑</button>
     </div>
+    ${isPC ? pcStageHTML(t) : ''}
     ${menuOpen ? `<div class="status-menu-inline">
         <button data-act="set" data-status="wait" class="${st==='wait'?'cur':''}">대기</button>
         <button data-act="set" data-status="doing" class="${st==='doing'?'cur':''}">진행중</button>
@@ -1910,6 +1944,18 @@ function renderProgressAndFilters(catItems){
     b.addEventListener('click', ()=>{ activeFilter = key; renderTaskList(); });
     filterWrap.appendChild(b);
   });
+  // 구매업무: 정렬 선택 (최근 계약순 / 계약종료일순)
+  if(activeCat==='purchase'){
+    const sortWrap = document.createElement('div');
+    sortWrap.style.cssText = 'margin-left:auto;display:flex;align-items:center;gap:6px;';
+    sortWrap.innerHTML = `<span style="font-size:12px;color:var(--t3);">정렬</span>
+      <select id="pcSortSel" style="font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--t1);cursor:pointer;font-family:inherit;">
+        <option value="contract" ${purchaseSort==='contract'?'selected':''}>최근 계약순</option>
+        <option value="due" ${purchaseSort==='due'?'selected':''}>계약종료일순</option>
+      </select>`;
+    filterWrap.appendChild(sortWrap);
+    sortWrap.querySelector('#pcSortSel').addEventListener('change', (e)=>{ purchaseSort = e.target.value; renderTaskList(); });
+  }
 }
 
 function renderTaskList(){
@@ -1935,6 +1981,9 @@ function renderTaskList(){
           due: c.dueDate || '',
           _isPurchaseCase: true,
           _caseId: c.id,
+          _contractDate: c.contractDate || '',
+          _dueDate: c.dueDate || '',
+          _stages: c.stages || {},
         };
       });
     }catch(e){}
@@ -2019,20 +2068,33 @@ function renderTaskList(){
     return;
   }
 
-  // 구매업무는 마감일의 년/월별로 그룹핑해서 표시
+  // 구매업무: 최근 계약순(계약시작일 desc) / 계약종료일순(desc) 으로 년/월 그룹핑
   if(activeCat==='purchase'){
-    items.sort((a,b)=> (a.due||'').localeCompare(b.due||'') || a.title.localeCompare(b.title));
-    title.innerHTML = `${CATS.purchase.name} <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(년/월별 · ${items.length}건)</span>`;
+    const byContract = purchaseSort!=='due';
+    const dateOf = t => byContract ? (t._contractDate || t.due || '') : (t._dueDate || t.due || '');
+    items.sort((a,b)=>{
+      const da=dateOf(a), db=dateOf(b);
+      if(!da && !db) return a.title.localeCompare(b.title);
+      if(!da) return 1; if(!db) return -1;
+      const cmp = byContract ? db.localeCompare(da) : da.localeCompare(db);  // 계약순=최신먼저, 종료일순=임박먼저
+      return cmp || a.title.localeCompare(b.title);
+    });
+    const sortLabel = byContract ? '최근 계약순' : '계약종료일 임박순';
+    title.innerHTML = `${CATS.purchase.name} <span style="color:var(--t3); font-weight:500; font-size:12.5px;">(${sortLabel} · ${items.length}건)</span>`;
 
     const groups = [];
     items.forEach(t=>{
-      const ym = (t.due||'').slice(0,7);
+      const ym = (dateOf(t)||'').slice(0,7);
       const key = ym || '미지정';
       let g = groups.find(g=>g.key===key);
       if(!g){ g = {key, ym, list:[]}; groups.push(g); }
       g.list.push(t);
     });
-    groups.sort((a,b)=> (a.ym||'9999').localeCompare(b.ym||'9999'));
+    groups.sort((a,b)=>{                         // 미지정은 맨 뒤
+      if(!a.ym && !b.ym) return 0;
+      if(!a.ym) return 1; if(!b.ym) return -1;
+      return byContract ? b.ym.localeCompare(a.ym) : a.ym.localeCompare(b.ym);
+    });
 
     wrap.innerHTML = '';
     groups.forEach(g=>{
@@ -2041,7 +2103,8 @@ function renderTaskList(){
       head.style.cssText = 'display:flex; align-items:center; gap:8px; margin:18px 0 8px; padding-left:2px;';
       const doneCnt = g.list.filter(t=>effStatus(t)==='done').length;
       const label = g.ym ? fmtYMLabel(g.ym) : '기한 미지정';
-      head.innerHTML = `<span style="font-size:13.5px; font-weight:700; color:var(--t1);">📅 ${label}</span>
+      const prefix = byContract ? '계약' : '종료';
+      head.innerHTML = `<span style="font-size:13.5px; font-weight:700; color:var(--t1);">📅 ${prefix} ${label}</span>
         <span style="font-size:12px; color:var(--t3);">${doneCnt}/${g.list.length}건 완료</span>`;
       wrap.appendChild(head);
       g.list.forEach(t=> wrap.appendChild(taskRowHTML(t)));
