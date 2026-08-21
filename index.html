@@ -1288,7 +1288,7 @@ async function sendAiMsg(){
         <label style="font-size:12.5px;color:var(--t2);font-weight:600;">이메일 표시 폭</label>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
           <input type="number" id="sigWidth" min="80" max="600" step="10" oninput="sigWidthChanged()" style="width:110px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;color:var(--t1);background:var(--bg);">
-          <span style="font-size:12px;color:var(--t3);">px · 숫자를 줄이면 작아집니다 (기본 = 원본의 2/3)</span>
+          <span style="font-size:12px;color:var(--t3);">px · 숫자를 줄이면 작아집니다 (기본 = 원본의 1/2)</span>
         </div>
       </div>
     </div>
@@ -3266,11 +3266,11 @@ function getSignature() {
   } catch (e) {}
   return { text: DM_SIGNATURE, imageDataUrl: '', imageName: '', imageWidth: 0, displayWidth: 0 };
 }
-// 이메일에 넣을 서명 이미지 표시 폭(px) — 저장값 우선, 없으면 원본의 2/3, 그것도 없으면 400
+// 이메일에 넣을 서명 이미지 표시 폭(px) — 저장값 우선, 없으면 원본의 1/2, 그것도 없으면 300
 function sigDisplayWidth(sig) {
   if (sig.displayWidth) return sig.displayWidth;
-  if (sig.imageWidth) return Math.round(sig.imageWidth * 2 / 3);
-  return 400;
+  if (sig.imageWidth) return Math.round(sig.imageWidth / 2);
+  return 300;
 }
 function saveSignatureLS(sig) {
   try { localStorage.setItem(SIG_KEY, JSON.stringify(sig)); } catch (e) {}
@@ -3335,7 +3335,7 @@ function sigPickImage(input) {
       _sigDraft.imageDataUrl = out;
       _sigDraft.imageName = (f.name || 'signature').replace(/\.[^.]+$/, '') + (out.startsWith('data:image/png') ? '.png' : '.jpg');
       _sigDraft.imageWidth = w;
-      _sigDraft.displayWidth = Math.round(w * 2 / 3);   // 기본 표시 폭 = 원본의 2/3
+      _sigDraft.displayWidth = Math.round(w / 2);   // 기본 표시 폭 = 원본의 1/2
       renderSigPreview();
     };
     img.onerror = () => alert('이미지를 불러오지 못했습니다.');
