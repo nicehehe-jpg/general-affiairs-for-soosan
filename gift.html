@@ -183,7 +183,10 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
       <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
         <button class="btn btn-primary" onclick="processAll()">⚡ 취합 시작</button>
         <button class="btn btn-secondary" onclick="resetAll()">🗑️ 초기화</button>
+        <button class="btn btn-success" onclick="saveGiftCloud()" title="현재 취합 명단·편집 내용을 클라우드에 저장 (모든 PC 공유)">💾 클라우드 저장</button>
+        <button class="btn btn-secondary" onclick="openGiftLoadModal()" title="저장된 취합 명단 불러오기/삭제">📂 저장 목록</button>
       </div>
+      <div class="alert alert-info" style="margin-top:12px">💡 취합·수정한 명단을 <b>클라우드 저장</b>해두면, 다음에 파일을 다시 올리지 않고 <b>저장 목록</b>에서 바로 불러올 수 있습니다. (로그인 기준 모든 PC 공유)</div>
     </div>
     <div class="card">
       <div class="card-title" style="justify-content:space-between">
@@ -300,6 +303,17 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
         <tbody id="voucherPreviewBody"><tr><td colspan="6"><div class="empty-state"><div class="icon">🧾</div><div class="title">미리보기 없음</div><div class="desc">공급가액·총금액 입력 후 '전표입력 양식 다운로드'를 누르면 표시됩니다.</div></div></td></tr></tbody></table>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 클라우드 저장 목록 모달 -->
+<div id="giftLoadModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeGiftModal()">
+  <div style="background:var(--surface);border-radius:16px;max-width:640px;width:100%;max-height:80vh;overflow:auto;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="margin:0;font-size:18px;color:var(--text1)">📂 저장된 취합 명단</h3>
+      <button class="btn" onclick="closeGiftModal()" style="padding:4px 12px">✕</button>
+    </div>
+    <div id="giftLoadList" style="font-size:13px;color:var(--text2)">불러오는 중…</div>
   </div>
 </div>
 
@@ -1426,6 +1440,92 @@ const DEFAULT_PRESETS=[
 ];
 let VENDOR_PRESET_LIST=(function(){ try{ const r=localStorage.getItem(GIFT_PRESET_KEY); if(r){ const p=JSON.parse(r); if(Array.isArray(p)) return p; } }catch(e){} return DEFAULT_PRESETS.map(x=>({...x})); })();
 async function sbSetGift(key,value){ try{ const url=`${SB_REST}?on_conflict=key`; const body=JSON.stringify({key,value,updated_at:new Date().toISOString()}); const opt=()=>({method:'POST',headers:{..._gmHeaders(),Prefer:'resolution=merge-duplicates'},body}); let r=await fetch(url,opt()); if(r.status===401 && await _gmRefresh()) r=await fetch(url,opt()); return r.ok; }catch(e){ return false; } }
+/* ===== 취합 명단 클라우드 저장 / 불러오기 / 삭제 ===== */
+const GIFT_SAVES_INDEX='gift_saves_index_v1';
+function _giftLoggedIn(){ const s=_gmSession(); return !!(s&&s.access_token); }
+async function sbDelGift(key){ try{ const url=`${SB_REST}?key=eq.${encodeURIComponent(key)}`; const opt=()=>({method:'DELETE',headers:_gmHeaders()}); let r=await fetch(url,opt()); if(r.status===401 && await _gmRefresh()) r=await fetch(url,opt()); return r.ok; }catch(e){ return false; } }
+
+async function saveGiftCloud(){
+  if(!allRows.length){ alert('저장할 취합 명단이 없습니다.\n먼저 파일을 업로드하고 [취합 시작]을 눌러주세요.'); return; }
+  if(!_giftLoggedIn()){ alert('로그인 후 저장할 수 있습니다.'); return; }
+  const memoEl=document.getElementById('vMemo');
+  const def=((memoEl&&memoEl.value)||'').trim()||('선물명단 '+new Date().toISOString().slice(0,10));
+  const title=(prompt('저장 이름을 입력하세요.\n(예: 2026 설 명절 선물)', def)||'').trim();
+  if(!title) return;
+  const id='g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  const savedAt=new Date().toISOString();
+  const okP=await sbSetGift('gift_save_'+id, { title, savedAt, allRows, sites:SITES, editedCells });
+  if(!okP){ alert('저장 실패 — 로그인/연결 상태를 확인하세요.'); return; }
+  let index=await sbGetGift(GIFT_SAVES_INDEX); if(!Array.isArray(index)) index=[];
+  index.unshift({ id, title, savedAt, count:allRows.length, sites:[...new Set(allRows.map(r=>r._siteName).filter(Boolean))] });
+  await sbSetGift(GIFT_SAVES_INDEX, index);
+  alert(`"${title}" 저장 완료 (${allRows.length}명).\n[📂 저장 목록]에서 언제든 불러올 수 있습니다.`);
+}
+
+function closeGiftModal(){ const m=document.getElementById('giftLoadModal'); if(m) m.style.display='none'; }
+async function openGiftLoadModal(){
+  const m=document.getElementById('giftLoadModal'); if(!m) return;
+  m.style.display='flex';
+  const box=document.getElementById('giftLoadList'); box.innerHTML='불러오는 중…';
+  if(!_giftLoggedIn()){ box.innerHTML='<div style="color:var(--danger);padding:12px">로그인 후 이용하세요.</div>'; return; }
+  const index=await sbGetGift(GIFT_SAVES_INDEX);
+  if(!Array.isArray(index)||!index.length){ box.innerHTML='<div style="text-align:center;color:var(--text3);padding:24px">저장된 명단이 없습니다.<br>먼저 [💾 클라우드 저장]으로 저장해 보세요.</div>'; return; }
+  box.innerHTML=index.map(s=>{
+    const d=s.savedAt?new Date(s.savedAt):null;
+    const dt=d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`:'';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:var(--text1)">${s.title||'(제목없음)'}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">${s.count||0}명 · ${(s.sites||[]).length}개 사업소 · ${dt}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="loadGiftCloud('${s.id}')">불러오기</button>
+      <button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:none" onclick="deleteGiftCloud('${s.id}')">삭제</button>
+    </div>`;
+  }).join('');
+}
+async function loadGiftCloud(id){
+  if(!_giftLoggedIn()){ alert('로그인 후 이용하세요.'); return; }
+  const payload=await sbGetGift('gift_save_'+id);
+  if(!payload||!Array.isArray(payload.allRows)){ alert('불러오기 실패 — 데이터가 없습니다.'); return; }
+  allRows=payload.allRows;
+  if(Array.isArray(payload.sites)&&payload.sites.length) SITES.splice(0,SITES.length,...payload.sites);
+  editedCells=payload.editedCells||{};
+  // allRows → 사업소별 pseudo siteFiles 재구성(현황·요약 렌더용)
+  const bySite={};
+  allRows.forEach(r=>{ const k=r._siteName||'기타'; (bySite[k]=bySite[k]||[]).push(r); });
+  siteFiles=Object.entries(bySite).map(([siteName,rows])=>({name:'☁ '+siteName, siteName, rows, _restored:true}));
+  refreshAllViews();
+  closeGiftModal();
+  alert(`"${payload.title||''}" 불러오기 완료 (${allRows.length}명).`);
+}
+async function deleteGiftCloud(id){
+  let index=await sbGetGift(GIFT_SAVES_INDEX); if(!Array.isArray(index)) index=[];
+  const item=index.find(x=>x.id===id);
+  if(!confirm(`"${item?item.title:''}" 저장본을 삭제할까요?\n되돌릴 수 없습니다.`)) return;
+  const ok=await sbDelGift('gift_save_'+id);
+  if(!ok){ await sbSetGift('gift_save_'+id, null); }   // DELETE 불가 시 내용 비우기
+  index=index.filter(x=>x.id!==id);
+  await sbSetGift(GIFT_SAVES_INDEX, index);
+  openGiftLoadModal();
+}
+function refreshAllViews(){
+  const st=id=>document.getElementById(id);
+  const submitted=[...new Set(siteFiles.map(sf=>sf.siteName))];
+  if(st('statTotal')) st('statTotal').textContent=allRows.length;
+  if(st('statSubmitted')) st('statSubmitted').textContent=submitted.length;
+  if(st('statMissing')) st('statMissing').textContent=Math.max(0,SITES.length-submitted.length);
+  if(typeof initSiteRefTable==='function') initSiteRefTable();
+  if(typeof updateRefTableStats==='function') updateRefTableStats();
+  if(masterRows.length>0){ if(typeof buildCompare==='function') buildCompare(); }
+  else if(typeof applyCentralEmpMaster==='function'){ applyCentralEmpMaster(); }
+  if(typeof renderSummary==='function') renderSummary();
+  if(typeof renderAll==='function') renderAll();
+  if(typeof renderCompare==='function') renderCompare();
+  if(typeof renderFileList==='function') renderFileList();
+  if(st('uploadedCountBadge')) st('uploadedCountBadge').textContent=siteFiles.length+'개(저장본)';
+  if(st('headerMeta')) st('headerMeta').textContent=`총 ${allRows.length}명 · ☁ 저장본 불러옴`;
+}
+
 function savePresets(){ try{ localStorage.setItem(GIFT_PRESET_KEY, JSON.stringify(VENDOR_PRESET_LIST)); }catch(e){} sbSetGift(GIFT_PRESET_KEY, VENDOR_PRESET_LIST); }
 async function loadPresetsCloud(){ try{ const c=await sbGetGift(GIFT_PRESET_KEY); if(Array.isArray(c)&&c.length){ VENDOR_PRESET_LIST=c; try{localStorage.setItem(GIFT_PRESET_KEY,JSON.stringify(c));}catch(e){} renderPresetButtons(); } }catch(e){} }
 function renderPresetButtons(){
