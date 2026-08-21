@@ -1245,6 +1245,10 @@ async function sendAiMsg(){
       #dmBody a{color:var(--blue);}
       #rteCharPop span{display:inline-block;width:30px;height:28px;line-height:28px;text-align:center;cursor:pointer;border-radius:6px;font-size:15px;}
       #rteCharPop span:hover{background:var(--bg);}
+      .tcm-item{padding:8px 12px;border-radius:7px;cursor:pointer;color:var(--t1);white-space:nowrap;}
+      .tcm-item:hover{background:var(--bg);}
+      .tcm-item.danger{color:var(--red);}
+      #dmBody table td,#dmBody table th{position:relative;}
     </style>
     <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);">
       <!-- 받는사람 -->
@@ -1412,6 +1416,21 @@ async function sendAiMsg(){
       <button class="set-btn" onclick="aiCompareApply()" style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff;">✨ AI 버전 적용</button>
     </div>
   </div>
+</div>
+
+<!-- 표 우클릭 편집 메뉴 -->
+<div id="tblCtxMenu" style="display:none;position:fixed;z-index:3000;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;min-width:190px;font-size:13px;">
+  <div class="tcm-item" onmousedown="tblOp(event,'rowAbove')">⬆ 위에 행 삽입</div>
+  <div class="tcm-item" onmousedown="tblOp(event,'rowBelow')">⬇ 아래에 행 삽입</div>
+  <div class="tcm-item" onmousedown="tblOp(event,'colLeft')">⬅ 왼쪽에 열 삽입</div>
+  <div class="tcm-item" onmousedown="tblOp(event,'colRight')">➡ 오른쪽에 열 삽입</div>
+  <div style="height:1px;background:var(--line);margin:5px 4px;"></div>
+  <div class="tcm-item" onmousedown="tblOp(event,'cellBg')">🎨 셀 배경색</div>
+  <div class="tcm-item" onmousedown="tblOp(event,'headerToggle')">▦ 제목행(음영) 토글</div>
+  <div style="height:1px;background:var(--line);margin:5px 4px;"></div>
+  <div class="tcm-item danger" onmousedown="tblOp(event,'delRow')">✖ 행 삭제</div>
+  <div class="tcm-item danger" onmousedown="tblOp(event,'delCol')">✖ 열 삭제</div>
+  <div class="tcm-item danger" onmousedown="tblOp(event,'delTable')">🗑 표 전체 삭제</div>
 </div>
 
 <!-- 설정 모달 -->
@@ -3530,6 +3549,23 @@ function rteInit() {
   const e = dmBodyEl(); if (!e || e._rteInit) return; e._rteInit = true;
   try { document.execCommand('styleWithCSS', false, true); } catch (_) {}
   ['keyup', 'mouseup', 'blur'].forEach(ev => e.addEventListener(ev, _rteSaveSel));
+  // 표 셀 우클릭 → 편집 메뉴
+  e.addEventListener('contextmenu', ev => {
+    const cell = ev.target.closest('td,th');
+    if (cell && e.contains(cell)) {
+      ev.preventDefault();
+      _tblCtx = cell;
+      const m = document.getElementById('tblCtxMenu');
+      m.style.display = 'block';
+      const mw = 200, mh = 360;
+      let x = ev.clientX, y = ev.clientY;
+      if (x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
+      if (y + mh > window.innerHeight) y = Math.max(8, window.innerHeight - mh - 8);
+      m.style.left = x + 'px'; m.style.top = y + 'px';
+    }
+  });
+  document.addEventListener('click', hideTblMenu);
+  document.addEventListener('scroll', hideTblMenu, true);
 }
 function rteCmd(e, cmd) { if (e) e.preventDefault(); _rteRestore(); document.execCommand(cmd, false, null); _rteSaveSel(); return false; }
 function rteFont(v) { if (!v) return; _rteRestore(); document.execCommand('fontName', false, v); _rteSaveSel(); }
@@ -3579,6 +3615,42 @@ function rteInsertTable() {
   document.execCommand('insertHTML', false, html);
   _rteSaveSel();
   document.getElementById('rteTablePop').style.display = 'none';
+}
+
+/* ===== 표 세부 편집 (우클릭 메뉴) ===== */
+let _tblCtx = null;
+function _tblCellStyle(isHeader) { return 'border:1px solid #cbd2da;padding:7px 10px;min-width:44px;' + (isHeader ? 'background:#f2f4f6;font-weight:700;' : ''); }
+function _tblNewCell(isHeader) { const el = document.createElement(isHeader ? 'th' : 'td'); el.setAttribute('style', _tblCellStyle(isHeader)); el.innerHTML = '&nbsp;'; return el; }
+function _rowIsHeader(tr) { return !!(tr && tr.children[0] && tr.children[0].tagName === 'TH'); }
+function hideTblMenu() { const m = document.getElementById('tblCtxMenu'); if (m) m.style.display = 'none'; }
+function tblOp(e, op) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  const cell = _tblCtx; hideTblMenu();
+  if (!cell) return false;
+  const tr = cell.parentElement, table = cell.closest('table');
+  const idx = [...tr.children].indexOf(cell);
+  if (op === 'rowAbove' || op === 'rowBelow') {
+    const nr = document.createElement('tr');
+    for (let i = 0; i < tr.children.length; i++) nr.appendChild(_tblNewCell(false));
+    if (op === 'rowBelow') tr.after(nr); else tr.before(nr);
+  } else if (op === 'colLeft' || op === 'colRight') {
+    [...table.rows].forEach(row => { const ref = row.children[Math.min(idx, row.children.length - 1)]; const nc = _tblNewCell(_rowIsHeader(row)); if (op === 'colRight') ref.after(nc); else ref.before(nc); });
+  } else if (op === 'delRow') {
+    if (table.rows.length <= 1) table.remove(); else tr.remove();
+  } else if (op === 'delCol') {
+    if (tr.children.length <= 1) table.remove(); else [...table.rows].forEach(row => { if (row.children[idx]) row.children[idx].remove(); });
+  } else if (op === 'delTable') {
+    table.remove();
+  } else if (op === 'cellBg') {
+    const c = prompt('셀 배경색 (예: #fff8e1 · 비우면 제거)', cell.style.backgroundColor || '#fff8e1');
+    if (c === null) return false;
+    cell.style.backgroundColor = c.trim();
+  } else if (op === 'headerToggle') {
+    [...tr.children].forEach(td => { const isTh = td.tagName === 'TH'; const nn = document.createElement(isTh ? 'td' : 'th'); nn.setAttribute('style', _tblCellStyle(!isTh)); nn.innerHTML = td.innerHTML; td.replaceWith(nn); });
+    _tblCtx = null;
+  }
+  _rteSaveSel();
+  return false;
 }
 
 /* ===== 본문 AI 다듬기 (Gemini) ===== */
