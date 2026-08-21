@@ -1210,9 +1210,13 @@ async function sendAiMsg(){
 
 <!-- 메일 모달 -->
 <div class="modal-overlay" id="dashMailModal" onclick="if(event.target===this)closeDashMailModal()">
-  <div class="modal" id="dashMailBox" style="max-width:560px; width:560px; position:relative; resize:none; transition:width .2s,height .2s,max-width .2s;">
-    <div id="mailTitleBar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;cursor:default;user-select:none;">
-      <h3 style="margin:0;">✉️ 메일 보내기</h3>
+  <div class="modal" id="dashMailBox" style="max-width:560px; width:560px; max-height:92vh; display:flex; flex-direction:column; position:relative; resize:none; transition:width .2s,height .2s,max-width .2s;">
+    <div id="mailTitleBar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;cursor:default;user-select:none;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <h3 style="margin:0;">✉️ 메일 보내기</h3>
+        <button id="dmSendBtn" onclick="dmSend()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">📨 보내기</button>
+        <span id="dmSenderStatus" style="font-size:11.5px;color:var(--t3);"></span>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="ab-status" id="abStatus">
           <span id="abStatusTxt">주소록 없음</span>
@@ -1271,14 +1275,14 @@ async function sendAiMsg(){
         </div>
       </div>
     </div>
-    <div class="set-field" style="margin-top:12px;">
+    <div class="set-field" style="margin-top:12px;flex:1;display:flex;flex-direction:column;min-height:0;">
       <label style="display:flex;justify-content:space-between;align-items:center;">본문
         <span style="font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;" onclick="openSignatureModal()">✏️ 서명 관리</span>
       </label>
-      <textarea id="dmBody" rows="9" style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:vertical;line-height:1.7;" placeholder="메일 내용을 입력하세요..."></textarea>
+      <textarea id="dmBody" style="flex:1;width:100%;min-height:220px;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:none;line-height:1.7;" placeholder="메일 내용을 입력하세요..."></textarea>
       <div id="dmSigImgNote" style="font-size:11.5px;color:var(--t3);margin-top:5px;display:none;"></div>
     </div>
-    <details style="margin-bottom:14px;">
+    <details style="margin-top:10px;flex-shrink:0;">
       <summary style="font-size:12.5px;font-weight:700;color:var(--blue);cursor:pointer;user-select:none;">📋 업무 목록 본문에 추가하기</summary>
       <div style="margin-top:10px;">
         <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
@@ -1288,11 +1292,6 @@ async function sendAiMsg(){
         <button onclick="dmInsertTasks()" style="margin-top:8px;width:100%;padding:9px;border:1px dashed var(--blue);border-radius:8px;background:var(--blue-bg);color:var(--blue);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">선택한 업무를 본문에 추가</button>
       </div>
     </details>
-    <div id="dmSenderStatus" style="font-size:12px;font-weight:600;margin-bottom:8px;text-align:center;color:var(--t3);">발송기 확인 중…</div>
-    <div class="modal-actions">
-      <button class="set-btn line" onclick="closeDashMailModal()">취소</button>
-      <button class="set-btn" id="dmSendBtn" onclick="dmSend()">📨 아웃룩으로 열기</button>
-    </div>
     <div id="mailResizeHandle" style="position:absolute;bottom:0;right:0;width:18px;height:18px;cursor:nwse-resize;display:flex;align-items:flex-end;justify-content:flex-end;padding:3px;">
       <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 9L9 1M5 9L9 5M9 9" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
@@ -3391,8 +3390,11 @@ function saveSignatureModal() {
 function updateDmSigNote() {
   const note = document.getElementById('dmSigImgNote'); if (!note) return;
   const sig = getSignature();
-  if (sig.imageDataUrl) { note.style.display = ''; note.textContent = '🖼️ 서명 이미지가 발송 시 자동으로 포함됩니다.'; }
-  else note.style.display = 'none';
+  const hasText = (sig.text || '').trim().length > 0;
+  if (hasText || sig.imageDataUrl) {
+    note.style.display = '';
+    note.textContent = '✍️ 서명' + (sig.imageDataUrl ? '(이미지 포함)' : '') + '이 발송 시 자동으로 추가됩니다. · 서명 관리에서 편집';
+  } else note.style.display = 'none';
 }
 loadSignatureCloud();
 
@@ -3455,7 +3457,7 @@ function openDashMailModal() {
   renderRecipientTags();
   document.getElementById('dmTo').value = '';
   document.getElementById('dmSubject').value = '';
-  document.getElementById('dmBody').value = getSignature().text;
+  document.getElementById('dmBody').value = '';   // 클린한 빈 본문 (서명은 발송 시 자동 추가)
   document.getElementById('acDropdown').classList.remove('show');
   document.getElementById('dmCc').value = '';
   document.getElementById('ccWrap').style.display = 'none';
@@ -3492,6 +3494,7 @@ function toggleMailMaximize() {
     box.style.width = '100vw';
     box.style.height = '100vh';
     box.style.maxWidth = '100vw';
+    box.style.maxHeight = '100vh';
     box.style.borderRadius = '0';
     box.style.margin = '0';
     overlay.style.alignItems = 'flex-start';
@@ -3506,6 +3509,7 @@ function toggleMailMaximize() {
     box.style.width = _mailPrevStyle.width || '560px';
     box.style.height = _mailPrevStyle.height || '';
     box.style.maxWidth = _mailPrevStyle.maxWidth || '560px';
+    box.style.maxHeight = '92vh';
     box.style.borderRadius = '';
     box.style.margin = '';
     overlay.style.alignItems = '';
@@ -3604,12 +3608,17 @@ function dmSend() {
   if (!toList.length) { alert('받는 사람을 입력해주세요.'); return; }
 
   const subject = document.getElementById('dmSubject').value.trim() || '(제목 없음)';
-  const body = document.getElementById('dmBody').value;
   const cc = (document.getElementById('dmCc').value || '').trim();
   const attachments = dmAttachments.map(a => ({ name: a.name, type: a.type, dataUrl: a.dataUrl }));
 
-  // 서명 이미지가 있으면 HTML 본문 + CID 이미지로 전송(수신자 메일에 인라인 표시)
+  // 본문(사용자 입력) + 서명 텍스트 자동 추가
   const sig = getSignature();
+  const userBody = document.getElementById('dmBody').value;
+  let sigPart = sig.text || '';
+  if (sigPart && userBody && !/^\s*\n/.test(sigPart)) sigPart = '\n\n' + sigPart;   // 필요 시 구분 여백
+  const body = (userBody + sigPart) || userBody;
+
+  // 서명 이미지가 있으면 HTML 본문 + CID 이미지로 전송(수신자 메일에 인라인 표시)
   const escHtml = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   let html = null, images = null;
   if (sig.imageDataUrl) {
@@ -3665,14 +3674,14 @@ async function checkMailSender() {
         const d = await r.json();
         if (d && d.ok) {
           mailSenderBase = base;
-          if (statusEl) { statusEl.innerHTML = `🟢 사내 발송기 연결됨 · ${d.from} (오늘 ${d.sentToday}/${d.limit}건) — <b>버튼 한 번에 바로 발송</b>`; statusEl.style.color = 'var(--green)'; }
+          if (statusEl) { statusEl.innerHTML = `🟢 발송기 연결됨 · 오늘 ${d.sentToday}/${d.limit}건`; statusEl.style.color = 'var(--green)'; }
           if (btn) btn.textContent = '📨 바로 발송';
           return;
         }
       }
     } catch (e) {}
   }
-  if (statusEl) { statusEl.innerHTML = '⚪ 발송기 꺼짐 — <b>아웃룩으로 열림</b> (회사 PC에서 [메일발송기 실행]을 켜면 바로 발송)'; statusEl.style.color = 'var(--t3)'; }
+  if (statusEl) { statusEl.innerHTML = '⚪ 발송기 꺼짐 · 아웃룩으로 열림'; statusEl.style.color = 'var(--t3)'; }
   if (btn) btn.textContent = '📨 아웃룩으로 열기';
 }
 document.addEventListener('click', (e)=>{
