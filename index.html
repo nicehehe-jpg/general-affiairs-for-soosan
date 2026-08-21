@@ -1225,24 +1225,57 @@ async function sendAiMsg(){
         </div>
       </div>
     </div>
-    <div class="set-field">
-      <label>받는 사람</label>
-      <div class="recipient-tags" id="recipientTags" style="display:none;"></div>
-      <div class="ac-wrap">
-        <input id="dmTo" placeholder="이름 또는 이메일 검색..." autocomplete="off"
-          oninput="acSearch(this.value)" onkeydown="acKeydown(event)">
-        <div class="ac-dropdown" id="acDropdown"></div>
+    <style>
+      .nv-row{display:flex;border-bottom:1px solid var(--line);align-items:flex-start;}
+      .nv-lbl{width:74px;flex-shrink:0;padding:11px 10px;font-size:13px;font-weight:700;color:var(--t2);user-select:none;}
+      .nv-cell{flex:1;min-width:0;padding:6px 8px;}
+      .nv-in{border:none;background:transparent;width:100%;padding:5px 2px;font-size:13.5px;color:var(--t1);outline:none;font-family:inherit;}
+      .nv-btn{border:1px solid var(--line);background:var(--bg);color:var(--t2);border-radius:7px;padding:5px 11px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+      .nv-btn:hover{background:var(--card);}
+    </style>
+    <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);">
+      <!-- 받는사람 -->
+      <div class="nv-row">
+        <div class="nv-lbl">받는사람</div>
+        <div class="nv-cell">
+          <div class="recipient-tags" id="recipientTags" style="display:none;"></div>
+          <div class="ac-wrap" style="position:relative;">
+            <input id="dmTo" class="nv-in" placeholder="이름 또는 이메일 검색..." autocomplete="off"
+              oninput="acSearch(this.value)" onkeydown="acKeydown(event)">
+            <div class="ac-dropdown" id="acDropdown"></div>
+          </div>
+        </div>
+      </div>
+      <!-- 참조 -->
+      <div class="nv-row">
+        <div class="nv-lbl" style="cursor:pointer;" onclick="toggleCc()">참조 <span id="ccToggleIcon" style="font-size:10px;color:var(--t3);">▾</span></div>
+        <div class="nv-cell" id="ccWrap" style="display:none;">
+          <input id="dmCc" class="nv-in" placeholder="참조 이메일 (쉼표로 구분)" autocomplete="off">
+        </div>
+      </div>
+      <!-- 제목 -->
+      <div class="nv-row">
+        <div class="nv-lbl">제목</div>
+        <div class="nv-cell"><input id="dmSubject" class="nv-in" placeholder="메일 제목"></div>
+      </div>
+      <!-- 파일첨부 -->
+      <div class="nv-row" style="border-bottom:none;">
+        <div class="nv-lbl">파일첨부</div>
+        <div class="nv-cell">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button class="nv-btn" onclick="document.getElementById('dmFileInput').click()">📎 내 PC</button>
+            <input type="file" id="dmFileInput" multiple style="display:none;" onchange="dmAddFiles(this.files)">
+            <span id="dmAttachSize" style="font-size:11.5px;color:var(--t3);">0 / 10MB</span>
+          </div>
+          <div id="dmAttachList" style="margin-top:6px;display:flex;flex-direction:column;gap:4px;"></div>
+        </div>
       </div>
     </div>
-    <div class="set-field">
-      <label>제목</label>
-      <input id="dmSubject" placeholder="메일 제목">
-    </div>
-    <div class="set-field">
+    <div class="set-field" style="margin-top:12px;">
       <label style="display:flex;justify-content:space-between;align-items:center;">본문
         <span style="font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;" onclick="openSignatureModal()">✏️ 서명 관리</span>
       </label>
-      <textarea id="dmBody" rows="8" style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:vertical;line-height:1.7;" placeholder="메일 내용을 입력하세요..."></textarea>
+      <textarea id="dmBody" rows="9" style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:vertical;line-height:1.7;" placeholder="메일 내용을 입력하세요..."></textarea>
       <div id="dmSigImgNote" style="font-size:11.5px;color:var(--t3);margin-top:5px;display:none;"></div>
     </div>
     <details style="margin-bottom:14px;">
@@ -3363,6 +3396,44 @@ function updateDmSigNote() {
 }
 loadSignatureCloud();
 
+/* ===== 참조(CC) · 파일첨부 (네이버식) ===== */
+let dmAttachments = [];                 // [{name,type,dataUrl,size}]
+const DM_MAX_ATTACH = 10 * 1024 * 1024; // 10MB
+function toggleCc() {
+  const w = document.getElementById('ccWrap'), ic = document.getElementById('ccToggleIcon');
+  const show = w.style.display === 'none';
+  w.style.display = show ? '' : 'none';
+  if (ic) ic.textContent = show ? '▴' : '▾';
+  if (show) { const i = document.getElementById('dmCc'); if (i) i.focus(); }
+}
+function fmtBytes(n) { if (n < 1024) return n + 'B'; if (n < 1024 * 1024) return (n / 1024).toFixed(0) + 'KB'; return (n / 1024 / 1024).toFixed(1) + 'MB'; }
+function dmAddFiles(files) {
+  const list = [...files]; if (!list.length) return;
+  let total = dmAttachments.reduce((s, a) => s + a.size, 0);
+  (function next(i) {
+    if (i >= list.length) { renderAttachList(); return; }
+    const f = list[i];
+    if (total + f.size > DM_MAX_ATTACH) { alert(`첨부 용량 한도(10MB)를 초과합니다: ${f.name}`); next(i + 1); return; }
+    const reader = new FileReader();
+    reader.onload = e => { dmAttachments.push({ name: f.name, type: f.type || 'application/octet-stream', dataUrl: e.target.result, size: f.size }); total += f.size; next(i + 1); };
+    reader.onerror = () => { alert('파일을 읽지 못했습니다: ' + f.name); next(i + 1); };
+    reader.readAsDataURL(f);
+  })(0);
+  const inp = document.getElementById('dmFileInput'); if (inp) inp.value = '';
+}
+function dmRemoveFile(idx) { dmAttachments.splice(idx, 1); renderAttachList(); }
+function renderAttachList() {
+  const box = document.getElementById('dmAttachList'), sz = document.getElementById('dmAttachSize');
+  const total = dmAttachments.reduce((s, a) => s + a.size, 0);
+  if (sz) sz.textContent = fmtBytes(total) + ' / 10MB';
+  if (!box) return;
+  box.innerHTML = dmAttachments.map((a, i) => `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:5px 9px;">
+    <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t1);">📄 ${a.name}</span>
+    <span style="color:var(--t3);font-size:11.5px;flex-shrink:0;">${fmtBytes(a.size)}</span>
+    <span onclick="dmRemoveFile(${i})" title="삭제" style="cursor:pointer;color:var(--red);font-weight:800;flex-shrink:0;">×</span>
+  </div>`).join('');
+}
+
 function heroSearch() {
   const q = document.getElementById('heroSearchInput').value.trim();
   if (!q) return;
@@ -3386,6 +3457,11 @@ function openDashMailModal() {
   document.getElementById('dmSubject').value = '';
   document.getElementById('dmBody').value = getSignature().text;
   document.getElementById('acDropdown').classList.remove('show');
+  document.getElementById('dmCc').value = '';
+  document.getElementById('ccWrap').style.display = 'none';
+  document.getElementById('ccToggleIcon').textContent = '▾';
+  dmAttachments = [];
+  renderAttachList();
   updateAbStatus();
   renderDmChecklist();
   updateDmSigNote();
@@ -3529,6 +3605,8 @@ function dmSend() {
 
   const subject = document.getElementById('dmSubject').value.trim() || '(제목 없음)';
   const body = document.getElementById('dmBody').value;
+  const cc = (document.getElementById('dmCc').value || '').trim();
+  const attachments = dmAttachments.map(a => ({ name: a.name, type: a.type, dataUrl: a.dataUrl }));
 
   // 서명 이미지가 있으면 HTML 본문 + CID 이미지로 전송(수신자 메일에 인라인 표시)
   const sig = getSignature();
@@ -3543,9 +3621,12 @@ function dmSend() {
     images = [{ cid: 'sigimg', dataUrl: sig.imageDataUrl, name: sig.imageName || 'signature.png' }];
   }
 
-  // 사내 발송기가 켜져 있으면 바로 발송, 아니면 아웃룩으로 열기(이미지는 발송기에서만 지원)
+  // 사내 발송기가 켜져 있으면 바로 발송, 아니면 아웃룩으로 열기(참조는 지원, 이미지·첨부는 발송기에서만)
   const openOutlook = () => {
-    window.location.href = `mailto:${encodeURIComponent(toList.join(';'))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    if (attachments.length) alert('아웃룩으로 열면 첨부파일은 자동 첨부되지 않습니다.\n발송기를 켜면 첨부까지 바로 발송됩니다.');
+    let url = `mailto:${encodeURIComponent(toList.join(';'))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    if (cc) url += `&cc=${encodeURIComponent(cc.replace(/,/g, ';'))}`;
+    window.location.href = url;
     closeDashMailModal();
   };
   (async () => {
@@ -3561,7 +3642,7 @@ function dmSend() {
     try {
       const r = await fetch(base + '/send', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: toList.join(','), subject, body, html, images })
+        body: JSON.stringify({ to: toList.join(','), cc, subject, body, html, images, attachments })
       });
       const data = await r.json();
       if (data && data.ok) { alert('✅ 메일이 발송되었습니다.'); closeDashMailModal(); }
