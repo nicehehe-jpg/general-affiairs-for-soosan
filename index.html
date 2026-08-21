@@ -1435,7 +1435,7 @@ async function sendAiMsg(){
 
 <!-- 받은편지함 모달 -->
 <div class="modal-overlay" id="inboxModal" onclick="if(event.target===this)closeInbox()">
-  <div class="modal" style="max-width:1120px;width:95vw;height:88vh;max-height:88vh;display:flex;flex-direction:column;">
+  <div class="modal" id="inboxBox" style="width:1120px;max-width:96vw;height:86vh;max-height:94vh;min-width:640px;min-height:420px;display:flex;flex-direction:column;resize:both;overflow:hidden;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <h3 style="margin:0;">📥 받은편지함</h3>
@@ -1447,7 +1447,7 @@ async function sendAiMsg(){
     </div>
     <div style="display:flex;gap:12px;flex:1;min-height:0;">
       <div id="inboxList" style="width:370px;flex-shrink:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);"></div>
-      <div id="inboxReader" style="flex:1;min-width:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
+      <div id="inboxReader" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
         <div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>
       </div>
     </div>
@@ -4020,10 +4020,10 @@ async function openMailItem(uid, el){
     const m=d.mail; _curMail=m;
     const atts=(m.attachments||[]).map(a=>`<span style="display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;margin:2px 4px 2px 0;">📎 ${_ie(a.name)} (${fmtBytes(a.size)})</span>`).join('');
     const bodyHtml = m.html
-      ? `<iframe sandbox="" style="width:100%;height:calc(88vh - 240px);min-height:300px;border:1px solid var(--line);border-radius:8px;background:#fff;" srcdoc="${_ie(m.html)}"></iframe>`
-      : `<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.8;color:var(--t1);">${_ie(m.text||'(내용 없음)')}</div>`;
+      ? `<iframe sandbox="" style="flex:1;width:100%;min-height:280px;border:1px solid var(--line);border-radius:8px;background:#fff;" srcdoc="${_ie(m.html)}"></iframe>`
+      : `<div style="flex:1;overflow:auto;white-space:pre-wrap;font-size:13.5px;line-height:1.8;color:var(--t1);">${_ie(m.text||'(내용 없음)')}</div>`;
     reader.innerHTML=`
-      <div style="border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;">
+      <div style="border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;flex-shrink:0;">
         <div style="font-size:17px;font-weight:800;color:var(--t1);word-break:break-all;">${_ie(m.subject)}</div>
         <div style="font-size:12.5px;color:var(--t2);margin-top:8px;">보낸사람 · <b>${_ie(m.from)}</b></div>
         <div style="font-size:12px;color:var(--t3);margin-top:2px;">${_ie(m.date)}</div>
