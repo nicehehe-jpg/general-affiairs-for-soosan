@@ -726,11 +726,11 @@
           <span class="sub">아웃룩으로 전송</span>
         </span>
       </button>
-      <button class="mail-hero-btn" onclick="location.href='mailto:'" style="background:linear-gradient(135deg,#0078D4,#106EBE);">
+      <button class="mail-hero-btn" onclick="openInbox()" style="background:linear-gradient(135deg,#0078D4,#106EBE);">
         <span class="ic">📥</span>
         <span class="txt">
           <span class="main">받은편지함</span>
-          <span class="sub">아웃룩 열기</span>
+          <span class="sub">받은 메일 보기</span>
         </span>
       </button>
     </div>
@@ -1431,6 +1431,27 @@ async function sendAiMsg(){
   <div class="tcm-item danger" onmousedown="tblOp(event,'delRow')">✖ 행 삭제</div>
   <div class="tcm-item danger" onmousedown="tblOp(event,'delCol')">✖ 열 삭제</div>
   <div class="tcm-item danger" onmousedown="tblOp(event,'delTable')">🗑 표 전체 삭제</div>
+</div>
+
+<!-- 받은편지함 모달 -->
+<div class="modal-overlay" id="inboxModal" onclick="if(event.target===this)closeInbox()">
+  <div class="modal" style="max-width:1120px;width:95vw;height:88vh;max-height:88vh;display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <h3 style="margin:0;">📥 받은편지함</h3>
+        <span id="inboxUser" style="font-size:12px;color:var(--t3);"></span>
+        <button class="nv-btn" onclick="loadInbox()">🔄 새로고침</button>
+        <button class="nv-btn" onclick="openDashMailModal()">✉️ 새 메일</button>
+      </div>
+      <button onclick="closeInbox()" title="닫기" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--t2);font-size:14px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;gap:12px;flex:1;min-height:0;">
+      <div id="inboxList" style="width:370px;flex-shrink:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);"></div>
+      <div id="inboxReader" style="flex:1;min-width:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
+        <div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- 설정 모달 -->
@@ -3953,6 +3974,74 @@ document.addEventListener('click', (e)=>{
     renderTaskList();
   }
 });
+
+/* ===== 받은편지함 (IMAP · 발송기 연동) ===== */
+function _ie(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _mailFromName(f){ const m=(f||'').match(/^\s*"?([^"<]+?)"?\s*</); return m?m[1].trim():((f||'').replace(/<.*>/,'').trim()||f||''); }
+function _mailEmail(f){ const m=(f||'').match(/<([^>]+)>/); return m?m[1].trim():(f||'').trim(); }
+function _mailDate(d){ try{ const dt=new Date(d); if(isNaN(dt)) return ''; const now=new Date(); return dt.toDateString()===now.toDateString() ? dt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : (dt.getMonth()+1)+'/'+dt.getDate(); }catch(e){ return ''; } }
+async function _senderBase(){
+  if(mailSenderBase) return mailSenderBase;
+  for(const u of MAIL_SENDER_URLS){ try{ const r=await fetch(u+'/health',{signal:AbortSignal.timeout(1200)}); if(r.ok){ mailSenderBase=u; return u; } }catch(e){} }
+  return null;
+}
+let _curMail = null;
+function openInbox(){ document.getElementById('inboxModal').classList.add('show'); loadInbox(); }
+function closeInbox(){ document.getElementById('inboxModal').classList.remove('show'); }
+async function loadInbox(){
+  const list=document.getElementById('inboxList');
+  list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">불러오는 중…</div>';
+  const base=await _senderBase();
+  if(!base){ list.innerHTML='<div style="padding:22px;color:var(--t2);font-size:13px;line-height:1.7;">🔌 발송기(회사 PC 프로그램)가 꺼져 있습니다.<br><b>메일발송기 실행.bat</b>을 켠 뒤 🔄 새로고침 하세요.<br><br><a href="mailto:" style="color:var(--blue);font-weight:700;">아웃룩으로 열기 →</a></div>'; return; }
+  try{
+    const r=await fetch(base+'/inbox?limit=40',{signal:AbortSignal.timeout(25000)});
+    const d=await r.json();
+    if(!d.ok){ list.innerHTML=`<div style="padding:22px;color:var(--red);font-size:13px;line-height:1.7;">받은편지함 오류<br><span style="color:var(--t2);">${_ie(d.error)}</span><br><br><span style="color:var(--t3);font-size:12px;">회사 PC의 <b>메일발송기\\config.json</b>에 이메일 계정·비밀번호(imap_user / imap_pass)를 입력했는지 확인하세요.</span></div>`; return; }
+    document.getElementById('inboxUser').textContent = d.user||'';
+    if(!(d.items&&d.items.length)){ list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">받은 메일이 없습니다.</div>'; return; }
+    list.innerHTML=d.items.map(m=>`<div class="inbox-item" data-uid="${_ie(m.uid)}" onclick="openMailItem('${_ie(m.uid)}',this)" style="padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;${m.seen?'':'background:var(--blue-bg);'}">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+        <span class="ib-from" style="font-weight:${m.seen?'500':'800'};font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.seen?'':'<span style=\'color:var(--blue)\'>●</span> '}${_ie(_mailFromName(m.from))}</span>
+        <span style="font-size:11px;color:var(--t3);flex-shrink:0;">${_mailDate(m.date)}</span>
+      </div>
+      <div style="font-size:12.5px;color:var(--t2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${m.seen?'400':'700'};">${_ie(m.subject)}</div>
+    </div>`).join('');
+  }catch(e){ list.innerHTML='<div style="padding:22px;color:var(--red);">받은편지함을 불러오지 못했습니다.<br>'+_ie(e.message||e)+'</div>'; }
+}
+async function openMailItem(uid, el){
+  if(el){ el.style.background=''; const f=el.querySelector('.ib-from'); if(f) f.innerHTML=f.innerHTML.replace(/^<span[^>]*>●<\/span>\s*/,''); }
+  const reader=document.getElementById('inboxReader');
+  reader.innerHTML='<div style="padding:40px;color:var(--t3);text-align:center;">불러오는 중…</div>';
+  const base=await _senderBase(); if(!base){ reader.innerHTML='<div style="padding:20px;color:var(--t3);">발송기 연결이 끊겼습니다.</div>'; return; }
+  try{
+    const r=await fetch(base+'/mail?uid='+encodeURIComponent(uid),{signal:AbortSignal.timeout(30000)});
+    const d=await r.json();
+    if(!d.ok){ reader.innerHTML='<div style="color:var(--red);padding:20px;">'+_ie(d.error||'조회 실패')+'</div>'; return; }
+    const m=d.mail; _curMail=m;
+    const atts=(m.attachments||[]).map(a=>`<span style="display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;margin:2px 4px 2px 0;">📎 ${_ie(a.name)} (${fmtBytes(a.size)})</span>`).join('');
+    const bodyHtml = m.html
+      ? `<iframe sandbox="" style="width:100%;height:calc(88vh - 240px);min-height:300px;border:1px solid var(--line);border-radius:8px;background:#fff;" srcdoc="${_ie(m.html)}"></iframe>`
+      : `<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.8;color:var(--t1);">${_ie(m.text||'(내용 없음)')}</div>`;
+    reader.innerHTML=`
+      <div style="border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px;">
+        <div style="font-size:17px;font-weight:800;color:var(--t1);word-break:break-all;">${_ie(m.subject)}</div>
+        <div style="font-size:12.5px;color:var(--t2);margin-top:8px;">보낸사람 · <b>${_ie(m.from)}</b></div>
+        <div style="font-size:12px;color:var(--t3);margin-top:2px;">${_ie(m.date)}</div>
+        ${atts?`<div style="margin-top:8px;">${atts}</div>`:''}
+        <div style="margin-top:12px;"><button class="set-btn" onclick="inboxReply()" style="padding:8px 18px;font-size:13px;">↩ 답장 쓰기</button></div>
+      </div>
+      ${bodyHtml}`;
+  }catch(e){ reader.innerHTML='<div style="color:var(--red);padding:20px;">'+_ie(e.message||e)+'</div>'; }
+}
+function inboxReply(){
+  if(!_curMail) return;
+  const addr=_mailEmail(_curMail.from); const nm=_mailFromName(_curMail.from);
+  const subj='Re: '+(_curMail.subject||'').replace(/^\s*(Re|RE|re):\s*/,'');
+  closeInbox();
+  openDashMailModal();
+  if(addr) addRecipient(nm||addr, addr, 'to');
+  document.getElementById('dmSubject').value=subj;
+}
 
 /* ===== 할 일 현황 위젯 ===== */
 function isTodoOverdue(t){
