@@ -2052,6 +2052,35 @@ function openAppLink(title){
   if(cfg) window.open(cfg.url, '_blank');
 }
 
+// ===== 업무별 관련 문서 연결 (로컬 폴더/파일 경로 또는 웹 링크 → 자동 열기) =====
+function setTaskFolder(id){
+  const t = TASKS.find(x=>x.id===id); if(!t) return;
+  const cur = t.folder || '';
+  const v = prompt('이 업무의 관련 문서를 연결하세요. 로컬 폴더·파일 경로 또는 웹 링크(URL) 모두 가능합니다.\n\n예) D:\\총무\\협회관리\n예) \\\\서버\\공유\\협회관리\\실적신고.xlsx\n예) https://docs.google.com/...\n\n※ 비우고 확인하면 연결이 해제됩니다.', cur);
+  if(v === null) return;                 // 취소
+  const path = v.trim();
+  if(path) t.folder = path; else delete t.folder;
+  openMenuId = null;
+  saveTasks(); renderAll();
+}
+async function openLocalFolder(path){
+  if(!path) return;
+  // 웹 링크(URL)면 브라우저 새 탭으로 바로 열기
+  if(/^https?:\/\//i.test(path)){ window.open(path, '_blank'); return; }
+  // 로컬 폴더/파일 경로면 회사 PC 발송기가 탐색기/연결프로그램으로 열기
+  const base = await _senderBase();
+  if(!base){
+    try{ await navigator.clipboard.writeText(path); }catch(e){}
+    alert('로컬 폴더·파일을 자동으로 열려면 회사 PC의 [메일발송기]를 켜야 합니다.\n(발송기가 탐색기를 대신 열어줍니다)\n\n경로를 클립보드에 복사했습니다:\n'+path);
+    return;
+  }
+  try{
+    const r = await fetch(base+'/open-folder', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path}), signal:AbortSignal.timeout(10000) });
+    const d = await r.json();
+    if(!d.ok){ alert('열기 실패: '+(d.error||'알 수 없는 오류')); }
+  }catch(e){ alert('열기 오류: '+(e.message||e)); }
+}
+
 // 구매계약 단계(purchase.html STAGES와 동일)
 const PC_STAGES = [
   {key:'approval',    label:'품의진행 완료'},
@@ -2103,6 +2132,7 @@ function taskRowHTML(t){
     <div class="row-actions">
       ${showRunBtn ? `<button class="run-btn" data-act="run" title="전표 생성기 실행">▶ 전표생성</button>` : ''}
       ${appCfg ? `<button class="run-btn" data-act="app" title="${appCfg.label}" style="background:var(--green-bg); color:var(--green);">${appCfg.icon} ${appCfg.label}</button>` : ''}
+      ${t.folder ? `<button class="run-btn" data-act="folder" title="열기: ${_ie(t.folder)}" style="background:#EEF2FF; color:#4F46E5;">${/^https?:\/\//i.test(t.folder)?'🔗 문서 열기':'📂 폴더 열기'}</button>` : ''}
       ${isMonthly ? `<button class="icon-btn" data-act="editday" title="처리 일자 수정">✏️</button>` : ''}
       <button class="icon-btn" data-act="menu" title="상태 변경">⋯</button>
       <button class="icon-btn" data-act="del" title="삭제">🗑</button>
@@ -2112,6 +2142,7 @@ function taskRowHTML(t){
         <button data-act="set" data-status="wait" class="${st==='wait'?'cur':''}">대기</button>
         <button data-act="set" data-status="doing" class="${st==='doing'?'cur':''}">진행중</button>
         <button data-act="set" data-status="done" class="${st==='done'?'cur':''}">완료</button>
+        <button data-act="setfolder" title="이 업무에 로컬 폴더 경로 또는 문서 링크 연결">🔗 문서/폴더 ${t.folder?'변경/해제':'지정'}</button>
       </div>` : ''}
   `;
   row.querySelector('[data-act="toggle"]').addEventListener('click', (e)=>{ e.stopPropagation(); toggleDone(t.id); });
@@ -2123,6 +2154,11 @@ function taskRowHTML(t){
   if(appCfg){
     row.querySelector('[data-act="app"]').addEventListener('click', (e)=>{ e.stopPropagation(); openAppLink(t.title); });
   }
+  if(t.folder){
+    row.querySelector('[data-act="folder"]').addEventListener('click', (e)=>{ e.stopPropagation(); openLocalFolder(t.folder); });
+  }
+  const _sf = row.querySelector('[data-act="setfolder"]');
+  if(_sf){ _sf.addEventListener('click', (e)=>{ e.stopPropagation(); setTaskFolder(t.id); }); }
   if(isMonthly){
     row.querySelector('[data-act="editday"]').addEventListener('click', (e)=>{ e.stopPropagation(); editMonthlyDay(t.id); });
   }
@@ -2567,6 +2603,11 @@ function handleRateMasterUploadDash(input){
 /* ============== 로그 관리 (업데이트 이력 + 오류 로그) ============== */
 function logEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const CHANGELOG_CENTRAL = [
+  { date:'2026-08-21', app:'대시보드 · 업무', items:[
+    '업무별 관련 문서 연결 — 로컬 폴더·파일 경로 또는 웹 링크(URL)를 지정하면 버튼으로 자동 열기',
+    '로컬 경로는 회사 PC 발송기가 탐색기로 열고(한글 경로 지원), 링크는 새 탭으로 열림(발송기 꺼져 있으면 경로 클립보드 복사)',
+    '업무 행의 ⋯ → \'문서/폴더 지정\'으로 연결·변경·해제'
+  ]},
   { date:'2026-08-21', app:'메일 · 보안', items:[
     '발송기 이메일 비밀번호를 Windows 암호화(DPAPI)로 저장 — 설정파일 평문 저장 제거'
   ]},
