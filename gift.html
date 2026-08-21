@@ -231,7 +231,9 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
         <button class="btn btn-success" onclick="exportCompare()">⬇️ 비교결과 엑셀</button>
       </div>
       <div class="table-wrap">
-        <table><thead><tr><th>#</th><th>상태/점수</th><th>이름(명단)</th><th>사번(명단)</th><th>소속(명단)</th><th>이름(제출)</th><th>사번(제출)</th><th>소속(제출)</th><th>매칭 근거</th><th>수정</th></tr></thead>
+        <datalist id="cmpSiteDL"></datalist>
+        <datalist id="cmpGiftDL"></datalist>
+        <table><thead><tr><th>#</th><th>상태/점수</th><th>이름(명단)</th><th>사번(명단)</th><th>소속(명단)</th><th>이름(제출)</th><th>사번(제출)</th><th>소속(제출)</th><th>매칭 근거</th><th>수정(이름·사번·소속·선물)</th></tr></thead>
         <tbody id="compareTableBody"></tbody></table>
       </div>
     </div>
@@ -685,25 +687,39 @@ function nameSim(a,b){
 }
 
 function applyEdit(idx){
-  const nameEl=document.getElementById('en_'+idx);
-  const empNoEl=document.getElementById('ee_'+idx);
   const current=compareData.find(c=>c.idx===idx);
-  if(!nameEl||!empNoEl||!masterRows[idx]||!current)return;
-  const name=nameEl.value.trim();
-  const empNo=empNoEl.value.trim();
-  if(!name){
-    alert('이름을 입력하세요.');
-    return;
-  }
-  if(!current.submitted){
-    alert('제출 명단에 연결된 행이 없어 바로 수정할 수 없습니다.');
-    return;
-  }
-
+  if(!current)return;
+  const g=id=>{const el=document.getElementById(id+'_'+idx);return el?el.value.trim():'';};
+  const name=g('en'), empNo=g('ee'), site=g('es'), gift=g('eg');
+  if(!name){ alert('이름을 입력하세요.'); return; }
+  // 제출 명단에 없는(누락) 행이면 → 사원명부 기준으로 제출 명단에 추가
+  if(!current.submitted){ addFromMaster(idx,{name,empNo,site,gift}); return; }
+  // 이름·사번·소속·선물 모두 반영
   current.submitted.name=name;
   current.submitted.empNo=empNo;
+  current.submitted.empNoNorm=(empNo||'').replace(/^0+/,'');
+  if(site){ current.submitted._siteName=site; current.submitted.dept=site; }
+  current.submitted.gift=gift;
   current.submitted._edited=true;
-  editedCells['cmp_'+idx]={name,empNo};
+  editedCells['cmp_'+idx]={name,empNo,site,gift};
+  buildCompare();
+  renderCompare();
+  renderAll();
+  renderSummary();
+}
+// 누락 행(사원명부엔 있으나 제출 명단엔 없음)을 제출 명단에 추가
+function addFromMaster(idx,vals){
+  const c=compareData.find(d=>d.idx===idx);
+  if(!c||!c.master){ alert('대상을 찾을 수 없습니다.'); return; }
+  const mr=c.master;
+  const name=((vals&&vals.name)||mr.name||'').trim();
+  const empNo=((vals&&vals.empNo)||mr.empNo||'').trim();
+  const site=((vals&&vals.site)||mr.mappedSite||matchSite(mr.dept)||mr.dept||'').trim();
+  const gift=((vals&&vals.gift)||'').trim();
+  if(!name){ alert('이름을 입력하세요.'); return; }
+  if(!confirm(`"${name}"(${empNo||'사번없음'})을(를) 제출 명단에 추가할까요?\n· 소속: ${site||'미지정'}\n· 선물: ${gift||'미지정'}\n(전체 취합·집계에 포함됩니다)`))return;
+  allRows.push({name,empNo,empNoNorm:(empNo||'').replace(/^0+/,''),dept:site,_siteName:site,gift,addr:'',recipient:'',phone:'',note:'수기추가',_edited:true,_addedFromMaster:true});
+  editedCells['cmp_'+idx]={name,empNo,site,gift};
   buildCompare();
   renderCompare();
   renderAll();
@@ -951,12 +967,15 @@ function buildCompare(){
       return;
     }
     const {row:sr,score,details}=cand;
-    // 95점 이상 = 연관성 있음 → 정상
-    if(score>=95){
-      compareData.push({status:'ok',master:mr,submitted:sr,idx,
-        reason:details.join(' · '),score});
+    const empExact=details.includes('사번✓');
+    const nameExact=details.includes('이름✓');
+    // 95점 이상, 또는 사번+이름이 모두 정확히 일치(=동일 인물) → 정상 (사업소 차이는 참고만)
+    if(score>=95 || (empExact&&nameExact)){
+      const siteNote=details.find(d=>d.startsWith('사업소✗'));
+      const reason=(score<95&&siteNote)?('정상 · 동일 사번·이름 (참고: '+siteNote+')'):details.join(' · ');
+      compareData.push({status:'ok',master:mr,submitted:sr,idx,reason,score});
     } else if(score>=60){
-      // 사번은 맞는데 이름/사업소 일부 불일치 → 확인 권장
+      // 사번은 맞는데 이름 일부 불일치 등 → 확인 권장
       compareData.push({status:'mismatch',master:mr,submitted:sr,idx,
         reason:'확인필요: '+details.join(' · '),score});
     } else {
@@ -1023,6 +1042,10 @@ function renderCompare(){
     return;
   }
   document.getElementById('compareAlert').innerHTML='';
+  // 소속·선물 자동완성 옵션 채우기
+  const sdl=document.getElementById('cmpSiteDL'), gdl=document.getElementById('cmpGiftDL');
+  if(sdl){ const opts=[...new Set([...(typeof SITES!=='undefined'?SITES.map(s=>s.name):[]), ...allRows.map(r=>r._siteName).filter(Boolean), ...allRows.map(r=>r.dept).filter(Boolean)])]; sdl.innerHTML=opts.map(s=>`<option value="${s}">`).join(''); }
+  if(gdl){ const opts=[...new Set(allRows.map(r=>r.gift).filter(Boolean))]; gdl.innerHTML=opts.map(g=>`<option value="${g}">`).join(''); }
   const tb=document.getElementById('compareTableBody');
   tb.innerHTML=filtered.map((c,fi)=>{
     const rc=c.ignored?'row-ignored':c.status==='missing'?'row-missing':c.status==='mismatch'?'row-warning':'';
@@ -1059,10 +1082,12 @@ function renderCompare(){
       <td style="font-family:monospace;font-size:12px;color:${empColor}">${se}</td>
       <td style="color:var(--text2);font-size:12px">${ssite}</td>
       <td style="color:var(--text3);font-size:11px;max-width:180px">${c.reason||''}</td>
-      <td>${c.status!=='ok'?`<div class="editable-cell">
-        <input type="text" placeholder="이름" value="${ed.name||c.master.name}" id="en_${c.idx}" style="width:68px">
-        <input type="text" placeholder="사번" value="${ed.empNo||c.master.empNo||''}" id="ee_${c.idx}" style="width:75px">
-        <button class="btn btn-primary btn-sm" onclick="applyEdit(${c.idx})">저장</button>
+      <td>${c.status!=='ok'?`<div class="editable-cell" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+        <input type="text" placeholder="이름" value="${ed.name||(c.submitted?c.submitted.name:c.master.name)||''}" id="en_${c.idx}" style="width:58px">
+        <input type="text" placeholder="사번" value="${ed.empNo||(c.submitted?c.submitted.empNo:c.master.empNo)||''}" id="ee_${c.idx}" style="width:66px">
+        <input type="text" list="cmpSiteDL" placeholder="소속" value="${ed.site||(c.submitted?(c.submitted._siteName||c.submitted.dept||''):msite)||''}" id="es_${c.idx}" style="width:96px">
+        <input type="text" list="cmpGiftDL" placeholder="선물" value="${ed.gift||(c.submitted?(c.submitted.gift||''):'')||''}" id="eg_${c.idx}" style="width:84px">
+        <button class="btn btn-primary btn-sm" onclick="applyEdit(${c.idx})">${c.status==='missing'?'＋추가':'저장'}</button>
       </div>`:''}</td>
     </tr>`;
   }).join('');
