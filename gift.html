@@ -156,6 +156,11 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
   <!-- UPLOAD -->
   <div class="tab-panel active" id="panel-upload">
     <div class="card">
+      <div class="card-title">📅 연간 선물 일정 · 양식 다운로드</div>
+      <div class="alert alert-info">각 사업소에 배포할 <b>빈 양식(엑셀)</b>을 내려받아 담당자에게 전달하세요. 담당자가 채워 회신하면 아래 <b>파일 업로드</b>에 올려 취합합니다.</div>
+      <div id="giftEventList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:8px"></div>
+    </div>
+    <div class="card">
       <div class="card-title">📁 파일 업로드 <span class="badge" id="uploadedCountBadge">0개 업로드됨</span></div>
       <div class="alert alert-info">ℹ️ 각 사업소 담당자에게서 받은 엑셀 파일 여러 개를 한 번에 업로드하세요. 사업소명은 파일 내 부서명 셀 또는 파일명에서 자동 감지합니다.</div>
       <div class="upload-section">
@@ -1242,6 +1247,53 @@ function downloadWB(wb, filename){
   setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); }, 1000);
 }
 
+/* ===== 연간 선물 일정 & 배포용 양식(엑셀) ===== */
+const GIFT_EVENTS = [
+  {month:'1월',  name:'설 명절 선물'},
+  {month:'4월',  name:'어버이날 선물'},
+  {month:'4월',  name:'창립기념일 선물'},
+  {month:'6월',  name:'하계 복날 기념 삼계탕 선물', gift:'삼계탕'},
+  {month:'8월',  name:'추석 명절 선물'},
+  {month:'10월', name:'직원자녀 수능 합격기원품 선물'},
+];
+function renderGiftEvents(){
+  const el=document.getElementById('giftEventList'); if(!el) return;
+  el.innerHTML=GIFT_EVENTS.map((ev,i)=>`
+    <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;color:var(--primary);font-weight:700">${ev.month}</div>
+        <div style="font-weight:600;color:var(--text1);line-height:1.3">${ev.name}</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="downloadGiftTemplate(${i})" title="빈 양식 엑셀 다운로드">📥 양식</button>
+    </div>`).join('');
+}
+function downloadGiftTemplate(idx){
+  const ev=GIFT_EVENTS[idx]; if(!ev){return;}
+  const year=new Date().getFullYear();
+  const title=`${year}년 ${ev.month} ${ev.name} 지급 대상자 명단`;
+  const HDR=['순번','부서','이름','사번','선물','집주소','수령인','핸드폰번호','비고'];
+  const aoa=[
+    [title],
+    ['※ 각 사업소 담당자는 아래 표에 대상자를 입력해 제출해 주세요. (사번은 정확히 기재 · 없는 칸은 비워두셔도 됩니다)'],
+    ['사업소명(부서):',''],
+    [],
+    HDR,
+  ];
+  for(let i=1;i<=25;i++) aoa.push([i,'','','',ev.gift||'','','','','']);
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:5},{wch:16},{wch:10},{wch:11},{wch:16},{wch:34},{wch:10},{wch:15},{wch:16}];
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}}];
+  // 스타일: 제목·안내·헤더
+  if(ws['A1']) ws['A1'].s={font:{bold:true,sz:15},alignment:{horizontal:'center',vertical:'center'}};
+  if(ws['A2']) ws['A2'].s={font:{sz:11,color:{rgb:'8B95A1'}},alignment:{horizontal:'center'}};
+  if(ws['A3']) ws['A3'].s={font:{bold:true,sz:11}};
+  const hr=5; // 헤더 엑셀 행번호(1-base)
+  ['A','B','C','D','E','F','G','H','I'].forEach(col=>{ const ad=col+hr; if(ws[ad]) ws[ad].s={font:{bold:true,color:{rgb:'FFFFFF'},sz:11},fill:{fgColor:{rgb:'3182F6'}},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'C9D2DD'}},bottom:{style:'thin',color:{rgb:'C9D2DD'}},left:{style:'thin',color:{rgb:'C9D2DD'}},right:{style:'thin',color:{rgb:'C9D2DD'}}}}; });
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'명단');
+  downloadWB(wb, `${title}_양식.xlsx`);
+}
+
 function exportAll(){
   if(!allRows.length){alert('파일을 업로드하고 취합 시작을 눌러주세요.');return;}
   const btn=document.getElementById('exportAllBtn');
@@ -1378,6 +1430,8 @@ async function applyCentralEmpMaster(force){
 }
 // 페이지 로드 시 중앙 사원명부 자동 적용
 applyCentralEmpMaster();
+// 연간 선물 일정·양식 목록 렌더
+renderGiftEvents();
 
 // ===== 🧾 자동 전표 생성 (적용률 기반 코스트센터 분할) — 전표생성기 엔진 이식 =====
 const RATE_KEY='voucher_rate_master_enc';
