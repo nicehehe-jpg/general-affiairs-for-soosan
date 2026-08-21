@@ -1439,7 +1439,8 @@ async function sendAiMsg(){
   <div class="modal" id="inboxBox" style="width:1120px;max-width:96vw;height:86vh;max-height:94vh;min-width:640px;min-height:420px;display:flex;flex-direction:column;resize:both;overflow:hidden;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <h3 style="margin:0;">📥 받은편지함</h3>
+        <h3 style="margin:0;">📬 메일함</h3>
+        <select id="inboxFolderSel" class="rte-sel" onchange="inboxChangeFolder(this.value)" style="font-size:13px;font-weight:700;padding:5px 8px;"><option value="INBOX">받은 편지함</option></select>
         <span id="inboxUser" style="font-size:12px;color:var(--t3);"></span>
         <button class="nv-btn" onclick="loadInbox()">🔄 새로고침</button>
         <button class="nv-btn" onclick="openDashMailModal()">✉️ 새 메일</button>
@@ -4013,9 +4014,21 @@ async function _senderBase(){
   return null;
 }
 let _curMail = null;
-let _inboxPage = 1, _inboxQ = '', _inboxField = 'both', _inboxPer = 30;
-function openInbox(){ _inboxPage=1; _inboxQ=''; const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); loadInbox(); }
+let _inboxPage = 1, _inboxQ = '', _inboxField = 'both', _inboxPer = 30, _inboxFolder = 'INBOX';
+function openInbox(){ _inboxPage=1; _inboxQ=''; _inboxFolder='INBOX'; const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); loadFolders(); loadInbox(); }
 function closeInbox(){ document.getElementById('inboxModal').classList.remove('show'); }
+async function loadFolders(){
+  const sel=document.getElementById('inboxFolderSel'); if(!sel) return;
+  const base=await _senderBase(); if(!base) return;
+  try{
+    const r=await fetch(base+'/folders',{signal:AbortSignal.timeout(15000)});
+    const d=await r.json();
+    if(d.ok && d.folders && d.folders.length){
+      sel.innerHTML=d.folders.map(f=>`<option value="${_ie(f.raw)}" ${f.raw===_inboxFolder?'selected':''}>${_ie(f.name)}</option>`).join('');
+    }
+  }catch(e){}
+}
+function inboxChangeFolder(raw){ _inboxFolder=raw||'INBOX'; _inboxPage=1; _inboxQ=''; const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>'; loadInbox(); }
 function inboxDoSearch(){ _inboxQ=(document.getElementById('inboxSearch').value||'').trim(); _inboxField=document.getElementById('inboxField').value; _inboxPage=1; loadInbox(); }
 function inboxClearSearch(){ document.getElementById('inboxSearch').value=''; _inboxQ=''; _inboxPage=1; loadInbox(); }
 function inboxGoPage(p){ _inboxPage=p; loadInbox(); document.getElementById('inboxList').scrollTop=0; }
@@ -4025,7 +4038,7 @@ async function loadInbox(){
   const base=await _senderBase();
   if(!base){ list.innerHTML='<div style="padding:22px;color:var(--t2);font-size:13px;line-height:1.7;">🔌 발송기(회사 PC 프로그램)가 꺼져 있습니다.<br><b>메일발송기 실행.bat</b>을 켠 뒤 🔄 새로고침 하세요.<br><br><a href="mailto:" style="color:var(--blue);font-weight:700;">아웃룩으로 열기 →</a></div>'; return; }
   try{
-    const url=base+`/inbox?page=${_inboxPage}&per=${_inboxPer}&q=${encodeURIComponent(_inboxQ)}&field=${encodeURIComponent(_inboxField)}`;
+    const url=base+`/inbox?page=${_inboxPage}&per=${_inboxPer}&q=${encodeURIComponent(_inboxQ)}&field=${encodeURIComponent(_inboxField)}&folder=${encodeURIComponent(_inboxFolder)}`;
     const r=await fetch(url,{signal:AbortSignal.timeout(30000)});
     const d=await r.json();
     if(!d.ok){ list.innerHTML=`<div style="padding:22px;color:var(--red);font-size:13px;line-height:1.7;">받은편지함 오류<br><span style="color:var(--t2);">${_ie(d.error)}</span><br><br><span style="color:var(--t3);font-size:12px;">회사 PC의 <b>메일발송기\\config.json</b>에 이메일 계정·비밀번호(imap_user / imap_pass)를 입력했는지 확인하세요.</span></div>`; return; }
@@ -4061,11 +4074,11 @@ async function openMailItem(uid, el){
   reader.innerHTML='<div style="padding:40px;color:var(--t3);text-align:center;">불러오는 중…</div>';
   const base=await _senderBase(); if(!base){ reader.innerHTML='<div style="padding:20px;color:var(--t3);">발송기 연결이 끊겼습니다.</div>'; return; }
   try{
-    const r=await fetch(base+'/mail?uid='+encodeURIComponent(uid),{signal:AbortSignal.timeout(30000)});
+    const r=await fetch(base+'/mail?uid='+encodeURIComponent(uid)+'&folder='+encodeURIComponent(_inboxFolder),{signal:AbortSignal.timeout(30000)});
     const d=await r.json();
     if(!d.ok){ reader.innerHTML='<div style="color:var(--red);padding:20px;">'+_ie(d.error||'조회 실패')+'</div>'; return; }
-    const m=d.mail; _curMail=m;
-    const atts=(m.attachments||[]).map(a=>`<span style="display:inline-block;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:12px;margin:2px 4px 2px 0;">📎 ${_ie(a.name)} (${fmtBytes(a.size)})</span>`).join('');
+    const m=d.mail; _curMail=m; _curMailUid=uid;
+    const atts=(m.attachments||[]).map(a=>`<span onclick="downloadAttachment('${_ie(uid)}',${a.idx},'${_ie(a.name).replace(/'/g,"\\'")}')" title="다운로드" style="display:inline-block;background:var(--blue-bg);border:1px solid var(--blue);color:var(--blue);border-radius:6px;padding:3px 9px;font-size:12px;margin:2px 4px 2px 0;cursor:pointer;font-weight:600;">📎 ${_ie(a.name)} (${fmtBytes(a.size)}) ⬇</span>`).join('');
     const bodyHtml = m.html
       ? `<iframe sandbox="" style="flex:1;width:100%;min-height:280px;border:1px solid var(--line);border-radius:8px;background:#fff;" srcdoc="${_ie(m.html)}"></iframe>`
       : `<div style="flex:1;overflow:auto;white-space:pre-wrap;font-size:13.5px;line-height:1.8;color:var(--t1);">${_ie(m.text||'(내용 없음)')}</div>`;
@@ -4079,6 +4092,20 @@ async function openMailItem(uid, el){
       </div>
       ${bodyHtml}`;
   }catch(e){ reader.innerHTML='<div style="color:var(--red);padding:20px;">'+_ie(e.message||e)+'</div>'; }
+}
+let _curMailUid = null;
+async function downloadAttachment(uid, idx, name){
+  const base=await _senderBase(); if(!base){ alert('발송기 연결이 끊겼습니다.'); return; }
+  try{
+    const r=await fetch(base+`/attachment?uid=${encodeURIComponent(uid)}&idx=${idx}&folder=${encodeURIComponent(_inboxFolder)}`,{signal:AbortSignal.timeout(60000)});
+    const ct=(r.headers.get('content-type')||'');
+    if(ct.includes('application/json')){ const j=await r.json(); alert('첨부 다운로드 실패: '+(j.error||'알 수 없는 오류')); return; }
+    if(!r.ok){ alert('첨부 다운로드 실패 ('+r.status+')'); return; }
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=name||'attachment'; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1500);
+  }catch(e){ alert('첨부 다운로드 오류: '+(e.message||e)); }
 }
 function _sanitizeHtml(html){
   try{
