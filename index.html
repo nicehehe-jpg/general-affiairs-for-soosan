@@ -1297,6 +1297,7 @@ async function sendAiMsg(){
       <label style="display:flex;justify-content:space-between;align-items:center;">본문
         <span style="display:flex;gap:12px;align-items:center;">
           <button id="dmAiBtn" onclick="dmRefineBody()" style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✨ AI 다듬기</button>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--t2);cursor:pointer;"><input type="checkbox" id="dmSigChk" onchange="dmSigToggle()"> 서명 넣기</label>
           <span style="font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;" onclick="openSignatureModal()">✏️ 서명 관리</span>
         </span>
       </label>
@@ -3429,6 +3430,13 @@ function saveSignatureLS(sig) {
   try { localStorage.setItem(SIG_KEY, JSON.stringify(sig)); } catch (e) {}
   if (typeof sbSet === 'function') { try { sbSet(SIG_KEY, sig); } catch (e) {} }   // 클라우드 동기화(내 PC 공유)
 }
+// 서명 자동 넣기 on/off (기본 꺼짐)
+function sigEnabled() { return localStorage.getItem('gm_sig_enabled') === '1'; }
+function dmSigToggle() {
+  const chk = document.getElementById('dmSigChk');
+  try { localStorage.setItem('gm_sig_enabled', chk && chk.checked ? '1' : '0'); } catch (e) {}
+  updateDmSigNote();
+}
 async function loadSignatureCloud() {
   if (localStorage.getItem(SIG_KEY)) return;   // 로컬 우선
   if (typeof sbGet !== 'function') return;
@@ -3510,6 +3518,7 @@ function saveSignatureModal() {
 }
 function updateDmSigNote() {
   const note = document.getElementById('dmSigImgNote'); if (!note) return;
+  if (!sigEnabled()) { note.style.display = 'none'; return; }
   const sig = getSignature();
   const hasText = (sig.text || '').trim().length > 0;
   if (hasText || sig.imageDataUrl) {
@@ -3757,6 +3766,7 @@ function openDashMailModal() {
   const aiBtn = document.getElementById('dmAiBtn'); if (aiBtn) { aiBtn.textContent = '✨ AI 다듬기'; aiBtn.onclick = dmRefineBody; aiBtn.disabled = false; }
   updateAbStatus();
   renderDmChecklist();
+  const sigChk = document.getElementById('dmSigChk'); if (sigChk) sigChk.checked = sigEnabled();
   updateDmSigNote();
   document.getElementById('dashMailModal').classList.add('show');
   checkMailSender();
@@ -3899,8 +3909,9 @@ function dmSend() {
   const cc = dmCcRecipients.map(r => r.email).join(',');
   const attachments = dmAttachments.map(a => ({ name: a.name, type: a.type, dataUrl: a.dataUrl }));
 
-  // 본문(리치 에디터 HTML) + 서명 자동 추가
-  const sig = getSignature();
+  // 본문(리치 에디터 HTML) + 서명 (서명 넣기 체크 시에만)
+  const useSig = sigEnabled();
+  const sig = useSig ? getSignature() : { text: '', imageDataUrl: '' };
   const escHtml = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const userHtml = dmGetBodyHtml();
   const userText = dmGetBodyText();
