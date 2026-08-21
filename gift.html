@@ -233,7 +233,7 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
       <div class="table-wrap">
         <datalist id="cmpSiteDL"></datalist>
         <datalist id="cmpGiftDL"></datalist>
-        <table><thead><tr><th>#</th><th>상태/점수</th><th>이름(명단)</th><th>사번(명단)</th><th>소속(명단)</th><th>이름(제출)</th><th>사번(제출)</th><th>소속(제출)</th><th>매칭 근거</th><th>수정(이름·사번·소속·선물)</th></tr></thead>
+        <table><thead><tr><th>#</th><th>상태/점수</th><th>이름(명단)</th><th>사번(명단)</th><th>소속(명단)</th><th>이름(제출)</th><th>사번(제출)</th><th>소속(제출)</th><th>선물(제출)</th><th>매칭 근거</th><th>수정(이름·사번·소속·선물)</th></tr></thead>
         <tbody id="compareTableBody"></tbody></table>
       </div>
     </div>
@@ -1036,7 +1036,7 @@ function renderCompare(){
     document.getElementById('compareAlert').innerHTML=
       '<div class="alert alert-warn">⚠️ 비교할 사원명부가 없습니다. 총무관리시스템 <b>설정 → 사원명부</b>에 등록돼 있으면 자동으로 불러옵니다. 없으면 위 \'최종 인원 명단\'에 파일을 올려주세요.</div>';
     document.getElementById('compareTableBody').innerHTML=
-      '<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div>'
+      '<tr><td colspan="11"><div class="empty-state"><div class="icon">🔍</div>'
       +'<div class="title">비교 명단 없음</div>'
       +'<div class="desc">설정에 등록된 사원명부를 자동 사용하거나, 파일을 업로드하세요.</div></div></td></tr>';
     return;
@@ -1065,6 +1065,7 @@ function renderCompare(){
     const sn=c.submitted?c.submitted.name:'-';
     const se=c.submitted?c.submitted.empNo:'-';
     const ssite=c.submitted?(c.submitted._siteName||'-'):'-';
+    const sgift=c.submitted?(c.submitted.gift||'-'):'-';
     const msite=c.master.mappedSite||matchSite(c.master.dept)||'-';
     // 이름 색상: 불일치면 오렌지
     const nameColor=sn!=='-'&&sn!==c.master.name?'var(--warning)':'inherit';
@@ -1081,6 +1082,7 @@ function renderCompare(){
       <td style="color:${nameColor};font-weight:${sn!=='-'&&sn!==c.master.name?'700':'400'}">${sn}</td>
       <td style="font-family:monospace;font-size:12px;color:${empColor}">${se}</td>
       <td style="color:var(--text2);font-size:12px">${ssite}</td>
+      <td style="font-size:12px;font-weight:${sgift!=='-'?'600':'400'};color:${sgift!=='-'?'var(--text)':'var(--text3)'}">${sgift}</td>
       <td style="color:var(--text3);font-size:11px;max-width:180px">${c.reason||''}</td>
       <td>${c.status!=='ok'?`<div class="editable-cell" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
         <input type="text" placeholder="이름" value="${ed.name||(c.submitted?c.submitted.name:c.master.name)||''}" id="en_${c.idx}" style="width:58px">
@@ -1092,7 +1094,7 @@ function renderCompare(){
     </tr>`;
   }).join('');
   if(!filtered.length)tb.innerHTML=
-    '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text3)">검색 결과 없음</td></tr>';
+    '<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3)">검색 결과 없음</td></tr>';
 }
 
 function applyIgnore(idx){
@@ -1255,16 +1257,16 @@ function exportAll(){
 function exportCompare(){
   if(!compareData.length){alert('비교 데이터가 없습니다.');return;}
   const wb=XLSX.utils.book_new();
-  const headers=['#','상태','점수','이름(명단)','사번(명단)','소속(명단)','이름(제출)','사번(제출)','소속(제출)','매칭 근거'];
+  const headers=['#','상태','점수','이름(명단)','사번(명단)','소속(명단)','이름(제출)','사번(제출)','소속(제출)','선물(제출)','매칭 근거'];
   const data=compareData.map((c,i)=>{
     const st=c.ignored?'미반영':c.status==='ok'?'정상':c.status==='missing'?'누락':'확인필요';
     const msite=c.master.mappedSite||matchSite(c.master.dept)||'';
     const ssite=c.submitted?c.submitted._siteName||'':'';
     return [i+1,st,c.score??'',c.master.name,c.master.empNo,msite,
-      c.submitted?.name||'',c.submitted?.empNo||'',ssite,c.reason||''];
+      c.submitted?.name||'',c.submitted?.empNo||'',ssite,c.submitted?.gift||'',c.reason||''];
   });
   const ws=XLSX.utils.aoa_to_sheet([headers,...data]);
-  ws['!cols']=[{wch:4},{wch:8},{wch:5},{wch:9},{wch:10},{wch:18},{wch:9},{wch:10},{wch:18},{wch:30}];
+  ws['!cols']=[{wch:4},{wch:8},{wch:5},{wch:9},{wch:10},{wch:18},{wch:9},{wch:10},{wch:18},{wch:16},{wch:30}];
   applySheetStyle(ws,headers,data);
   XLSX.utils.book_append_sheet(wb,ws,'비교결과');
   downloadWB(wb,'선물지급_명단비교결과.xlsx');
