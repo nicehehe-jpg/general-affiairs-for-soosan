@@ -1239,8 +1239,11 @@ async function sendAiMsg(){
       <input id="dmSubject" placeholder="메일 제목">
     </div>
     <div class="set-field">
-      <label>본문</label>
+      <label style="display:flex;justify-content:space-between;align-items:center;">본문
+        <span style="font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;" onclick="openSignatureModal()">✏️ 서명 관리</span>
+      </label>
       <textarea id="dmBody" rows="8" style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:vertical;line-height:1.7;" placeholder="메일 내용을 입력하세요..."></textarea>
+      <div id="dmSigImgNote" style="font-size:11.5px;color:var(--t3);margin-top:5px;display:none;"></div>
     </div>
     <details style="margin-bottom:14px;">
       <summary style="font-size:12.5px;font-weight:700;color:var(--blue);cursor:pointer;user-select:none;">📋 업무 목록 본문에 추가하기</summary>
@@ -1259,6 +1262,32 @@ async function sendAiMsg(){
     </div>
     <div id="mailResizeHandle" style="position:absolute;bottom:0;right:0;width:18px;height:18px;cursor:nwse-resize;display:flex;align-items:flex-end;justify-content:flex-end;padding:3px;">
       <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 9L9 1M5 9L9 5M9 9" stroke="var(--t3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+</div>
+
+<!-- 메일 서명 관리 모달 -->
+<div class="modal-overlay" id="sigModal" onclick="if(event.target===this)closeSignatureModal()">
+  <div class="modal" style="max-width:560px;width:560px;">
+    <h3 style="margin:0 0 6px;">✏️ 메일 서명 관리</h3>
+    <p style="font-size:12px;color:var(--t3);margin:0 0 16px;">텍스트 서명과 이미지(로고·서명)를 저장해 두면 메일 작성 시 자동으로 들어갑니다.</p>
+    <div class="set-field">
+      <label>서명 텍스트</label>
+      <textarea id="sigText" rows="8" style="width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:vertical;line-height:1.7;"></textarea>
+    </div>
+    <div class="set-field">
+      <label>서명 이미지 (로고·서명 · 선택)</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="set-btn line" onclick="document.getElementById('sigImgInput').click()">🖼️ 이미지 선택</button>
+        <input type="file" id="sigImgInput" accept="image/png,image/jpeg,image/gif" style="display:none;" onchange="sigPickImage(this)">
+        <button class="set-btn line" id="sigImgRemoveBtn" onclick="sigRemoveImage()" style="display:none;color:var(--red);">이미지 삭제</button>
+        <span style="font-size:11.5px;color:var(--t3);">PNG·JPG (가로 최대 600px로 자동 축소)</span>
+      </div>
+      <div id="sigImgPreview" style="margin-top:10px;"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="set-btn line" onclick="closeSignatureModal()">취소</button>
+      <button class="set-btn" onclick="saveSignatureModal()">저장</button>
     </div>
   </div>
 </div>
@@ -3216,6 +3245,85 @@ E-mail  nicehehe@soosan.co.kr
 Address  울산광역시 북구 매곡산업로 21 (자동차조선기술관 3층)
 Homepage  www.soosanens.co.kr`;
 
+/* ===== 메일 서명 관리 (텍스트 + 이미지) ===== */
+const SIG_KEY = 'gm_mail_signature';
+let _sigDraft = { imageDataUrl: '', imageName: '' };
+function getSignature() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SIG_KEY) || 'null');
+    if (s && typeof s === 'object') return { text: (s.text != null ? s.text : DM_SIGNATURE), imageDataUrl: s.imageDataUrl || '', imageName: s.imageName || '' };
+  } catch (e) {}
+  return { text: DM_SIGNATURE, imageDataUrl: '', imageName: '' };
+}
+function saveSignatureLS(sig) {
+  try { localStorage.setItem(SIG_KEY, JSON.stringify(sig)); } catch (e) {}
+  if (typeof sbSet === 'function') { try { sbSet(SIG_KEY, sig); } catch (e) {} }   // 클라우드 동기화(내 PC 공유)
+}
+async function loadSignatureCloud() {
+  if (localStorage.getItem(SIG_KEY)) return;   // 로컬 우선
+  if (typeof sbGet !== 'function') return;
+  try { const c = await sbGet(SIG_KEY); if (c && typeof c === 'object' && (c.text != null || c.imageDataUrl)) localStorage.setItem(SIG_KEY, JSON.stringify(c)); } catch (e) {}
+}
+function openSignatureModal() {
+  const sig = getSignature();
+  document.getElementById('sigText').value = sig.text;
+  _sigDraft = { imageDataUrl: sig.imageDataUrl || '', imageName: sig.imageName || '' };
+  renderSigPreview();
+  document.getElementById('sigModal').classList.add('show');
+}
+function closeSignatureModal() { document.getElementById('sigModal').classList.remove('show'); }
+function renderSigPreview() {
+  const box = document.getElementById('sigImgPreview');
+  const rm = document.getElementById('sigImgRemoveBtn');
+  if (_sigDraft.imageDataUrl) {
+    box.innerHTML = `<img src="${_sigDraft.imageDataUrl}" style="max-width:100%;max-height:160px;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;">`;
+    rm.style.display = '';
+  } else {
+    box.innerHTML = '<span style="font-size:12px;color:var(--t3);">등록된 이미지 없음</span>';
+    rm.style.display = 'none';
+  }
+}
+function sigPickImage(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 600;
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      let out = canvas.toDataURL('image/png');
+      if (out.length > 400 * 1024) out = canvas.toDataURL('image/jpeg', 0.85);   // 큰 사진이면 JPEG로 용량↓
+      _sigDraft.imageDataUrl = out;
+      _sigDraft.imageName = (f.name || 'signature').replace(/\.[^.]+$/, '') + (out.startsWith('data:image/png') ? '.png' : '.jpg');
+      renderSigPreview();
+    };
+    img.onerror = () => alert('이미지를 불러오지 못했습니다.');
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+function sigRemoveImage() { _sigDraft = { imageDataUrl: '', imageName: '' }; renderSigPreview(); }
+function saveSignatureModal() {
+  const sig = { text: document.getElementById('sigText').value, imageDataUrl: _sigDraft.imageDataUrl || '', imageName: _sigDraft.imageName || '' };
+  saveSignatureLS(sig);
+  closeSignatureModal();
+  if (document.getElementById('dashMailModal').classList.contains('show')) updateDmSigNote();
+  alert('서명을 저장했습니다.');
+}
+function updateDmSigNote() {
+  const note = document.getElementById('dmSigImgNote'); if (!note) return;
+  const sig = getSignature();
+  if (sig.imageDataUrl) { note.style.display = ''; note.textContent = '🖼️ 서명 이미지가 발송 시 자동으로 포함됩니다.'; }
+  else note.style.display = 'none';
+}
+loadSignatureCloud();
+
 function heroSearch() {
   const q = document.getElementById('heroSearchInput').value.trim();
   if (!q) return;
@@ -3237,10 +3345,11 @@ function openDashMailModal() {
   renderRecipientTags();
   document.getElementById('dmTo').value = '';
   document.getElementById('dmSubject').value = '';
-  document.getElementById('dmBody').value = DM_SIGNATURE;
+  document.getElementById('dmBody').value = getSignature().text;
   document.getElementById('acDropdown').classList.remove('show');
   updateAbStatus();
   renderDmChecklist();
+  updateDmSigNote();
   document.getElementById('dashMailModal').classList.add('show');
   checkMailSender();
   setTimeout(() => document.getElementById('dmTo').focus(), 100);
@@ -3382,7 +3491,19 @@ function dmSend() {
   const subject = document.getElementById('dmSubject').value.trim() || '(제목 없음)';
   const body = document.getElementById('dmBody').value;
 
-  // 사내 발송기가 켜져 있으면 바로 발송, 아니면 아웃룩으로 열기
+  // 서명 이미지가 있으면 HTML 본문 + CID 이미지로 전송(수신자 메일에 인라인 표시)
+  const sig = getSignature();
+  const escHtml = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let html = null, images = null;
+  if (sig.imageDataUrl) {
+    html = "<div style=\"font-family:'맑은 고딕',Malgun Gothic,sans-serif;white-space:pre-wrap;font-size:14px;color:#191F28;\">"
+      + escHtml(body).replace(/\n/g, '<br>')
+      + '<br><br><img src="cid:sigimg" alt="signature" style="max-width:100%;">'
+      + '</div>';
+    images = [{ cid: 'sigimg', dataUrl: sig.imageDataUrl, name: sig.imageName || 'signature.png' }];
+  }
+
+  // 사내 발송기가 켜져 있으면 바로 발송, 아니면 아웃룩으로 열기(이미지는 발송기에서만 지원)
   const openOutlook = () => {
     window.location.href = `mailto:${encodeURIComponent(toList.join(';'))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     closeDashMailModal();
@@ -3400,7 +3521,7 @@ function dmSend() {
     try {
       const r = await fetch(base + '/send', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: toList.join(','), subject, body })
+        body: JSON.stringify({ to: toList.join(','), subject, body, html, images })
       });
       const data = await r.json();
       if (data && data.ok) { alert('✅ 메일이 발송되었습니다.'); closeDashMailModal(); }
