@@ -1450,7 +1450,20 @@ async function sendAiMsg(){
       </div>
     </div>
     <div style="display:flex;gap:12px;flex:1;min-height:0;">
-      <div id="inboxList" style="width:370px;flex-shrink:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);"></div>
+      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;gap:8px;">
+        <div style="display:flex;gap:6px;">
+          <select id="inboxField" class="rte-sel" style="flex-shrink:0;">
+            <option value="both">제목+보낸사람</option>
+            <option value="subject">제목</option>
+            <option value="from">보낸사람</option>
+          </select>
+          <input id="inboxSearch" placeholder="검색어 입력…" autocomplete="off" onkeydown="if(event.key==='Enter')inboxDoSearch()" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--bg);color:var(--t1);outline:none;">
+          <button class="nv-btn" onclick="inboxDoSearch()" style="flex-shrink:0;">🔍</button>
+          <button class="nv-btn" onclick="inboxClearSearch()" title="검색 해제" style="flex-shrink:0;">✕</button>
+        </div>
+        <div id="inboxList" style="flex:1;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);"></div>
+        <div id="inboxPager" style="flex-shrink:0;"></div>
+      </div>
       <div id="inboxReader" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
         <div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>
       </div>
@@ -4000,19 +4013,24 @@ async function _senderBase(){
   return null;
 }
 let _curMail = null;
-function openInbox(){ document.getElementById('inboxModal').classList.add('show'); loadInbox(); }
+let _inboxPage = 1, _inboxQ = '', _inboxField = 'both', _inboxPer = 30;
+function openInbox(){ _inboxPage=1; _inboxQ=''; const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); loadInbox(); }
 function closeInbox(){ document.getElementById('inboxModal').classList.remove('show'); }
+function inboxDoSearch(){ _inboxQ=(document.getElementById('inboxSearch').value||'').trim(); _inboxField=document.getElementById('inboxField').value; _inboxPage=1; loadInbox(); }
+function inboxClearSearch(){ document.getElementById('inboxSearch').value=''; _inboxQ=''; _inboxPage=1; loadInbox(); }
+function inboxGoPage(p){ _inboxPage=p; loadInbox(); document.getElementById('inboxList').scrollTop=0; }
 async function loadInbox(){
-  const list=document.getElementById('inboxList');
-  list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">불러오는 중…</div>';
+  const list=document.getElementById('inboxList'), pager=document.getElementById('inboxPager');
+  list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">불러오는 중…</div>'; pager.innerHTML='';
   const base=await _senderBase();
   if(!base){ list.innerHTML='<div style="padding:22px;color:var(--t2);font-size:13px;line-height:1.7;">🔌 발송기(회사 PC 프로그램)가 꺼져 있습니다.<br><b>메일발송기 실행.bat</b>을 켠 뒤 🔄 새로고침 하세요.<br><br><a href="mailto:" style="color:var(--blue);font-weight:700;">아웃룩으로 열기 →</a></div>'; return; }
   try{
-    const r=await fetch(base+'/inbox?limit=40',{signal:AbortSignal.timeout(25000)});
+    const url=base+`/inbox?page=${_inboxPage}&per=${_inboxPer}&q=${encodeURIComponent(_inboxQ)}&field=${encodeURIComponent(_inboxField)}`;
+    const r=await fetch(url,{signal:AbortSignal.timeout(30000)});
     const d=await r.json();
     if(!d.ok){ list.innerHTML=`<div style="padding:22px;color:var(--red);font-size:13px;line-height:1.7;">받은편지함 오류<br><span style="color:var(--t2);">${_ie(d.error)}</span><br><br><span style="color:var(--t3);font-size:12px;">회사 PC의 <b>메일발송기\\config.json</b>에 이메일 계정·비밀번호(imap_user / imap_pass)를 입력했는지 확인하세요.</span></div>`; return; }
     document.getElementById('inboxUser').textContent = d.user||'';
-    if(!(d.items&&d.items.length)){ list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">받은 메일이 없습니다.</div>'; return; }
+    if(!(d.items&&d.items.length)){ list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">'+(_inboxQ?'검색 결과가 없습니다.':'받은 메일이 없습니다.')+'</div>'; renderInboxPager(d); return; }
     list.innerHTML=d.items.map(m=>`<div class="inbox-item" data-uid="${_ie(m.uid)}" onclick="openMailItem('${_ie(m.uid)}',this)" style="padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;${m.seen?'':'background:var(--blue-bg);'}">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
         <span class="ib-from" style="font-weight:${m.seen?'500':'800'};font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.seen?'':'<span style=\'color:var(--blue)\'>●</span> '}${_ie(_mailFromName(m.from))}</span>
@@ -4020,7 +4038,22 @@ async function loadInbox(){
       </div>
       <div style="font-size:12.5px;color:var(--t2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${m.seen?'400':'700'};">${_ie(m.subject)}</div>
     </div>`).join('');
+    renderInboxPager(d);
   }catch(e){ list.innerHTML='<div style="padding:22px;color:var(--red);">받은편지함을 불러오지 못했습니다.<br>'+_ie(e.message||e)+'</div>'; }
+}
+function renderInboxPager(d){
+  const pager=document.getElementById('inboxPager'); if(!pager) return;
+  const per=d.per||_inboxPer, total=d.total||0, p=d.page||1;
+  const totalPages=Math.max(1, Math.ceil(total/per));
+  const mk=(n,label,dis,cur)=>`<button ${dis?'disabled':''} onclick="inboxGoPage(${n})" style="min-width:26px;padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:${cur?'var(--blue)':'var(--bg)'};color:${cur?'#fff':'var(--t2)'};cursor:${dis?'default':'pointer'};font-size:12px;font-weight:${cur?'700':'400'};${dis?'opacity:.4;':''}">${label}</button>`;
+  let btns=mk(Math.max(1,p-1),'‹',p<=1,false);
+  const win=2; let s=Math.max(1,p-win), e=Math.min(totalPages,p+win);
+  if(s>1){ btns+=mk(1,'1',false,p===1); if(s>2) btns+='<span style="color:var(--t3);padding:0 2px;">…</span>'; }
+  for(let i=s;i<=e;i++) btns+=mk(i,String(i),false,i===p);
+  if(e<totalPages){ if(e<totalPages-1) btns+='<span style="color:var(--t3);padding:0 2px;">…</span>'; btns+=mk(totalPages,String(totalPages),false,p===totalPages); }
+  btns+=mk(Math.min(totalPages,p+1),'›',p>=totalPages,false);
+  pager.innerHTML=`<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:center;">${btns}</div>`
+    +`<div style="text-align:center;font-size:11px;color:var(--t3);margin-top:4px;">${(total).toLocaleString()}건${_inboxQ?' 검색':''} · ${p}/${totalPages}페이지</div>`;
 }
 async function openMailItem(uid, el){
   if(el){ el.style.background=''; const f=el.querySelector('.ib-from'); if(f) f.innerHTML=f.innerHTML.replace(/^<span[^>]*>●<\/span>\s*/,''); }
