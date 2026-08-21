@@ -1284,6 +1284,13 @@ async function sendAiMsg(){
         <span style="font-size:11.5px;color:var(--t3);">PNG·JPG (가로 최대 600px로 자동 축소)</span>
       </div>
       <div id="sigImgPreview" style="margin-top:10px;"></div>
+      <div id="sigWidthField" style="display:none;margin-top:10px;">
+        <label style="font-size:12.5px;color:var(--t2);font-weight:600;">이메일 표시 폭</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <input type="number" id="sigWidth" min="80" max="600" step="10" oninput="sigWidthChanged()" style="width:110px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;color:var(--t1);background:var(--bg);">
+          <span style="font-size:12px;color:var(--t3);">px · 숫자를 줄이면 작아집니다 (기본 = 원본의 2/3)</span>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="set-btn line" onclick="closeSignatureModal()">취소</button>
@@ -3247,13 +3254,23 @@ Homepage  www.soosanens.co.kr`;
 
 /* ===== 메일 서명 관리 (텍스트 + 이미지) ===== */
 const SIG_KEY = 'gm_mail_signature';
-let _sigDraft = { imageDataUrl: '', imageName: '' };
+let _sigDraft = { imageDataUrl: '', imageName: '', imageWidth: 0, displayWidth: 0 };
 function getSignature() {
   try {
     const s = JSON.parse(localStorage.getItem(SIG_KEY) || 'null');
-    if (s && typeof s === 'object') return { text: (s.text != null ? s.text : DM_SIGNATURE), imageDataUrl: s.imageDataUrl || '', imageName: s.imageName || '' };
+    if (s && typeof s === 'object') return {
+      text: (s.text != null ? s.text : DM_SIGNATURE),
+      imageDataUrl: s.imageDataUrl || '', imageName: s.imageName || '',
+      imageWidth: s.imageWidth || 0, displayWidth: s.displayWidth || 0
+    };
   } catch (e) {}
-  return { text: DM_SIGNATURE, imageDataUrl: '', imageName: '' };
+  return { text: DM_SIGNATURE, imageDataUrl: '', imageName: '', imageWidth: 0, displayWidth: 0 };
+}
+// 이메일에 넣을 서명 이미지 표시 폭(px) — 저장값 우선, 없으면 원본의 2/3, 그것도 없으면 400
+function sigDisplayWidth(sig) {
+  if (sig.displayWidth) return sig.displayWidth;
+  if (sig.imageWidth) return Math.round(sig.imageWidth * 2 / 3);
+  return 400;
 }
 function saveSignatureLS(sig) {
   try { localStorage.setItem(SIG_KEY, JSON.stringify(sig)); } catch (e) {}
@@ -3267,7 +3284,7 @@ async function loadSignatureCloud() {
 function openSignatureModal() {
   const sig = getSignature();
   document.getElementById('sigText').value = sig.text;
-  _sigDraft = { imageDataUrl: sig.imageDataUrl || '', imageName: sig.imageName || '' };
+  _sigDraft = { imageDataUrl: sig.imageDataUrl || '', imageName: sig.imageName || '', imageWidth: sig.imageWidth || 0, displayWidth: sig.displayWidth || (sig.imageDataUrl ? sigDisplayWidth(sig) : 0) };
   renderSigPreview();
   document.getElementById('sigModal').classList.add('show');
 }
@@ -3275,13 +3292,29 @@ function closeSignatureModal() { document.getElementById('sigModal').classList.r
 function renderSigPreview() {
   const box = document.getElementById('sigImgPreview');
   const rm = document.getElementById('sigImgRemoveBtn');
+  const wField = document.getElementById('sigWidthField');
+  const wInput = document.getElementById('sigWidth');
   if (_sigDraft.imageDataUrl) {
-    box.innerHTML = `<img src="${_sigDraft.imageDataUrl}" style="max-width:100%;max-height:160px;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;">`;
+    const w = _sigDraft.displayWidth || 400;
+    box.innerHTML = `<img src="${_sigDraft.imageDataUrl}" style="width:${w}px;max-width:100%;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;">`;
     rm.style.display = '';
+    if (wField) wField.style.display = '';
+    if (wInput) wInput.value = w;
   } else {
     box.innerHTML = '<span style="font-size:12px;color:var(--t3);">등록된 이미지 없음</span>';
     rm.style.display = 'none';
+    if (wField) wField.style.display = 'none';
   }
+}
+// 표시 폭 입력 변경 → 미리보기 즉시 반영
+function sigWidthChanged() {
+  const wInput = document.getElementById('sigWidth');
+  let w = parseInt(wInput.value, 10);
+  if (isNaN(w) || w < 40) w = 40;
+  if (w > 800) w = 800;
+  _sigDraft.displayWidth = w;
+  const img = document.querySelector('#sigImgPreview img');
+  if (img) img.style.width = w + 'px';
 }
 function sigPickImage(input) {
   const f = input.files && input.files[0];
@@ -3301,6 +3334,8 @@ function sigPickImage(input) {
       if (out.length > 400 * 1024) out = canvas.toDataURL('image/jpeg', 0.85);   // 큰 사진이면 JPEG로 용량↓
       _sigDraft.imageDataUrl = out;
       _sigDraft.imageName = (f.name || 'signature').replace(/\.[^.]+$/, '') + (out.startsWith('data:image/png') ? '.png' : '.jpg');
+      _sigDraft.imageWidth = w;
+      _sigDraft.displayWidth = Math.round(w * 2 / 3);   // 기본 표시 폭 = 원본의 2/3
       renderSigPreview();
     };
     img.onerror = () => alert('이미지를 불러오지 못했습니다.');
@@ -3308,9 +3343,13 @@ function sigPickImage(input) {
   };
   reader.readAsDataURL(f);
 }
-function sigRemoveImage() { _sigDraft = { imageDataUrl: '', imageName: '' }; renderSigPreview(); }
+function sigRemoveImage() { _sigDraft = { imageDataUrl: '', imageName: '', imageWidth: 0, displayWidth: 0 }; renderSigPreview(); }
 function saveSignatureModal() {
-  const sig = { text: document.getElementById('sigText').value, imageDataUrl: _sigDraft.imageDataUrl || '', imageName: _sigDraft.imageName || '' };
+  const sig = {
+    text: document.getElementById('sigText').value,
+    imageDataUrl: _sigDraft.imageDataUrl || '', imageName: _sigDraft.imageName || '',
+    imageWidth: _sigDraft.imageWidth || 0, displayWidth: _sigDraft.displayWidth || 0
+  };
   saveSignatureLS(sig);
   closeSignatureModal();
   if (document.getElementById('dashMailModal').classList.contains('show')) updateDmSigNote();
@@ -3496,9 +3535,10 @@ function dmSend() {
   const escHtml = s => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   let html = null, images = null;
   if (sig.imageDataUrl) {
+    const w = sigDisplayWidth(sig);   // 표시 폭(px) — 기본 원본의 2/3
     html = "<div style=\"font-family:'맑은 고딕',Malgun Gothic,sans-serif;white-space:pre-wrap;font-size:14px;color:#191F28;\">"
       + escHtml(body).replace(/\n/g, '<br>')
-      + '<br><br><img src="cid:sigimg" alt="signature" style="max-width:100%;">'
+      + `<br><br><img src="cid:sigimg" alt="signature" width="${w}" style="width:${w}px;max-width:100%;">`
       + '</div>';
     images = [{ cid: 'sigimg', dataUrl: sig.imageDataUrl, name: sig.imageName || 'signature.png' }];
   }
