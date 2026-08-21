@@ -1650,6 +1650,14 @@ let TASKS = loadTasks();
 let activeCat = 'all';
 let activeFilter = 'all';
 let purchaseSort = 'contract';   // 구매업무 정렬: 'contract'(최근 계약순) | 'due'(계약종료일순)
+let pcCollapsed = new Set();      // 접힌 구매업무 그룹(월) 키
+let pcGroupKeys = [];             // 현재 렌더된 구매 그룹 키 목록(전체 접기/펼치기용)
+function toggleAllPcGroups(){
+  const allCollapsed = pcGroupKeys.length>0 && pcGroupKeys.every(k=>pcCollapsed.has(k));
+  if(allCollapsed) pcCollapsed.clear();
+  else pcGroupKeys.forEach(k=>pcCollapsed.add(k));
+  renderTaskList();
+}
 let openMenuId = null;
 
 function renderAll(){
@@ -1948,13 +1956,16 @@ function renderProgressAndFilters(catItems){
   if(activeCat==='purchase'){
     const sortWrap = document.createElement('div');
     sortWrap.style.cssText = 'margin-left:auto;display:flex;align-items:center;gap:6px;';
-    sortWrap.innerHTML = `<span style="font-size:12px;color:var(--t3);">정렬</span>
+    const allCollapsed = pcGroupKeys.length>0 && pcGroupKeys.every(k=>pcCollapsed.has(k));
+    sortWrap.innerHTML = `<button id="pcToggleAll" style="font-size:12px;font-weight:700;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--t2);cursor:pointer;font-family:inherit;">${allCollapsed?'전체 펼치기 ▾':'전체 접기 ▸'}</button>
+      <span style="font-size:12px;color:var(--t3);">정렬</span>
       <select id="pcSortSel" style="font-size:12.5px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--t1);cursor:pointer;font-family:inherit;">
         <option value="contract" ${purchaseSort==='contract'?'selected':''}>최근 계약순</option>
         <option value="due" ${purchaseSort==='due'?'selected':''}>계약종료일순</option>
       </select>`;
     filterWrap.appendChild(sortWrap);
     sortWrap.querySelector('#pcSortSel').addEventListener('change', (e)=>{ purchaseSort = e.target.value; renderTaskList(); });
+    sortWrap.querySelector('#pcToggleAll').addEventListener('click', toggleAllPcGroups);
   }
 }
 
@@ -2095,19 +2106,37 @@ function renderTaskList(){
       if(!a.ym) return 1; if(!b.ym) return -1;
       return byContract ? b.ym.localeCompare(a.ym) : a.ym.localeCompare(b.ym);
     });
+    pcGroupKeys = groups.map(g=>g.key);          // 전체 접기/펼치기용
 
     wrap.innerHTML = '';
     groups.forEach(g=>{
+      const collapsed = pcCollapsed.has(g.key);
       const head = document.createElement('div');
       head.className = 'day-group-head';
-      head.style.cssText = 'display:flex; align-items:center; gap:8px; margin:18px 0 8px; padding-left:2px;';
+      head.style.cssText = 'display:flex; align-items:center; gap:8px; margin:18px 0 8px; padding-left:2px; cursor:pointer; user-select:none;';
       const doneCnt = g.list.filter(t=>effStatus(t)==='done').length;
       const label = g.ym ? fmtYMLabel(g.ym) : '기한 미지정';
       const prefix = byContract ? '계약' : '종료';
-      head.innerHTML = `<span style="font-size:13.5px; font-weight:700; color:var(--t1);">📅 ${prefix} ${label}</span>
-        <span style="font-size:12px; color:var(--t3);">${doneCnt}/${g.list.length}건 완료</span>`;
+      head.innerHTML = `<span class="pc-chev" style="font-size:11px; color:var(--t3); width:12px; transition:transform .15s; transform:rotate(${collapsed?'-90':'0'}deg);">▼</span>
+        <span style="font-size:13.5px; font-weight:700; color:var(--t1);">📅 ${prefix} ${label}</span>
+        <span style="font-size:12px; color:var(--t3);">${doneCnt}/${g.list.length}건 완료</span>
+        <span class="pc-toggle-txt" style="margin-left:auto; font-size:12px; font-weight:700; color:var(--blue);">${collapsed?'열기 ▸':'닫기 ▾'}</span>`;
+      const body = document.createElement('div');
+      body.className = 'pc-group-body';
+      if(collapsed) body.style.display = 'none';
+      g.list.forEach(t=> body.appendChild(taskRowHTML(t)));
+      head.addEventListener('click', (e)=>{
+        // 행 내부 클릭이 아닌 헤더 클릭만
+        const nowCollapsed = !pcCollapsed.has(g.key);
+        if(nowCollapsed) pcCollapsed.add(g.key); else pcCollapsed.delete(g.key);
+        body.style.display = nowCollapsed ? 'none' : '';
+        const chev = head.querySelector('.pc-chev');
+        const txt = head.querySelector('.pc-toggle-txt');
+        if(chev) chev.style.transform = `rotate(${nowCollapsed?'-90':'0'}deg)`;
+        if(txt) txt.textContent = nowCollapsed ? '열기 ▸' : '닫기 ▾';
+      });
       wrap.appendChild(head);
-      g.list.forEach(t=> wrap.appendChild(taskRowHTML(t)));
+      wrap.appendChild(body);
     });
     return;
   }
