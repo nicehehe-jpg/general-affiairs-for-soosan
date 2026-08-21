@@ -1120,9 +1120,9 @@ function renderCompare(){
       <td style="color:var(--text3);font-size:11px;max-width:180px">${c.reason||''}</td>
       <td>${c.confirmed?`<button class="btn btn-sm" onclick="unconfirmEdit(${c.idx})" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border)" title="확정을 취소하고 다시 점수로 판정">↩︎ 확정취소</button>`
         :c.status!=='ok'?`<div class="editable-cell" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-        <input type="text" placeholder="이름" value="${ed.name||(c.submitted?c.submitted.name:c.master.name)||''}" id="en_${c.idx}" style="width:58px">
-        <input type="text" placeholder="사번" value="${ed.empNo||(c.submitted?c.submitted.empNo:c.master.empNo)||''}" id="ee_${c.idx}" style="width:66px">
-        <input type="text" list="cmpSiteDL" placeholder="소속" value="${ed.site||(c.submitted?(c.submitted._siteName||c.submitted.dept||''):msite)||''}" id="es_${c.idx}" style="width:96px">
+        <input type="text" placeholder="이름" value="${ed.name||c.master.name||(c.submitted?c.submitted.name:'')||''}" id="en_${c.idx}" style="width:58px">
+        <input type="text" placeholder="사번" value="${ed.empNo||c.master.empNo||(c.submitted?c.submitted.empNo:'')||''}" id="ee_${c.idx}" style="width:66px">
+        <input type="text" list="cmpSiteDL" placeholder="소속" value="${ed.site||(msite&&msite!=='-'?msite:(c.submitted?(c.submitted._siteName||c.submitted.dept||''):''))||''}" id="es_${c.idx}" style="width:96px">
         <input type="text" list="cmpGiftDL" placeholder="선물" value="${ed.gift||(c.submitted?(c.submitted.gift||''):'')||''}" id="eg_${c.idx}" style="width:84px">
         <button class="btn btn-primary btn-sm" onclick="applyEdit(${c.idx})" title="정보 저장 후 정상으로 확정">${c.status==='missing'?'＋추가':'💾 저장·확정'}</button>
       </div>`:''}</td>
