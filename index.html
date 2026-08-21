@@ -1443,7 +1443,10 @@ async function sendAiMsg(){
         <button class="nv-btn" onclick="loadInbox()">🔄 새로고침</button>
         <button class="nv-btn" onclick="openDashMailModal()">✉️ 새 메일</button>
       </div>
-      <button onclick="closeInbox()" title="닫기" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--t2);font-size:14px;cursor:pointer;">✕</button>
+      <div style="display:flex;gap:6px;">
+        <button id="inboxMaxBtn" onclick="toggleInboxMaximize()" title="최대화" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--t2);font-size:12px;cursor:pointer;">⛶</button>
+        <button onclick="closeInbox()" title="닫기" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--t2);font-size:14px;cursor:pointer;">✕</button>
+      </div>
     </div>
     <div style="display:flex;gap:12px;flex:1;min-height:0;">
       <div id="inboxList" style="width:370px;flex-shrink:0;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);"></div>
@@ -4033,14 +4036,50 @@ async function openMailItem(uid, el){
       ${bodyHtml}`;
   }catch(e){ reader.innerHTML='<div style="color:var(--red);padding:20px;">'+_ie(e.message||e)+'</div>'; }
 }
+function _sanitizeHtml(html){
+  try{
+    const doc=new DOMParser().parseFromString(html||'','text/html');
+    doc.querySelectorAll('script,style,link,meta,iframe,object,embed,base').forEach(el=>el.remove());
+    doc.querySelectorAll('*').forEach(el=>{ [...el.attributes].forEach(a=>{ if(/^on/i.test(a.name)) el.removeAttribute(a.name); }); });
+    return doc.body ? doc.body.innerHTML : (html||'');
+  }catch(e){ return _ie(html||''); }
+}
 function inboxReply(){
   if(!_curMail) return;
-  const addr=_mailEmail(_curMail.from); const nm=_mailFromName(_curMail.from);
-  const subj='Re: '+(_curMail.subject||'').replace(/^\s*(Re|RE|re):\s*/,'');
+  const m=_curMail;
+  const addr=_mailEmail(m.from); const nm=_mailFromName(m.from);
+  const subj='Re: '+(m.subject||'').replace(/^\s*(Re|RE|re):\s*/,'');
   closeInbox();
   openDashMailModal();
   if(addr) addRecipient(nm||addr, addr, 'to');
   document.getElementById('dmSubject').value=subj;
+  // 원본 메일 인용 (사라지지 않도록)
+  const origBody = m.html ? _sanitizeHtml(m.html) : ('<div style="white-space:pre-wrap;">'+_ie(m.text||'')+'</div>');
+  const quote =
+    '<br><br>'
+    + '<div style="color:#888;border-top:1px solid #ddd;padding-top:8px;font-size:12px;line-height:1.6;">'
+    +   '보낸사람: '+_ie(m.from)+'<br>날짜: '+_ie(m.date)+'<br>제목: '+_ie(m.subject)
+    + '</div>'
+    + '<blockquote style="border-left:3px solid #ddd;margin:8px 0 0;padding:4px 0 4px 12px;color:#555;">'+origBody+'</blockquote>';
+  dmSetBodyHtml(quote);
+  // 커서를 맨 위(답장 작성 위치)로
+  const ed=dmBodyEl(); if(ed){ ed.focus(); try{ const r=document.createRange(); r.setStart(ed,0); r.collapse(true); const s=window.getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){} }
+}
+let _inboxMax=false, _inboxPrev={};
+function toggleInboxMaximize(){
+  const box=document.getElementById('inboxBox'); const ov=document.getElementById('inboxModal'); const btn=document.getElementById('inboxMaxBtn');
+  if(!_inboxMax){
+    _inboxPrev={w:box.style.width,h:box.style.height,mw:box.style.maxWidth,mh:box.style.maxHeight};
+    box.style.width='100vw'; box.style.height='100vh'; box.style.maxWidth='100vw'; box.style.maxHeight='100vh'; box.style.borderRadius='0'; box.style.resize='none';
+    ov.style.alignItems='stretch'; ov.style.justifyContent='stretch'; ov.style.padding='0';
+    if(btn){ btn.textContent='❐'; btn.title='이전 크기로'; }
+    _inboxMax=true;
+  } else {
+    box.style.width=_inboxPrev.w||'1120px'; box.style.height=_inboxPrev.h||'86vh'; box.style.maxWidth=_inboxPrev.mw||'96vw'; box.style.maxHeight=_inboxPrev.mh||'94vh'; box.style.borderRadius=''; box.style.resize='both';
+    ov.style.alignItems=''; ov.style.justifyContent=''; ov.style.padding='';
+    if(btn){ btn.textContent='⛶'; btn.title='최대화'; }
+    _inboxMax=false;
+  }
 }
 
 /* ===== 할 일 현황 위젯 ===== */
