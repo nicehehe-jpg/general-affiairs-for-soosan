@@ -1214,7 +1214,7 @@ async function sendAiMsg(){
     <div id="mailTitleBar" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;cursor:default;user-select:none;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <h3 style="margin:0;">✉️ 메일 보내기</h3>
-        <button id="dmSendBtn" onclick="dmSend()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">📨 보내기</button>
+        <button id="dmSendBtn" onclick="dmSend()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;">📨 메일 보내기</button>
         <span id="dmSenderStatus" style="font-size:11.5px;color:var(--t3);"></span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -1245,7 +1245,7 @@ async function sendAiMsg(){
           <div class="recipient-tags" id="recipientTags" style="display:none;"></div>
           <div class="ac-wrap" style="position:relative;">
             <input id="dmTo" class="nv-in" placeholder="이름 또는 이메일 검색..." autocomplete="off"
-              oninput="acSearch(this.value)" onkeydown="acKeydown(event)">
+              oninput="acSearch(this.value,'to')" onkeydown="acKeydown(event,'to')">
             <div class="ac-dropdown" id="acDropdown"></div>
           </div>
         </div>
@@ -1254,7 +1254,12 @@ async function sendAiMsg(){
       <div class="nv-row">
         <div class="nv-lbl" style="cursor:pointer;" onclick="toggleCc()">참조 <span id="ccToggleIcon" style="font-size:10px;color:var(--t3);">▾</span></div>
         <div class="nv-cell" id="ccWrap" style="display:none;">
-          <input id="dmCc" class="nv-in" placeholder="참조 이메일 (쉼표로 구분)" autocomplete="off">
+          <div class="recipient-tags" id="ccTags" style="display:none;"></div>
+          <div class="ac-wrap" style="position:relative;">
+            <input id="dmCc" class="nv-in" placeholder="이름 또는 이메일 검색..." autocomplete="off"
+              oninput="acSearch(this.value,'cc')" onkeydown="acKeydown(event,'cc')">
+            <div class="ac-dropdown" id="ccDropdown"></div>
+          </div>
         </div>
       </div>
       <!-- 제목 -->
@@ -1277,7 +1282,10 @@ async function sendAiMsg(){
     </div>
     <div class="set-field" style="margin-top:12px;flex:1;display:flex;flex-direction:column;min-height:0;">
       <label style="display:flex;justify-content:space-between;align-items:center;">본문
-        <span style="font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;" onclick="openSignatureModal()">✏️ 서명 관리</span>
+        <span style="display:flex;gap:12px;align-items:center;">
+          <button id="dmAiBtn" onclick="dmRefineBody()" style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">✨ AI 다듬기</button>
+          <span style="font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;" onclick="openSignatureModal()">✏️ 서명 관리</span>
+        </span>
       </label>
       <textarea id="dmBody" style="flex:1;width:100%;min-height:220px;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;font-size:13.5px;font-family:inherit;color:var(--t1);background:var(--bg);outline:none;resize:none;line-height:1.7;" placeholder="메일 내용을 입력하세요..."></textarea>
       <div id="dmSigImgNote" style="font-size:11.5px;color:var(--t3);margin-top:5px;display:none;"></div>
@@ -3179,18 +3187,27 @@ function updateAbStatus() {
 }
 
 // ---- 자동완성 ----
-function acSearch(q) {
+let dmCcRecipients = [];   // 참조(CC) 선택 목록
+function _recList(which) { return which === 'cc' ? dmCcRecipients : dmRecipients; }
+function _setRecList(which, v) { if (which === 'cc') dmCcRecipients = v; else dmRecipients = v; }
+function _acIds(which) {
+  return which === 'cc'
+    ? { input: 'dmCc', dd: 'ccDropdown', tags: 'ccTags' }
+    : { input: 'dmTo', dd: 'acDropdown', tags: 'recipientTags' };
+}
+function acSearch(q, which) {
+  which = which || 'to';
   acFocusIdx = -1;
-  const dd = document.getElementById('acDropdown');
+  const ids = _acIds(which), dd = document.getElementById(ids.dd), list = _recList(which);
   if (!q.trim() || !AB_CONTACTS.length) { dd.classList.remove('show'); return; }
   const kw = q.toLowerCase();
   const results = AB_CONTACTS
-    .filter(c => !dmRecipients.find(r => r.email === c.email))
-    .filter(c => c.name.toLowerCase().includes(kw) || c.email.toLowerCase().includes(kw) || (c.dept||'').toLowerCase().includes(kw))
+    .filter(c => !list.find(r => r.email === c.email))
+    .filter(c => c.name.toLowerCase().includes(kw) || c.email.toLowerCase().includes(kw) || (c.dept || '').toLowerCase().includes(kw))
     .slice(0, 8);
   if (!results.length) { dd.classList.remove('show'); return; }
   dd.innerHTML = results.map((c, i) => `
-    <div class="ac-item" data-idx="${i}" onclick="acSelect(${i})">
+    <div class="ac-item" data-idx="${i}" onclick="acSelect(${i},'${which}')">
       <div class="ac-avatar">${c.name.charAt(0)}</div>
       <div class="ac-info">
         <div class="ac-name">${c.name}${c.title ? ' · '+c.title : ''}</div>
@@ -3201,68 +3218,53 @@ function acSearch(q) {
   dd._results = results;
   dd.classList.add('show');
 }
-
-function acKeydown(e) {
-  const dd = document.getElementById('acDropdown');
+function acKeydown(e, which) {
+  which = which || 'to';
+  const dd = document.getElementById(_acIds(which).dd);
   const items = dd.querySelectorAll('.ac-item');
-  if (!dd.classList.contains('show')) {
-    if (e.key === 'Enter') { dmAddRecipientRaw(); return; }
-    return;
-  }
-  if (e.key === 'ArrowDown') {
-    e.preventDefault();
-    acFocusIdx = Math.min(acFocusIdx + 1, items.length - 1);
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    acFocusIdx = Math.max(acFocusIdx - 1, 0);
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    if (acFocusIdx >= 0) acSelect(acFocusIdx);
-    else dmAddRecipientRaw();
-    return;
-  } else if (e.key === 'Escape') {
-    dd.classList.remove('show'); return;
-  }
+  if (!dd.classList.contains('show')) { if (e.key === 'Enter') dmAddRecipientRaw(which); return; }
+  if (e.key === 'ArrowDown') { e.preventDefault(); acFocusIdx = Math.min(acFocusIdx + 1, items.length - 1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acFocusIdx = Math.max(acFocusIdx - 1, 0); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (acFocusIdx >= 0) acSelect(acFocusIdx, which); else dmAddRecipientRaw(which); return; }
+  else if (e.key === 'Escape') { dd.classList.remove('show'); return; }
   items.forEach((el, i) => el.classList.toggle('focused', i === acFocusIdx));
 }
-
-function acSelect(idx) {
-  const dd = document.getElementById('acDropdown');
-  const c = dd._results[idx];
-  if (!c) return;
-  addRecipient(c.name, c.email);
-  document.getElementById('dmTo').value = '';
+function acSelect(idx, which) {
+  which = which || 'to';
+  const ids = _acIds(which), dd = document.getElementById(ids.dd);
+  const c = dd._results[idx]; if (!c) return;
+  addRecipient(c.name, c.email, which);
+  document.getElementById(ids.input).value = '';
   dd.classList.remove('show');
 }
-
-function dmAddRecipientRaw() {
-  const val = document.getElementById('dmTo').value.trim();
+function dmAddRecipientRaw(which) {
+  which = which || 'to';
+  const ids = _acIds(which), val = document.getElementById(ids.input).value.trim();
   if (!val) return;
-  if (val.includes('@')) {
-    addRecipient(val, val);
-    document.getElementById('dmTo').value = '';
-  }
+  if (val.includes('@')) { addRecipient(val, val, which); document.getElementById(ids.input).value = ''; }
 }
-
-function addRecipient(name, email) {
-  if (dmRecipients.find(r => r.email === email)) return;
-  dmRecipients.push({ name, email });
-  renderRecipientTags();
+function addRecipient(name, email, which) {
+  which = which || 'to';
+  const list = _recList(which);
+  if (list.find(r => r.email === email)) return;
+  list.push({ name, email });
+  renderRecipientTags(which);
 }
-
-function removeRecipient(email) {
-  dmRecipients = dmRecipients.filter(r => r.email !== email);
-  renderRecipientTags();
+function removeRecipient(email, which) {
+  which = which || 'to';
+  _setRecList(which, _recList(which).filter(r => r.email !== email));
+  renderRecipientTags(which);
 }
-
-function renderRecipientTags() {
-  const wrap = document.getElementById('recipientTags');
-  if (!dmRecipients.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+function renderRecipientTags(which) {
+  which = which || 'to';
+  const ids = _acIds(which), wrap = document.getElementById(ids.tags), list = _recList(which);
+  if (!wrap) return;
+  if (!list.length) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
   wrap.style.display = 'flex';
-  wrap.innerHTML = dmRecipients.map(r => `
+  wrap.innerHTML = list.map(r => `
     <div class="recipient-tag">
       ${r.name !== r.email ? r.name + ' &lt;' + r.email + '&gt;' : r.email}
-      <span class="rm-tag" onclick="removeRecipient('${r.email}')">×</span>
+      <span class="rm-tag" onclick="removeRecipient('${r.email}','${which}')">×</span>
     </div>`).join('');
 }
 
@@ -3270,6 +3272,7 @@ function renderRecipientTags() {
 document.addEventListener('click', e => {
   if (!e.target.closest('.ac-wrap')) {
     document.getElementById('acDropdown')?.classList.remove('show');
+    document.getElementById('ccDropdown')?.classList.remove('show');
   }
 });
 
@@ -3436,6 +3439,45 @@ function renderAttachList() {
   </div>`).join('');
 }
 
+/* ===== 본문 AI 다듬기 (Gemini) ===== */
+let _dmBodyBeforeAi = null;
+async function dmRefineBody() {
+  if (!getGeminiKey()) { try { await loadGeminiKeyFromCloud(); } catch (e) {} }
+  if (!getGeminiKey()) { alert('AI 다듬기를 사용하려면 Gemini API 키가 필요합니다.\n우측 하단 🤖 AI 어시스턴트에서 키를 먼저 설정해 주세요.'); return; }
+  const ta = document.getElementById('dmBody');
+  const text = (ta.value || '').trim();
+  if (!text) { alert('다듬을 본문 내용을 먼저 입력해 주세요.'); return; }
+  const btn = document.getElementById('dmAiBtn'); const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '✨ 다듬는 중…'; }
+  try {
+    const sys = '당신은 한국어 비즈니스 이메일 교정 도우미입니다. 사용자가 준 이메일 본문을, 원래 의미와 정보를 유지하면서 정중하고 자연스럽고 명확한 비즈니스체로 다듬어 주세요. 자연스러운 인사말과 맺음말은 넣어도 좋습니다. 서명·연락처·회사명은 새로 추가하지 마세요. 결과는 다듬은 본문 텍스트만 출력하고, 설명이나 따옴표는 붙이지 마세요.';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_AI_MODEL}:generateContent?key=${encodeURIComponent(getGeminiKey())}`;
+    const r = await fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: sys }] },
+        contents: [{ role: 'user', parts: [{ text: text }] }],
+        generationConfig: { temperature: 0.6, maxOutputTokens: 1400 }
+      })
+    });
+    const data = await r.json();
+    if (r.status === 401 || r.status === 403) { localStorage.removeItem('gm_gemini_key'); alert('Gemini 키가 유효하지 않습니다. 🤖 AI 어시스턴트에서 키를 다시 설정해 주세요.'); return; }
+    const out = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
+    if (!out) { alert('AI 다듬기 실패: ' + ((data.error && data.error.message) || '응답을 받지 못했습니다.')); return; }
+    _dmBodyBeforeAi = ta.value;           // 되돌리기용 원문 보관
+    ta.value = out;
+    if (btn) { btn.textContent = '↩ 원문 되돌리기'; btn.onclick = dmUndoRefine; btn.disabled = false; }
+    return;
+  } catch (e) { alert('AI 다듬기 오류: ' + (e.message || e)); }
+  finally { if (btn && btn.textContent === '✨ 다듬는 중…') { btn.disabled = false; btn.textContent = orig; } }
+}
+function dmUndoRefine() {
+  const ta = document.getElementById('dmBody'); const btn = document.getElementById('dmAiBtn');
+  if (_dmBodyBeforeAi != null) ta.value = _dmBodyBeforeAi;
+  _dmBodyBeforeAi = null;
+  if (btn) { btn.textContent = '✨ AI 다듬기'; btn.onclick = dmRefineBody; }
+}
+
 function heroSearch() {
   const q = document.getElementById('heroSearchInput').value.trim();
   if (!q) return;
@@ -3462,8 +3504,12 @@ function openDashMailModal() {
   document.getElementById('dmCc').value = '';
   document.getElementById('ccWrap').style.display = 'none';
   document.getElementById('ccToggleIcon').textContent = '▾';
+  dmCcRecipients = [];
+  renderRecipientTags('cc');
   dmAttachments = [];
   renderAttachList();
+  _dmBodyBeforeAi = null;
+  const aiBtn = document.getElementById('dmAiBtn'); if (aiBtn) { aiBtn.textContent = '✨ AI 다듬기'; aiBtn.onclick = dmRefineBody; aiBtn.disabled = false; }
   updateAbStatus();
   renderDmChecklist();
   updateDmSigNote();
@@ -3608,7 +3654,9 @@ function dmSend() {
   if (!toList.length) { alert('받는 사람을 입력해주세요.'); return; }
 
   const subject = document.getElementById('dmSubject').value.trim() || '(제목 없음)';
-  const cc = (document.getElementById('dmCc').value || '').trim();
+  const ccRaw = document.getElementById('dmCc').value.trim();
+  if (ccRaw.includes('@')) addRecipient(ccRaw, ccRaw, 'cc');   // 직접 입력한 이메일도 포함
+  const cc = dmCcRecipients.map(r => r.email).join(',');
   const attachments = dmAttachments.map(a => ({ name: a.name, type: a.type, dataUrl: a.dataUrl }));
 
   // 본문(사용자 입력) + 서명 텍스트 자동 추가
@@ -3675,14 +3723,14 @@ async function checkMailSender() {
         if (d && d.ok) {
           mailSenderBase = base;
           if (statusEl) { statusEl.innerHTML = `🟢 발송기 연결됨 · 오늘 ${d.sentToday}/${d.limit}건`; statusEl.style.color = 'var(--green)'; }
-          if (btn) btn.textContent = '📨 바로 발송';
+          if (btn) btn.textContent = '📨 메일 보내기';
           return;
         }
       }
     } catch (e) {}
   }
-  if (statusEl) { statusEl.innerHTML = '⚪ 발송기 꺼짐 · 아웃룩으로 열림'; statusEl.style.color = 'var(--t3)'; }
-  if (btn) btn.textContent = '📨 아웃룩으로 열기';
+  if (statusEl) { statusEl.innerHTML = '⚪ 발송기 꺼짐 (아웃룩으로 발송)'; statusEl.style.color = 'var(--t3)'; }
+  if (btn) btn.textContent = '📨 메일 보내기';
 }
 document.addEventListener('click', (e)=>{
   if(openMenuId !== null && !e.target.closest('.row-actions') && !e.target.closest('.status-menu-inline')){
