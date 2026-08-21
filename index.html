@@ -3526,8 +3526,10 @@ function rteCmd(e, cmd) { if (e) e.preventDefault(); _rteRestore(); document.exe
 function rteFont(v) { if (!v) return; _rteRestore(); document.execCommand('fontName', false, v); _rteSaveSel(); }
 function rteSize(px) {
   if (!px) return; _rteRestore();
+  try { document.execCommand('styleWithCSS', false, false); } catch (_) {}   // font[size] 생성용
   document.execCommand('fontSize', false, '7');
   dmBodyEl().querySelectorAll('font[size="7"]').forEach(f => { f.removeAttribute('size'); f.style.fontSize = px + 'px'; });
+  try { document.execCommand('styleWithCSS', false, true); } catch (_) {}
   _rteSaveSel();
 }
 function rteColor(c) { _rteRestore(); try { document.execCommand('styleWithCSS', false, true); } catch (_) {} document.execCommand('foreColor', false, c); _rteSaveSel(); }
