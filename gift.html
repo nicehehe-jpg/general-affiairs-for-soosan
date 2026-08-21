@@ -342,7 +342,9 @@ const SITES=[
   {name:'수산뉴텍',manager:'임상현 책임'},
 ];
 
-let siteFiles=[],masterRows=[],allRows=[],compareData=[],editedCells={};
+let siteFiles=[],masterRows=[],allRows=[],compareData=[],editedCells={},confirmedKeys={};
+// 저장·확정한 행의 안정 키(사원명부 사번 기준) — 재비교/저장에도 유지
+function _cmpKey(mr){ const e=String((mr&&mr.empNo)||'').replace(/^0+/,''); return e?('k'+e):('n'+((mr&&mr.name)||'')); }
 
 function switchTab(btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -716,10 +718,17 @@ function applyEdit(idx){
   current.submitted.gift=gift;
   current.submitted._edited=true;
   editedCells['cmp_'+idx]={name,empNo,site,gift};
+  confirmedKeys[_cmpKey(current.master)]=true;   // 저장 = 정보 저장 + 정상 확정
   buildCompare();
   renderCompare();
   renderAll();
   renderSummary();
+}
+// 확정 취소 → 다시 점수 기준으로 판정
+function unconfirmEdit(idx){
+  const c=compareData.find(d=>d.idx===idx); if(!c)return;
+  delete confirmedKeys[_cmpKey(c.master)];
+  buildCompare(); renderCompare();
 }
 // 누락 행(사원명부엔 있으나 제출 명단엔 없음)을 제출 명단에 추가
 function addFromMaster(idx,vals){
@@ -734,6 +743,7 @@ function addFromMaster(idx,vals){
   if(!confirm(`"${name}"(${empNo||'사번없음'})을(를) 제출 명단에 추가할까요?\n· 소속: ${site||'미지정'}\n· 선물: ${gift||'미지정'}\n(전체 취합·집계에 포함됩니다)`))return;
   allRows.push({name,empNo,empNoNorm:(empNo||'').replace(/^0+/,''),dept:site,_siteName:site,gift,addr:'',recipient:'',phone:'',note:'수기추가',_edited:true,_addedFromMaster:true});
   editedCells['cmp_'+idx]={name,empNo,site,gift};
+  confirmedKeys[_cmpKey(c.master)]=true;   // 추가 = 정상 확정
   buildCompare();
   renderCompare();
   renderAll();
@@ -999,6 +1009,14 @@ function buildCompare(){
     }
   });
 
+  // ── 사용자가 '저장·확정'한 행은 점수와 무관하게 정상으로 고정 ──
+  compareData.forEach(c=>{
+    if(confirmedKeys[_cmpKey(c.master)]){
+      c.status='ok'; c.confirmed=true; c.ignored=false;
+      if(!/확정/.test(c.reason||'')) c.reason='✅ 확정'+(c.reason?(' · '+c.reason):'');
+    }
+  });
+
   document.getElementById('statIssues').textContent=compareData.filter(c=>c.status!=='ok').length;
 }
 
@@ -1065,11 +1083,13 @@ function renderCompare(){
     const rc=c.ignored?'row-ignored':c.status==='missing'?'row-missing':c.status==='mismatch'?'row-warning':'';
     const sb=c.ignored
       ?'<span style="font-size:12px;font-weight:600;color:var(--text3);padding:3px 10px;background:var(--surface2);border-radius:20px">— 미반영</span>'
-      :c.status==='ok'
-        ?'<span class="badge-ok">✅ 정상</span>'
-        :c.status==='missing'
-          ?'<span class="badge-miss">❌ 누락</span>'
-          :'<span class="badge-warn">⚠️ 확인</span>';
+      :c.confirmed
+        ?'<span class="badge-ok" title="사용자가 저장·확정한 행">✅ 확정</span>'
+        :c.status==='ok'
+          ?'<span class="badge-ok">✅ 정상</span>'
+          :c.status==='missing'
+            ?'<span class="badge-miss">❌ 누락</span>'
+            :'<span class="badge-warn">⚠️ 확인</span>';
     // 점수 색상
     const sc=c.score??0;
     const scColor=sc>=95?'var(--success)':sc>=60?'var(--warning)':'var(--danger)';
@@ -1098,12 +1118,13 @@ function renderCompare(){
       <td style="color:var(--text2);font-size:12px">${ssite}</td>
       <td style="font-size:12px;font-weight:${sgift!=='-'?'600':'400'};color:${sgift!=='-'?'var(--text)':'var(--text3)'}">${sgift}</td>
       <td style="color:var(--text3);font-size:11px;max-width:180px">${c.reason||''}</td>
-      <td>${c.status!=='ok'?`<div class="editable-cell" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+      <td>${c.confirmed?`<button class="btn btn-sm" onclick="unconfirmEdit(${c.idx})" style="background:var(--surface2);color:var(--text2);border:1px solid var(--border)" title="확정을 취소하고 다시 점수로 판정">↩︎ 확정취소</button>`
+        :c.status!=='ok'?`<div class="editable-cell" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
         <input type="text" placeholder="이름" value="${ed.name||(c.submitted?c.submitted.name:c.master.name)||''}" id="en_${c.idx}" style="width:58px">
         <input type="text" placeholder="사번" value="${ed.empNo||(c.submitted?c.submitted.empNo:c.master.empNo)||''}" id="ee_${c.idx}" style="width:66px">
         <input type="text" list="cmpSiteDL" placeholder="소속" value="${ed.site||(c.submitted?(c.submitted._siteName||c.submitted.dept||''):msite)||''}" id="es_${c.idx}" style="width:96px">
         <input type="text" list="cmpGiftDL" placeholder="선물" value="${ed.gift||(c.submitted?(c.submitted.gift||''):'')||''}" id="eg_${c.idx}" style="width:84px">
-        <button class="btn btn-primary btn-sm" onclick="applyEdit(${c.idx})">${c.status==='missing'?'＋추가':'저장'}</button>
+        <button class="btn btn-primary btn-sm" onclick="applyEdit(${c.idx})" title="정보 저장 후 정상으로 확정">${c.status==='missing'?'＋추가':'💾 저장·확정'}</button>
       </div>`:''}</td>
     </tr>`;
   }).join('');
@@ -1273,7 +1294,7 @@ function exportCompare(){
   const wb=XLSX.utils.book_new();
   const headers=['#','상태','점수','이름(명단)','사번(명단)','소속(명단)','이름(제출)','사번(제출)','소속(제출)','선물(제출)','매칭 근거'];
   const data=compareData.map((c,i)=>{
-    const st=c.ignored?'미반영':c.status==='ok'?'정상':c.status==='missing'?'누락':'확인필요';
+    const st=c.ignored?'미반영':c.confirmed?'정상(확정)':c.status==='ok'?'정상':c.status==='missing'?'누락':'확인필요';
     const msite=c.master.mappedSite||matchSite(c.master.dept)||'';
     const ssite=c.submitted?c.submitted._siteName||'':'';
     return [i+1,st,c.score??'',c.master.name,c.master.empNo,msite,
@@ -1288,7 +1309,7 @@ function exportCompare(){
 
 function resetAll(){
   if(!confirm('초기화할까요?'))return;
-  siteFiles=[];masterRows=[];allRows=[];compareData=[];editedCells={};
+  siteFiles=[];masterRows=[];allRows=[];compareData=[];editedCells={};confirmedKeys={};
   ['siteFileList','masterFileList','summaryTableBody','allTableBody','compareTableBody'].forEach(id=>document.getElementById(id).innerHTML='');
   ['inputSite','inputMaster'].forEach(id=>document.getElementById(id).value='');
   ['dropSite','dropMaster'].forEach(id=>document.getElementById(id).classList.remove('has-files'));
@@ -1454,7 +1475,7 @@ async function saveGiftCloud(){
   if(!title) return;
   const id='g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
   const savedAt=new Date().toISOString();
-  const okP=await sbSetGift('gift_save_'+id, { title, savedAt, allRows, sites:SITES, editedCells });
+  const okP=await sbSetGift('gift_save_'+id, { title, savedAt, allRows, sites:SITES, editedCells, confirmedKeys });
   if(!okP){ alert('저장 실패 — 로그인/연결 상태를 확인하세요.'); return; }
   let index=await sbGetGift(GIFT_SAVES_INDEX); if(!Array.isArray(index)) index=[];
   index.unshift({ id, title, savedAt, count:allRows.length, sites:[...new Set(allRows.map(r=>r._siteName).filter(Boolean))] });
@@ -1490,6 +1511,7 @@ async function loadGiftCloud(id){
   allRows=payload.allRows;
   if(Array.isArray(payload.sites)&&payload.sites.length) SITES.splice(0,SITES.length,...payload.sites);
   editedCells=payload.editedCells||{};
+  confirmedKeys=payload.confirmedKeys||{};
   // allRows → 사업소별 pseudo siteFiles 재구성(현황·요약 렌더용)
   const bySite={};
   allRows.forEach(r=>{ const k=r._siteName||'기타'; (bySite[k]=bySite[k]||[]).push(r); });
