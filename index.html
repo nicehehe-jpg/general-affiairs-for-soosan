@@ -4155,13 +4155,65 @@ async function loadCatCounts(){
     if(d.ok){ _mailCatCounts=d.counts||{}; _mailCatUncat=(d.uncategorized!=null?d.uncategorized:null); renderMailCats(); }
   }catch(e){}
 }
+/* 쉬운 폼 방식 사서함 관리 (JSON 편집 X) */
 function manageMailCategories(){
-  const cats=getMailCats();
-  const p=prompt('가상 사서함(카테고리) 규칙 편집 — 메일은 이동하지 않고 서버에서 걸러 보여줍니다.\n\n각 항목:\n{"name":"이름","icon":"🧾","subject":["제목키워드1","키워드2"],"from":["발신키워드"]}\n· subject: 제목에 하나라도 포함되면 매칭(OR)\n· from: 보낸사람에 포함되면 매칭\n\n(빈칸 확인 시 기본값 초기화)', JSON.stringify(cats,null,1));
-  if(p===null) return;
-  if(!p.trim()){ saveMailCats(MAIL_CAT_DEFAULT.slice()); _inboxCat=null; _inboxCatRule=null; _mailCatCounts=null; _mailCatUncat=null; renderMailCats(); loadCatCounts(); return; }
-  try{ const a=JSON.parse(p); if(!Array.isArray(a)) throw 0; saveMailCats(a); _mailCatCounts=null; _mailCatUncat=null; renderMailCats(); loadCatCounts(); alert('저장되었습니다.'); }
-  catch(e){ alert('형식 오류입니다. JSON 배열 형태를 확인하세요.'); }
+  const ex=document.getElementById('catMgrOverlay'); if(ex) ex.remove();
+  const ov=document.createElement('div');
+  ov.id='catMgrOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;';
+  ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div style="background:var(--card,#fff);color:var(--t1,#111);width:580px;max-width:94vw;max-height:88vh;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:15px 18px;border-bottom:1px solid var(--line,#eee);display:flex;justify-content:space-between;align-items:center;">
+      <b style="font-size:15px;">📂 사서함(카테고리) 관리</b>
+      <button onclick="document.getElementById('catMgrOverlay').remove()" style="border:none;background:transparent;font-size:18px;cursor:pointer;color:var(--t2,#666);">✕</button>
+    </div>
+    <div style="padding:10px 16px;font-size:12px;color:var(--t3,#888);line-height:1.55;">각 카테고리에 <b>제목 키워드</b>나 <b>보낸사람</b>을 적으면 해당 메일이 자동 분류됩니다. 여러 개는 <b>쉼표(,)</b>로 구분하세요. <span style="color:var(--t2)">(메일은 옮기지 않고 걸러 보여주기만 합니다)</span></div>
+    <div id="catMgrList" style="flex:1;overflow-y:auto;padding:2px 16px 8px;"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--line,#eee);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;">
+        <button onclick="catMgrAddRow()" style="padding:8px 14px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--t2);font-weight:700;cursor:pointer;font-family:inherit;">+ 카테고리 추가</button>
+        <button onclick="catMgrReset()" style="padding:8px 14px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--t3);cursor:pointer;font-family:inherit;">기본값 복원</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="document.getElementById('catMgrOverlay').remove()" style="padding:8px 16px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--t2);cursor:pointer;font-family:inherit;">취소</button>
+        <button onclick="catMgrSave()" style="padding:8px 20px;border:none;border-radius:9px;background:var(--blue,#3182F6);color:#fff;font-weight:800;cursor:pointer;font-family:inherit;">저장</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  catMgrRender(getMailCats());
+}
+function _catRowHtml(c){
+  c=c||{}; const esc=(x)=>String(x==null?'':x).replace(/"/g,'&quot;');
+  return `<div class="catmgr-row" style="display:grid;grid-template-columns:46px 1fr 32px;gap:8px;align-items:start;border:1px solid var(--line,#eee);border-radius:10px;padding:10px;margin-bottom:8px;">
+    <input class="cm-icon" value="${esc(c.icon||'📂')}" maxlength="2" title="아이콘" style="text-align:center;font-size:18px;border:1px solid var(--line);border-radius:8px;padding:7px 0;background:var(--bg);color:var(--t1);">
+    <div style="display:flex;flex-direction:column;gap:6px;min-width:0;">
+      <input class="cm-name" value="${esc(c.name||'')}" placeholder="카테고리 이름 (예: 세금계산서)" style="font-weight:700;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--bg);color:var(--t1);">
+      <input class="cm-subject" value="${esc((c.subject||[]).join(', '))}" placeholder="제목 키워드 · 쉼표로 구분 (예: 세금계산서, 계산서)" style="border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--bg);color:var(--t1);font-size:13px;">
+      <input class="cm-from" value="${esc((c.from||[]).join(', '))}" placeholder="보낸사람 키워드 · 선택 (예: 원자력, 상공회의소)" style="border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--bg);color:var(--t1);font-size:13px;">
+    </div>
+    <button onclick="this.closest('.catmgr-row').remove()" title="이 카테고리 삭제" style="border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--red,#F04452);cursor:pointer;height:34px;font-family:inherit;">✕</button>
+  </div>`;
+}
+function catMgrRender(cats){ const l=document.getElementById('catMgrList'); if(!l) return; l.innerHTML=((cats&&cats.length)?cats:[{icon:'📂'}]).map(_catRowHtml).join(''); }
+function catMgrAddRow(){ const l=document.getElementById('catMgrList'); if(!l) return; l.insertAdjacentHTML('beforeend', _catRowHtml({icon:'📂'})); l.scrollTop=l.scrollHeight; const inps=l.querySelectorAll('.catmgr-row:last-child .cm-name'); if(inps.length) inps[0].focus(); }
+function catMgrReset(){ if(!confirm('기본 카테고리로 되돌릴까요? (지금 편집 중인 내용은 사라집니다)')) return; catMgrRender(MAIL_CAT_DEFAULT.slice()); }
+function catMgrSave(){
+  const rows=[...document.querySelectorAll('#catMgrList .catmgr-row')];
+  const splitc=(v)=>(v||'').split(',').map(x=>x.trim()).filter(Boolean);
+  const cats=[];
+  rows.forEach(r=>{
+    const name=(r.querySelector('.cm-name').value||'').trim(); if(!name) return;
+    const icon=((r.querySelector('.cm-icon').value||'').trim())||'📂';
+    const subject=splitc(r.querySelector('.cm-subject').value);
+    const from=splitc(r.querySelector('.cm-from').value);
+    if(!subject.length && !from.length) return;   // 조건 없는 행은 무시
+    cats.push({name, icon, subject, from});
+  });
+  saveMailCats(cats.length?cats:MAIL_CAT_DEFAULT.slice());
+  _inboxCat=null; _inboxCatRule=null; _mailCatCounts=null; _mailCatUncat=null;
+  const ov=document.getElementById('catMgrOverlay'); if(ov) ov.remove();
+  renderMailCats(); loadCatCounts();
 }
 
 async function loadInbox(){
