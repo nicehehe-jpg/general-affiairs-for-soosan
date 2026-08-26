@@ -1436,7 +1436,7 @@ async function sendAiMsg(){
 
 <!-- 받은편지함 모달 -->
 <div class="modal-overlay" id="inboxModal" onclick="if(event.target===this)closeInbox()">
-  <div class="modal" id="inboxBox" style="width:1120px;max-width:96vw;height:86vh;max-height:94vh;min-width:640px;min-height:420px;display:flex;flex-direction:column;resize:both;overflow:hidden;">
+  <div class="modal" id="inboxBox" style="width:1180px;max-width:96vw;height:86vh;max-height:94vh;min-width:780px;min-height:420px;display:flex;flex-direction:column;resize:both;overflow:hidden;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <h3 style="margin:0;">📬 메일함</h3>
@@ -1450,8 +1450,11 @@ async function sendAiMsg(){
         <button onclick="closeInbox()" title="닫기" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--t2);font-size:14px;cursor:pointer;">✕</button>
       </div>
     </div>
-    <div style="display:flex;gap:12px;flex:1;min-height:0;">
-      <div style="width:380px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;gap:8px;">
+    <div style="display:flex;gap:10px;flex:1;min-height:0;">
+      <!-- 좌측 카테고리 사이드바(세로) -->
+      <div id="inboxCatBar" style="width:150px;flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;gap:3px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:6px;"></div>
+      <!-- 메일 목록 컬럼 -->
+      <div id="inboxListCol" style="width:360px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;gap:8px;">
         <div style="display:flex;gap:6px;">
           <select id="inboxField" class="rte-sel" style="flex-shrink:0;">
             <option value="both">제목+보낸사람</option>
@@ -1463,11 +1466,13 @@ async function sendAiMsg(){
           <button class="nv-btn" onclick="inboxClearSearch()" title="검색 해제" style="flex-shrink:0;">✕</button>
           <button id="inboxUnreadBtn" class="nv-btn" onclick="toggleUnread()" title="안읽은 메일만 보기" style="flex-shrink:0;">📩</button>
         </div>
-        <div id="inboxCatBar" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;"></div>
         <div id="inboxList" style="flex:1;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);"></div>
         <div id="inboxPager" style="flex-shrink:0;"></div>
       </div>
-      <div id="inboxReader" style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
+      <!-- 좌우 크기조절 스플리터 -->
+      <div id="inboxSplit" onmousedown="inboxStartResize(event)" title="드래그하여 목록 너비 조절" style="width:6px;flex-shrink:0;cursor:col-resize;background:var(--line);opacity:.35;border-radius:3px;"></div>
+      <!-- 메일 내용(리더) -->
+      <div id="inboxReader" style="flex:1;min-width:220px;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--card);">
         <div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>
       </div>
     </div>
@@ -4128,14 +4133,60 @@ function saveMailCats(a){ try{ localStorage.setItem('mail_cat_rules_v2', JSON.st
 function renderMailCats(){
   const bar=document.getElementById('inboxCatBar'); if(!bar) return;
   const cats=getMailCats();
-  const cnt=(nm)=> (_mailCatCounts && (nm in _mailCatCounts)) ? ` <span style="opacity:.7">${_mailCatCounts[nm]}</span>` : '';
-  const chip=(active,label,onclick,title)=>`<button onclick="${onclick}" title="${title||''}" style="padding:4px 10px;border-radius:14px;border:1px solid ${active?'var(--blue)':'var(--line)'};background:${active?'var(--blue)':'var(--bg)'};color:${active?'#fff':'var(--t2)'};font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">${label}</button>`;
-  let html=chip(_inboxCat===null && !_inboxQ, '전체', "applyMailCategory(null)");
-  cats.forEach((c,i)=>{ html+=chip(_inboxCat===c.name, `${c.icon||'📂'} ${_ie(c.name)}${cnt(c.name)}`, `applyMailCategory(${i})`, '제목: '+((c.subject||[]).join(', '))+(c.from?(' · 발신: '+c.from.join(', ')):'')); });
-  const un = (_mailCatUncat!=null) ? ` <span style="opacity:.7">${_mailCatUncat}</span>` : '';
-  html+=chip(_inboxCat==='__uncat__', `🗂 미분류${un}`, "applyMailCategory('uncat')", '어떤 카테고리에도 안 걸리는 메일');
-  html+=chip(false, '⚙', "manageMailCategories()", '사서함 관리');
+  const cnt=(nm)=> (_mailCatCounts && (nm in _mailCatCounts)) ? _mailCatCounts[nm] : null;
+  const row=(active,icon,label,count,onclick,title)=>`<button onclick="${onclick}" title="${title||''}" style="display:flex;align-items:center;gap:6px;width:100%;text-align:left;padding:7px 9px;border-radius:8px;border:1px solid ${active?'var(--blue)':'transparent'};background:${active?'var(--blue-bg)':'transparent'};color:${active?'var(--blue)':'var(--t2)'};font-size:12.5px;font-weight:${active?'800':'600'};cursor:pointer;font-family:inherit;">`
+    +`<span style="flex-shrink:0;">${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>`
+    +`${count!=null?`<span style="flex-shrink:0;font-size:11px;color:${active?'var(--blue)':'var(--t3)'};font-weight:700;">${count}</span>`:''}</button>`;
+  let html=row(_inboxCat===null && !_inboxQ, '📥','전체', null, "applyMailCategory(null)", '전체 받은편지함');
+  cats.forEach((c,i)=>{ html+=row(_inboxCat===c.name, c.icon||'📂', _ie(c.name), cnt(c.name), `applyMailCategory(${i})`, '제목: '+((c.subject||[]).join(', '))+((c.from&&c.from.length)?(' · 발신: '+c.from.join(', ')):'')); });
+  html+=row(_inboxCat==='__uncat__', '🗂','미분류', _mailCatUncat, "applyMailCategory('uncat')", '어떤 카테고리에도 안 걸리는 메일');
+  html+=`<button onclick="manageMailCategories()" title="사서함 관리" style="margin-top:5px;padding:6px;border:1px dashed var(--line);border-radius:8px;background:transparent;color:var(--t3);font-size:12px;cursor:pointer;font-family:inherit;">⚙ 관리</button>`;
   bar.innerHTML=html;
+}
+/* 목록 너비 좌우 조절(스플리터 드래그) */
+function inboxStartResize(e){
+  e.preventDefault();
+  const col=document.getElementById('inboxListCol'); if(!col) return;
+  const startX=e.clientX, startW=col.getBoundingClientRect().width;
+  function mv(ev){ let w=startW+(ev.clientX-startX); w=Math.max(240,Math.min(760,w)); col.style.width=w+'px'; }
+  function up(){ document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); document.body.style.userSelect=''; }
+  document.body.style.userSelect='none';
+  document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+}
+/* 메일 우클릭 → 발신자를 카테고리에 추가(아웃룩 규칙 방식) */
+function _mailEmailAddr(f){ const m=(f||'').match(/<([^>]+)>/); return m?m[1].trim():(f||'').trim(); }
+function _closeInboxCtx(){ const m=document.getElementById('inboxCtxMenu'); if(m) m.remove(); }
+function inboxMailCtx(e, uid, fromEnc){
+  e.preventDefault(); e.stopPropagation();
+  _closeInboxCtx();
+  const from=decodeURIComponent(fromEnc||'');
+  const email=_mailEmailAddr(from)||from;
+  const cats=getMailCats();
+  const menu=document.createElement('div'); menu.id='inboxCtxMenu';
+  menu.style.cssText=`position:fixed;z-index:100000;left:${e.clientX}px;top:${e.clientY}px;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:6px;min-width:240px;max-width:300px;font-size:13px;color:var(--t1);`;
+  const item=(inner,onclick,extra)=>`<div onclick="${onclick}" style="padding:8px 10px;border-radius:7px;cursor:pointer;${extra||''}" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">${inner}</div>`;
+  let html=`<div style="padding:6px 10px;color:var(--t3);font-size:11.5px;border-bottom:1px solid var(--line);margin-bottom:4px;line-height:1.5;">📧 <b style="color:var(--t2)">${_ie(email)}</b><br>이 발신자를 카테고리로 자동분류</div>`;
+  cats.forEach((c,i)=>{ html+=item(`${c.icon||'📂'} <b>${_ie(c.name)}</b> 에 추가`, `inboxCtxAdd(${i},'${encodeURIComponent(email)}')`); });
+  html+=item(`＋ 새 카테고리로 만들기`, `inboxCtxNew('${encodeURIComponent(email)}')`, 'color:var(--blue);font-weight:700;border-top:1px solid var(--line);margin-top:4px;');
+  menu.innerHTML=html;
+  document.body.appendChild(menu);
+  const r=menu.getBoundingClientRect();
+  if(r.right>window.innerWidth) menu.style.left=(window.innerWidth-r.width-8)+'px';
+  if(r.bottom>window.innerHeight) menu.style.top=(window.innerHeight-r.height-8)+'px';
+  setTimeout(()=>document.addEventListener('mousedown', _closeInboxCtx, {once:true}), 0);
+}
+function inboxCtxAdd(i, emailEnc){
+  const email=decodeURIComponent(emailEnc); const cats=getMailCats(); const c=cats[i]; if(!c){ _closeInboxCtx(); return; }
+  c.from=c.from||[]; if(!c.from.includes(email)) c.from.push(email);
+  saveMailCats(cats); _closeInboxCtx(); _mailCatCounts=null; _mailCatUncat=null; renderMailCats(); loadCatCounts();
+  alert(`'${c.name}' 카테고리에 발신자 «${email}» 를 추가했습니다.\n이제 이 주소로 오는 메일은 자동으로 분류됩니다.`);
+}
+function inboxCtxNew(emailEnc){
+  const email=decodeURIComponent(emailEnc); _closeInboxCtx();
+  const name=prompt('새 카테고리 이름을 입력하세요.\n(발신자 «'+email+'» 의 메일이 이 카테고리로 자동 분류됩니다)','');
+  if(!name || !name.trim()) return;
+  const cats=getMailCats(); cats.push({name:name.trim(), icon:'📁', subject:[], from:[email]});
+  saveMailCats(cats); _mailCatCounts=null; _mailCatUncat=null; renderMailCats(); loadCatCounts();
 }
 function applyMailCategory(i){
   const s=document.getElementById('inboxSearch');
@@ -4229,7 +4280,7 @@ async function loadInbox(){
     if(!d.ok){ list.innerHTML=`<div style="padding:22px;color:var(--red);font-size:13px;line-height:1.7;">받은편지함 오류<br><span style="color:var(--t2);">${_ie(d.error)}</span><br><br><span style="color:var(--t3);font-size:12px;">회사 PC의 <b>메일발송기\\config.json</b>에 이메일 계정·비밀번호(imap_user / imap_pass)를 입력했는지 확인하세요.</span></div>`; return; }
     document.getElementById('inboxUser').textContent = d.user||'';
     if(!(d.items&&d.items.length)){ list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">'+(_inboxCatRule?'이 카테고리에 해당하는 메일이 없습니다.':(_inboxQ?'검색 결과가 없습니다.':(_inboxUnread?'안읽은 메일이 없습니다.':'받은 메일이 없습니다.')))+'</div>'; renderInboxPager(d); return; }
-    list.innerHTML=d.items.map(m=>`<div class="inbox-item" data-uid="${_ie(m.uid)}" onclick="openMailItem('${_ie(m.uid)}',this)" style="padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;${m.seen?'':'background:var(--blue-bg);'}">
+    list.innerHTML=d.items.map(m=>`<div class="inbox-item" data-uid="${_ie(m.uid)}" onclick="openMailItem('${_ie(m.uid)}',this)" oncontextmenu="inboxMailCtx(event,'${_ie(m.uid)}','${encodeURIComponent(m.from||'')}')" title="우클릭: 이 발신자 카테고리 분류" style="padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;${m.seen?'':'background:var(--blue-bg);'}">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
         <span class="ib-from" style="font-weight:${m.seen?'500':'800'};font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.seen?'':'<span style=\'color:var(--blue)\'>●</span> '}${_ie(_mailFromName(m.from))}</span>
         <span style="font-size:11px;color:var(--t3);flex-shrink:0;">${_mailDate(m.date)}</span>
