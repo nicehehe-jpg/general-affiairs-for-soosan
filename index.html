@@ -4093,7 +4093,7 @@ let _curMail = null;
 let _inboxPage = 1, _inboxQ = '', _inboxField = 'both', _inboxPer = 30, _inboxFolder = 'INBOX', _inboxUnread = false;
 function _resetUnreadBtn(){ _inboxUnread=false; const b=document.getElementById('inboxUnreadBtn'); if(b){ b.style.background=''; b.style.color=''; } }
 function toggleUnread(){ _inboxUnread=!_inboxUnread; _inboxPage=1; const b=document.getElementById('inboxUnreadBtn'); if(b){ b.style.background=_inboxUnread?'var(--blue)':''; b.style.color=_inboxUnread?'#fff':''; } loadInbox(); }
-function openInbox(){ _inboxPage=1; _inboxQ=''; _inboxFolder='INBOX'; _inboxCat=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); renderMailCats(); loadFolders(); loadInbox(); }
+function openInbox(){ _inboxPage=1; _inboxQ=''; _inboxFolder='INBOX'; _inboxCat=null; _inboxCatRule=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); renderMailCats(); loadFolders(); loadInbox(); loadCatCounts(); }
 function closeInbox(){ document.getElementById('inboxModal').classList.remove('show'); }
 async function loadFolders(){
   const sel=document.getElementById('inboxFolderSel'); if(!sel) return;
@@ -4106,49 +4106,61 @@ async function loadFolders(){
     }
   }catch(e){}
 }
-function inboxChangeFolder(raw){ _inboxFolder=raw||'INBOX'; _inboxPage=1; _inboxQ=''; _inboxCat=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; renderMailCats(); document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>'; loadInbox(); }
-function inboxDoSearch(){ _inboxQ=(document.getElementById('inboxSearch').value||'').trim(); _inboxField=document.getElementById('inboxField').value; _inboxPage=1; _inboxCat=null; renderMailCats(); loadInbox(); }
-function inboxClearSearch(){ document.getElementById('inboxSearch').value=''; _inboxQ=''; _inboxPage=1; _inboxCat=null; renderMailCats(); loadInbox(); }
+function inboxChangeFolder(raw){ _inboxFolder=raw||'INBOX'; _inboxPage=1; _inboxQ=''; _inboxCat=null; _inboxCatRule=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; renderMailCats(); document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>'; loadInbox(); }
+function inboxDoSearch(){ _inboxQ=(document.getElementById('inboxSearch').value||'').trim(); _inboxField=document.getElementById('inboxField').value; _inboxPage=1; _inboxCat=null; _inboxCatRule=null; renderMailCats(); loadInbox(); }
+function inboxClearSearch(){ document.getElementById('inboxSearch').value=''; _inboxQ=''; _inboxPage=1; _inboxCat=null; _inboxCatRule=null; renderMailCats(); loadInbox(); }
 function inboxGoPage(p){ _inboxPage=p; loadInbox(); document.getElementById('inboxList').scrollTop=0; }
 
-/* ===== 가상 사서함(카테고리) — 비파괴: 규칙 기반 저장된 검색. 메일을 옮기지 않고 클릭 시 해당 검색으로 걸러 보여줌 ===== */
+/* ===== 가상 사서함(카테고리) Phase2 — 다중 규칙(제목·발신) 서버 필터 + 카운트 + 미분류. 비파괴(메일 안 옮김) ===== */
 const MAIL_CAT_DEFAULT = [
-  {name:'세금계산서', icon:'🧾', q:'세금계산서', field:'subject'},
-  {name:'전자결재',   icon:'✅', q:'결재',       field:'subject'},
-  {name:'구매·계약',  icon:'📄', q:'계약',       field:'subject'},
-  {name:'협회',       icon:'🏛', q:'협회',       field:'both'},
-  {name:'ERP인증',    icon:'🔑', q:'인증번호',   field:'subject'},
+  {name:'세금계산서', icon:'🧾', subject:['세금계산서']},
+  {name:'전자결재',   icon:'✅', subject:['[결재]','전자결재','결재']},
+  {name:'구매·계약',  icon:'📄', subject:['계약서','발주','구매','견적','계약'], from:['eformsign']},
+  {name:'협회',       icon:'🏛', subject:['협회','포럼'], from:['원자력','상공회의소','공사협회','조합']},
+  {name:'ERP인증',    icon:'🔑', subject:['인증번호','WEB ERP']},
 ];
-let _inboxCat = null; // 현재 선택된 카테고리 이름(없으면 null)
-function getMailCats(){ try{ const r=localStorage.getItem('mail_cat_rules'); if(r){ const a=JSON.parse(r); if(Array.isArray(a)&&a.length) return a; } }catch(e){} return MAIL_CAT_DEFAULT.slice(); }
-function saveMailCats(a){ try{ localStorage.setItem('mail_cat_rules', JSON.stringify(a)); }catch(e){} }
+let _inboxCat = null;       // 선택된 카테고리 이름
+let _inboxCatRule = null;   // 서버로 보낼 규칙(객체) — 있으면 /inbox에 cat=로 전달
+let _mailCatCounts = null;  // {name:count}
+let _mailCatUncat = null;   // 미분류 개수
+function getMailCats(){ try{ const r=localStorage.getItem('mail_cat_rules_v2'); if(r){ const a=JSON.parse(r); if(Array.isArray(a)&&a.length) return a; } }catch(e){} return MAIL_CAT_DEFAULT.slice(); }
+function saveMailCats(a){ try{ localStorage.setItem('mail_cat_rules_v2', JSON.stringify(a)); }catch(e){} }
 function renderMailCats(){
   const bar=document.getElementById('inboxCatBar'); if(!bar) return;
   const cats=getMailCats();
+  const cnt=(nm)=> (_mailCatCounts && (nm in _mailCatCounts)) ? ` <span style="opacity:.7">${_mailCatCounts[nm]}</span>` : '';
   const chip=(active,label,onclick,title)=>`<button onclick="${onclick}" title="${title||''}" style="padding:4px 10px;border-radius:14px;border:1px solid ${active?'var(--blue)':'var(--line)'};background:${active?'var(--blue)':'var(--bg)'};color:${active?'#fff':'var(--t2)'};font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">${label}</button>`;
   let html=chip(_inboxCat===null && !_inboxQ, '전체', "applyMailCategory(null)");
-  cats.forEach((c,i)=>{ html+=chip(_inboxCat===c.name, `${c.icon||'📂'} ${_ie(c.name)}`, `applyMailCategory(${i})`, '검색: '+_ie(c.q)); });
-  html+=chip(false, '⚙ 사서함 관리', "manageMailCategories()", '카테고리 규칙 편집');
+  cats.forEach((c,i)=>{ html+=chip(_inboxCat===c.name, `${c.icon||'📂'} ${_ie(c.name)}${cnt(c.name)}`, `applyMailCategory(${i})`, '제목: '+((c.subject||[]).join(', '))+(c.from?(' · 발신: '+c.from.join(', ')):'')); });
+  const un = (_mailCatUncat!=null) ? ` <span style="opacity:.7">${_mailCatUncat}</span>` : '';
+  html+=chip(_inboxCat==='__uncat__', `🗂 미분류${un}`, "applyMailCategory('uncat')", '어떤 카테고리에도 안 걸리는 메일');
+  html+=chip(false, '⚙', "manageMailCategories()", '사서함 관리');
   bar.innerHTML=html;
 }
 function applyMailCategory(i){
-  if(i===null){ _inboxCat=null; _inboxQ=''; const s=document.getElementById('inboxSearch'); if(s) s.value=''; }
-  else{
-    const c=getMailCats()[i]; if(!c) return;
-    _inboxCat=c.name; _inboxQ=(c.q||'').trim(); _inboxField=c.field||'both';
-    const s=document.getElementById('inboxSearch'); if(s) s.value=_inboxQ;
-    const f=document.getElementById('inboxField'); if(f) f.value=_inboxField;
-  }
+  const s=document.getElementById('inboxSearch');
+  if(i===null){ _inboxCat=null; _inboxCatRule=null; _inboxQ=''; if(s) s.value=''; }
+  else if(i==='uncat'){ _inboxCat='__uncat__'; _inboxCatRule={uncat:getMailCats()}; _inboxQ=''; if(s) s.value=''; }
+  else{ const c=getMailCats()[i]; if(!c) return; _inboxCat=c.name; _inboxCatRule={subject:c.subject||[], from:c.from||[], notSubject:c.notSubject||[]}; _inboxQ=''; if(s) s.value=''; }
   _inboxFolder='INBOX'; _inboxPage=1; _resetUnreadBtn();
   const fs=document.getElementById('inboxFolderSel'); if(fs) fs.value='INBOX';
   renderMailCats(); loadInbox();
 }
+async function loadCatCounts(){
+  try{
+    const base=await _senderBase(); if(!base) return;
+    const cats=getMailCats();
+    const r=await fetch(base+'/cat-counts?folder=INBOX&cats='+encodeURIComponent(JSON.stringify(cats)),{signal:AbortSignal.timeout(40000)});
+    const d=await r.json();
+    if(d.ok){ _mailCatCounts=d.counts||{}; _mailCatUncat=(d.uncategorized!=null?d.uncategorized:null); renderMailCats(); }
+  }catch(e){}
+}
 function manageMailCategories(){
   const cats=getMailCats();
-  const p=prompt('가상 사서함(카테고리) 규칙 편집 — 메일은 이동하지 않고, 칩 클릭 시 해당 검색으로 걸러 보여줍니다.\n\n각 항목 형식:\n{"name":"이름","icon":"🧾","q":"검색어","field":"subject | from | both"}\n\n(빈칸으로 확인하면 기본값으로 초기화)', JSON.stringify(cats,null,1));
+  const p=prompt('가상 사서함(카테고리) 규칙 편집 — 메일은 이동하지 않고 서버에서 걸러 보여줍니다.\n\n각 항목:\n{"name":"이름","icon":"🧾","subject":["제목키워드1","키워드2"],"from":["발신키워드"]}\n· subject: 제목에 하나라도 포함되면 매칭(OR)\n· from: 보낸사람에 포함되면 매칭\n\n(빈칸 확인 시 기본값 초기화)', JSON.stringify(cats,null,1));
   if(p===null) return;
-  if(!p.trim()){ saveMailCats(MAIL_CAT_DEFAULT.slice()); _inboxCat=null; renderMailCats(); return; }
-  try{ const a=JSON.parse(p); if(!Array.isArray(a)) throw 0; saveMailCats(a); renderMailCats(); alert('저장되었습니다.'); }
+  if(!p.trim()){ saveMailCats(MAIL_CAT_DEFAULT.slice()); _inboxCat=null; _inboxCatRule=null; _mailCatCounts=null; _mailCatUncat=null; renderMailCats(); loadCatCounts(); return; }
+  try{ const a=JSON.parse(p); if(!Array.isArray(a)) throw 0; saveMailCats(a); _mailCatCounts=null; _mailCatUncat=null; renderMailCats(); loadCatCounts(); alert('저장되었습니다.'); }
   catch(e){ alert('형식 오류입니다. JSON 배열 형태를 확인하세요.'); }
 }
 
@@ -4158,12 +4170,13 @@ async function loadInbox(){
   const base=await _senderBase();
   if(!base){ list.innerHTML='<div style="padding:22px;color:var(--t2);font-size:13px;line-height:1.7;">🔌 발송기(회사 PC 프로그램)가 꺼져 있습니다.<br><b>메일발송기 실행.bat</b>을 켠 뒤 🔄 새로고침 하세요.<br><br><a href="mailto:" style="color:var(--blue);font-weight:700;">아웃룩으로 열기 →</a></div>'; return; }
   try{
-    const url=base+`/inbox?page=${_inboxPage}&per=${_inboxPer}&q=${encodeURIComponent(_inboxQ)}&field=${encodeURIComponent(_inboxField)}&folder=${encodeURIComponent(_inboxFolder)}&unread=${_inboxUnread?1:0}`;
-    const r=await fetch(url,{signal:AbortSignal.timeout(30000)});
+    let url=base+`/inbox?page=${_inboxPage}&per=${_inboxPer}&q=${encodeURIComponent(_inboxQ)}&field=${encodeURIComponent(_inboxField)}&folder=${encodeURIComponent(_inboxFolder)}&unread=${_inboxUnread?1:0}`;
+    if(_inboxCatRule) url += '&cat='+encodeURIComponent(JSON.stringify(_inboxCatRule));
+    const r=await fetch(url,{signal:AbortSignal.timeout(40000)});
     const d=await r.json();
     if(!d.ok){ list.innerHTML=`<div style="padding:22px;color:var(--red);font-size:13px;line-height:1.7;">받은편지함 오류<br><span style="color:var(--t2);">${_ie(d.error)}</span><br><br><span style="color:var(--t3);font-size:12px;">회사 PC의 <b>메일발송기\\config.json</b>에 이메일 계정·비밀번호(imap_user / imap_pass)를 입력했는지 확인하세요.</span></div>`; return; }
     document.getElementById('inboxUser').textContent = d.user||'';
-    if(!(d.items&&d.items.length)){ list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">'+(_inboxQ?'검색 결과가 없습니다.':(_inboxUnread?'안읽은 메일이 없습니다.':'받은 메일이 없습니다.'))+'</div>'; renderInboxPager(d); return; }
+    if(!(d.items&&d.items.length)){ list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">'+(_inboxCatRule?'이 카테고리에 해당하는 메일이 없습니다.':(_inboxQ?'검색 결과가 없습니다.':(_inboxUnread?'안읽은 메일이 없습니다.':'받은 메일이 없습니다.')))+'</div>'; renderInboxPager(d); return; }
     list.innerHTML=d.items.map(m=>`<div class="inbox-item" data-uid="${_ie(m.uid)}" onclick="openMailItem('${_ie(m.uid)}',this)" style="padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;${m.seen?'':'background:var(--blue-bg);'}">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
         <span class="ib-from" style="font-weight:${m.seen?'500':'800'};font-size:13px;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.seen?'':'<span style=\'color:var(--blue)\'>●</span> '}${_ie(_mailFromName(m.from))}</span>
