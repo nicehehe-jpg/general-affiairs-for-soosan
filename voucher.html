@@ -214,7 +214,8 @@
   <div class="upload-box">
     <label class="upl">📎 전자세금계산서 PDF 업로드 (여러 개 선택 가능, 자동 행 추가)</label>
     <input type="file" id="etcPdfFile" accept=".pdf" multiple>
-    <div class="hint">전자세금계산서를 올리면 공급자(거래처), 공급가액, 세액을 읽어 아래 표에 행을 추가합니다. 업무유형은 품목명을 보고 추정하므로 추가된 행에서 꼭 확인/수정하세요.</div>
+    <button type="button" class="btn small" onclick="importTaxFromMail()" style="margin:8px 0 2px;">📧 메일에서 세금계산서 불러오기</button>
+    <div class="hint">전자세금계산서를 올리면(또는 <b>메일에서 불러오면</b>) 공급자(거래처), 공급가액, 세액을 읽어 아래 표에 행을 추가합니다. 업무유형은 품목명을 보고 추정하므로 추가된 행에서 꼭 확인/수정하세요.</div>
     <div class="status-msg" id="etcPdfStatus"></div>
   </div>
   <div class="row">
@@ -897,6 +898,102 @@ async function handleEtcPdfUpload(ev){
   renderEtcTable();
   statusEl.classList.remove('err');
   statusEl.textContent = msgs.join('\n') + '\n업무유형/거래처를 확인 후 필요시 수정하세요.';
+}
+
+/* ===== 메일에서 전자세금계산서 자동 불러오기 (mailserver 127.0.0.1:3000 · 비파괴) ===== */
+let _mailBaseCache = null;
+async function _mailBase(){
+  if(_mailBaseCache) return _mailBaseCache;
+  for(const b of ['http://localhost:3000','http://127.0.0.1:3000']){
+    try{ const r=await fetch(b+'/health',{signal:AbortSignal.timeout(2500)}); const d=await r.json(); if(d&&d.ok){ _mailBaseCache=b; return b; } }catch(e){}
+  }
+  return null;
+}
+function _taxCatRule(){ // 메일함(index.html)과 같은 origin이라 localStorage 공유
+  try{ const r=localStorage.getItem('mail_cat_rules_v2'); if(r){ const a=JSON.parse(r); const c=(a||[]).find(x=>/세금계산서/.test(x.name||'')); if(c) return {subject:c.subject||[], from:c.from||[]}; } }catch(e){}
+  return {subject:['세금계산서']};
+}
+function _taxFmtB(n){ n=+n||0; if(n<1024) return n+'B'; if(n<1048576) return (n/1024).toFixed(1)+'KB'; return (n/1048576).toFixed(1)+'MB'; }
+function _taxFromName(f){ const m=(f||'').match(/^\s*"?([^"<]+?)"?\s*</); return m?m[1].trim():((f||'').replace(/<.*>/,'').trim()||f||''); }
+function _taxEsc(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function _taxModal(title, bodyHtml){
+  let ov=document.getElementById('taxMailOverlay'); if(ov) ov.remove();
+  ov=document.createElement('div'); ov.id='taxMailOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;';
+  ov.onclick=(e)=>{ if(e.target===ov) ov.remove(); };
+  ov.innerHTML=`<div style="background:#fff;color:#111;width:640px;max-width:94vw;max-height:88vh;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;font-family:inherit;">
+    <div style="padding:15px 18px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;"><b id="taxMailTitle" style="font-size:15px;">${title}</b><button onclick="document.getElementById('taxMailOverlay').remove()" style="border:none;background:transparent;font-size:18px;cursor:pointer;color:#666;">✕</button></div>
+    <div id="taxMailBody" style="flex:1;overflow-y:auto;">${bodyHtml}</div>
+    <div id="taxMailFoot" style="padding:12px 16px;border-top:1px solid #eee;display:flex;justify-content:flex-end;gap:8px;"></div>
+  </div>`;
+  document.body.appendChild(ov); return ov;
+}
+function _taxBody(ov, html){ const b=ov&&ov.querySelector('#taxMailBody'); if(b) b.innerHTML=html; }
+async function importTaxFromMail(){
+  const te=document.getElementById('task-etc'); if(te && !te.checked){ te.checked=true; updateTaskVisibility(); }
+  const base=await _mailBase();
+  if(!base){ alert('메일 서버(발송기)가 꺼져 있습니다.\n회사 PC에서 "메일발송기 실행.bat"을 켠 뒤 다시 시도하세요.'); return; }
+  const ov=_taxModal('메일에서 세금계산서 찾는 중…','<div style="padding:30px;text-align:center;color:#888;">불러오는 중…</div>');
+  try{
+    const rule=_taxCatRule();
+    const r=await fetch(base+'/inbox?folder=INBOX&per=40&page=1&cat='+encodeURIComponent(JSON.stringify(rule)),{signal:AbortSignal.timeout(40000)});
+    const d=await r.json();
+    if(!d.ok){ _taxBody(ov,'<div style="padding:20px;color:#F04452;">오류: '+_taxEsc(d.error||'조회 실패')+'</div>'); return; }
+    const mails=d.items||[];
+    if(!mails.length){ _taxBody(ov,'<div style="padding:24px;color:#888;text-align:center;">세금계산서 카테고리 메일이 없습니다.<br><span style="font-size:12px;">메일함 ⚙에서 세금계산서 규칙을 확인하세요.</span></div>'); return; }
+    const rows=[];
+    for(let i=0;i<mails.length;i++){
+      _taxBody(ov,'<div style="padding:24px;text-align:center;color:#888;">첨부 확인 중… ('+(i+1)+'/'+mails.length+')</div>');
+      try{
+        const rr=await fetch(base+'/mail?uid='+encodeURIComponent(mails[i].uid)+'&folder=INBOX',{signal:AbortSignal.timeout(30000)});
+        const dd=await rr.json();
+        const atts=((dd.ok&&dd.mail&&dd.mail.attachments)||[]).filter(a=>/\.pdf$/i.test(a.name||''));
+        atts.forEach(a=>rows.push({uid:mails[i].uid, subject:mails[i].subject, from:mails[i].from, date:mails[i].date, idx:a.idx, name:a.name, size:a.size}));
+      }catch(e){}
+    }
+    if(!rows.length){ _taxBody(ov,'<div style="padding:24px;color:#888;text-align:center;">PDF 첨부가 있는 세금계산서 메일이 없습니다.</div>'); return; }
+    _taxRenderPicker(ov, base, rows);
+  }catch(e){ _taxBody(ov,'<div style="padding:20px;color:#F04452;">오류: '+_taxEsc(e.message||e)+'</div>'); }
+}
+function _taxRenderPicker(ov, base, rows){
+  ov.querySelector('#taxMailTitle').textContent='세금계산서 첨부 '+rows.length+'건';
+  const list=rows.map((r,i)=>`<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-bottom:1px solid #f2f2f2;cursor:pointer;">
+    <input type="checkbox" class="tax-pick" data-i="${i}" checked style="margin-top:3px;">
+    <div style="min-width:0;">
+      <div style="font-size:13px;font-weight:700;color:#111;">📎 ${_taxEsc(r.name)} <span style="color:#999;font-weight:400;">(${_taxFmtB(r.size)})</span></div>
+      <div style="font-size:12px;color:#555;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_taxEsc(r.subject)}</div>
+      <div style="font-size:11px;color:#999;margin-top:1px;">${_taxEsc(_taxFromName(r.from))} · ${_taxEsc(r.date)}</div>
+    </div></label>`).join('');
+  _taxBody(ov, `<div style="padding:9px 14px;font-size:12px;color:#888;">가져올 세금계산서를 선택하세요. 선택한 PDF를 읽어 ③기타 표에 <b>공급가액·세액·거래처</b>가 자동 입력됩니다.</div>${list}`);
+  const foot=ov.querySelector('#taxMailFoot');
+  foot.innerHTML=`<label style="margin-right:auto;font-size:12px;color:#666;display:flex;align-items:center;gap:5px;cursor:pointer;"><input type="checkbox" id="taxPickAll" checked onchange="document.querySelectorAll('.tax-pick').forEach(c=>c.checked=this.checked)"> 전체선택</label>
+    <button onclick="document.getElementById('taxMailOverlay').remove()" style="padding:8px 16px;border:1px solid #ddd;border-radius:9px;background:#f7f7f7;cursor:pointer;font-family:inherit;">취소</button>
+    <button id="taxImportBtn" style="padding:8px 18px;border:none;border-radius:9px;background:#3182F6;color:#fff;font-weight:800;cursor:pointer;font-family:inherit;">선택 가져오기</button>`;
+  document.getElementById('taxImportBtn').onclick=()=>_taxDoImport(ov, base, rows);
+}
+async function _taxDoImport(ov, base, rows){
+  const picks=[...ov.querySelectorAll('.tax-pick:checked')].map(c=>rows[+c.dataset.i]);
+  if(!picks.length){ alert('선택된 항목이 없습니다.'); return; }
+  const btn=document.getElementById('taxImportBtn'); if(btn){ btn.disabled=true; btn.textContent='가져오는 중…'; }
+  let ok=0, fail=0; const errs=[];
+  for(const p of picks){
+    try{
+      const rr=await fetch(base+`/attachment?uid=${encodeURIComponent(p.uid)}&idx=${p.idx}&folder=INBOX`,{signal:AbortSignal.timeout(60000)});
+      const ct=(rr.headers.get('content-type')||'');
+      if(ct.includes('application/json')){ const j=await rr.json(); throw new Error(j.error||'다운로드 실패'); }
+      const blob=await rr.blob();
+      const file=new File([blob], p.name, {type:'application/pdf'});
+      const text=await extractPdfText(file);
+      const parsed=parseTaxInvoiceText(text);
+      etcItems.push({type:parsed.type, vendor:parsed.vendor||'', supply:parsed.supply||0, vat:parsed.vat||0, evidType:'세금계산서', memo:''});
+      ok++;
+    }catch(e){ fail++; errs.push(p.name+': '+(e.message||e)); }
+  }
+  renderEtcTable();
+  if(ov) ov.remove();
+  const st=document.getElementById('etcPdfStatus'); if(st){ st.classList.remove('err'); st.textContent=`메일에서 ${ok}건 불러왔습니다${fail?(' · 실패 '+fail+'건'):''}. 업무유형/거래처를 확인·수정하세요.`; }
+  if(errs.length) console.warn('[세금계산서 가져오기 실패]', errs);
+  const card=document.getElementById('etcCard'); if(card) card.scrollIntoView({behavior:'smooth'});
 }
 
 // ===================== 엑셀 업로드 (통신비/대리운전) =====================
