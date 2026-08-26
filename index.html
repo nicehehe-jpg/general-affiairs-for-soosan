@@ -1463,6 +1463,7 @@ async function sendAiMsg(){
           <button class="nv-btn" onclick="inboxClearSearch()" title="검색 해제" style="flex-shrink:0;">✕</button>
           <button id="inboxUnreadBtn" class="nv-btn" onclick="toggleUnread()" title="안읽은 메일만 보기" style="flex-shrink:0;">📩</button>
         </div>
+        <div id="inboxCatBar" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;"></div>
         <div id="inboxList" style="flex:1;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--card);"></div>
         <div id="inboxPager" style="flex-shrink:0;"></div>
       </div>
@@ -4092,7 +4093,7 @@ let _curMail = null;
 let _inboxPage = 1, _inboxQ = '', _inboxField = 'both', _inboxPer = 30, _inboxFolder = 'INBOX', _inboxUnread = false;
 function _resetUnreadBtn(){ _inboxUnread=false; const b=document.getElementById('inboxUnreadBtn'); if(b){ b.style.background=''; b.style.color=''; } }
 function toggleUnread(){ _inboxUnread=!_inboxUnread; _inboxPage=1; const b=document.getElementById('inboxUnreadBtn'); if(b){ b.style.background=_inboxUnread?'var(--blue)':''; b.style.color=_inboxUnread?'#fff':''; } loadInbox(); }
-function openInbox(){ _inboxPage=1; _inboxQ=''; _inboxFolder='INBOX'; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); loadFolders(); loadInbox(); }
+function openInbox(){ _inboxPage=1; _inboxQ=''; _inboxFolder='INBOX'; _inboxCat=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); renderMailCats(); loadFolders(); loadInbox(); }
 function closeInbox(){ document.getElementById('inboxModal').classList.remove('show'); }
 async function loadFolders(){
   const sel=document.getElementById('inboxFolderSel'); if(!sel) return;
@@ -4105,10 +4106,52 @@ async function loadFolders(){
     }
   }catch(e){}
 }
-function inboxChangeFolder(raw){ _inboxFolder=raw||'INBOX'; _inboxPage=1; _inboxQ=''; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>'; loadInbox(); }
-function inboxDoSearch(){ _inboxQ=(document.getElementById('inboxSearch').value||'').trim(); _inboxField=document.getElementById('inboxField').value; _inboxPage=1; loadInbox(); }
-function inboxClearSearch(){ document.getElementById('inboxSearch').value=''; _inboxQ=''; _inboxPage=1; loadInbox(); }
+function inboxChangeFolder(raw){ _inboxFolder=raw||'INBOX'; _inboxPage=1; _inboxQ=''; _inboxCat=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; renderMailCats(); document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>'; loadInbox(); }
+function inboxDoSearch(){ _inboxQ=(document.getElementById('inboxSearch').value||'').trim(); _inboxField=document.getElementById('inboxField').value; _inboxPage=1; _inboxCat=null; renderMailCats(); loadInbox(); }
+function inboxClearSearch(){ document.getElementById('inboxSearch').value=''; _inboxQ=''; _inboxPage=1; _inboxCat=null; renderMailCats(); loadInbox(); }
 function inboxGoPage(p){ _inboxPage=p; loadInbox(); document.getElementById('inboxList').scrollTop=0; }
+
+/* ===== 가상 사서함(카테고리) — 비파괴: 규칙 기반 저장된 검색. 메일을 옮기지 않고 클릭 시 해당 검색으로 걸러 보여줌 ===== */
+const MAIL_CAT_DEFAULT = [
+  {name:'세금계산서', icon:'🧾', q:'세금계산서', field:'subject'},
+  {name:'전자결재',   icon:'✅', q:'결재',       field:'subject'},
+  {name:'구매·계약',  icon:'📄', q:'계약',       field:'subject'},
+  {name:'협회',       icon:'🏛', q:'협회',       field:'both'},
+  {name:'ERP인증',    icon:'🔑', q:'인증번호',   field:'subject'},
+];
+let _inboxCat = null; // 현재 선택된 카테고리 이름(없으면 null)
+function getMailCats(){ try{ const r=localStorage.getItem('mail_cat_rules'); if(r){ const a=JSON.parse(r); if(Array.isArray(a)&&a.length) return a; } }catch(e){} return MAIL_CAT_DEFAULT.slice(); }
+function saveMailCats(a){ try{ localStorage.setItem('mail_cat_rules', JSON.stringify(a)); }catch(e){} }
+function renderMailCats(){
+  const bar=document.getElementById('inboxCatBar'); if(!bar) return;
+  const cats=getMailCats();
+  const chip=(active,label,onclick,title)=>`<button onclick="${onclick}" title="${title||''}" style="padding:4px 10px;border-radius:14px;border:1px solid ${active?'var(--blue)':'var(--line)'};background:${active?'var(--blue)':'var(--bg)'};color:${active?'#fff':'var(--t2)'};font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">${label}</button>`;
+  let html=chip(_inboxCat===null && !_inboxQ, '전체', "applyMailCategory(null)");
+  cats.forEach((c,i)=>{ html+=chip(_inboxCat===c.name, `${c.icon||'📂'} ${_ie(c.name)}`, `applyMailCategory(${i})`, '검색: '+_ie(c.q)); });
+  html+=chip(false, '⚙ 사서함 관리', "manageMailCategories()", '카테고리 규칙 편집');
+  bar.innerHTML=html;
+}
+function applyMailCategory(i){
+  if(i===null){ _inboxCat=null; _inboxQ=''; const s=document.getElementById('inboxSearch'); if(s) s.value=''; }
+  else{
+    const c=getMailCats()[i]; if(!c) return;
+    _inboxCat=c.name; _inboxQ=(c.q||'').trim(); _inboxField=c.field||'both';
+    const s=document.getElementById('inboxSearch'); if(s) s.value=_inboxQ;
+    const f=document.getElementById('inboxField'); if(f) f.value=_inboxField;
+  }
+  _inboxFolder='INBOX'; _inboxPage=1; _resetUnreadBtn();
+  const fs=document.getElementById('inboxFolderSel'); if(fs) fs.value='INBOX';
+  renderMailCats(); loadInbox();
+}
+function manageMailCategories(){
+  const cats=getMailCats();
+  const p=prompt('가상 사서함(카테고리) 규칙 편집 — 메일은 이동하지 않고, 칩 클릭 시 해당 검색으로 걸러 보여줍니다.\n\n각 항목 형식:\n{"name":"이름","icon":"🧾","q":"검색어","field":"subject | from | both"}\n\n(빈칸으로 확인하면 기본값으로 초기화)', JSON.stringify(cats,null,1));
+  if(p===null) return;
+  if(!p.trim()){ saveMailCats(MAIL_CAT_DEFAULT.slice()); _inboxCat=null; renderMailCats(); return; }
+  try{ const a=JSON.parse(p); if(!Array.isArray(a)) throw 0; saveMailCats(a); renderMailCats(); alert('저장되었습니다.'); }
+  catch(e){ alert('형식 오류입니다. JSON 배열 형태를 확인하세요.'); }
+}
+
 async function loadInbox(){
   const list=document.getElementById('inboxList'), pager=document.getElementById('inboxPager');
   list.innerHTML='<div style="padding:24px;color:var(--t3);text-align:center;">불러오는 중…</div>'; pager.innerHTML='';
