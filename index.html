@@ -2607,6 +2607,9 @@ function handleRateMasterUploadDash(input){
 /* ============== 로그 관리 (업데이트 이력 + 오류 로그) ============== */
 function logEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const CHANGELOG_CENTRAL = [
+  { date:'2026-08-27', app:'메일 · 작성', items:[
+    '엑셀 표 붙여넣기 시 테두리·배경색·정렬 등 서식 유지 — 클립보드의 클래스(.xl) 스타일을 인라인으로 자동 변환(기존엔 테두리가 사라지던 문제 해결)'
+  ]},
   { date:'2026-08-27', app:'메일 · 대시보드', items:[
     '받은편지함을 팝업 대신 대시보드 안 인페이지 화면으로 표시(좌측 \'메일함\' 메뉴) — 그룹웨어식 사용감',
     '메일 좌측 분류 재구성 — \'전체 메일\' 아래 카테고리(세금계산서·전자결재·구매계약·협회·ERP인증) 들여쓰기, \'보낸 메일·중요 메일·사용자 설정\' 분리',
@@ -3692,6 +3695,7 @@ function rteInit() {
   const e = dmBodyEl(); if (!e || e._rteInit) return; e._rteInit = true;
   try { document.execCommand('styleWithCSS', false, true); } catch (_) {}
   ['keyup', 'mouseup', 'blur'].forEach(ev => e.addEventListener(ev, _rteSaveSel));
+  e.addEventListener('paste', _dmHandlePaste);   // 엑셀 표 붙여넣기 시 테두리·배경 유지
   // 표 셀 우클릭 → 편집 메뉴
   e.addEventListener('contextmenu', ev => {
     const cell = ev.target.closest('td,th');
@@ -3709,6 +3713,56 @@ function rteInit() {
   });
   document.addEventListener('click', hideTblMenu);
   document.addEventListener('scroll', hideTblMenu, true);
+}
+/* ===== 엑셀 표 붙여넣기: <style> 클래스(.xl..)를 인라인 스타일로 변환해 테두리·배경·정렬 유지 ===== */
+function _dmHandlePaste(ev){
+  try{
+    const cd = ev.clipboardData || window.clipboardData; if(!cd) return;
+    const html = cd.getData('text/html');
+    if(!html || !/<table[\s>]/i.test(html)) return;   // 표가 아니면 브라우저 기본 붙여넣기 유지
+    const cleaned = _excelHtmlToInline(html);
+    if(!cleaned) return;
+    ev.preventDefault();
+    _rteRestore();
+    document.execCommand('insertHTML', false, cleaned);
+    _rteSaveSel();
+  }catch(e){ /* 실패 시 기본 붙여넣기로 폴백 */ }
+}
+function _excelHtmlToInline(html){
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  // 1) <style> 안의 규칙(.xl65 클래스 / td·th·tr·table 요소) 수집
+  const rules = [];  // {test:fn(el)->bool, css:string}
+  doc.querySelectorAll('style').forEach(st=>{
+    (st.textContent||'').replace(/<!--|-->/g,'').replace(/([^{}]+)\{([^{}]*)\}/g, (m, sel, body)=>{
+      body = (body||'').trim(); if(!body) return '';
+      sel.split(',').forEach(one=>{
+        const s = one.trim(); if(!s) return;
+        const mcl = s.match(/^\.([\w\-]+)$/);
+        if(mcl){ const cl=mcl[1]; rules.push({test:el=>el.classList && el.classList.contains(cl), css:body}); }
+        else if(/^(table|tr|td|th)$/i.test(s)){ const tag=s.toLowerCase(); rules.push({test:el=>el.tagName.toLowerCase()===tag, css:body}); }
+      });
+      return '';
+    });
+  });
+  // 2) 표 관련 요소에 규칙 CSS를 인라인으로 병합(인라인이 마지막=우선), mso-* 제거
+  doc.querySelectorAll('table,tr,td,th').forEach(el=>{
+    let css=''; rules.forEach(r=>{ try{ if(r.test(el)) css+=';'+r.css; }catch(_){} });
+    const inline = el.getAttribute('style')||'';
+    let finalCss = (css+';'+inline).replace(/mso-[^:;]+:[^;]*;?/gi,'').replace(/;{2,}/g,';').replace(/^;+|;+$/g,'').trim();
+    if(finalCss) el.setAttribute('style', finalCss);
+    el.removeAttribute('class');
+  });
+  // 3) 표 기본 보정(테두리 겹침 방지) + 불필요 속성 제거
+  doc.querySelectorAll('table').forEach(t=>{
+    let s = t.getAttribute('style')||'';
+    if(!/border-collapse/i.test(s)) s += ';border-collapse:collapse';
+    t.setAttribute('style', s.replace(/^;+/,''));
+    ['border','cellspacing','cellpadding','width','height'].forEach(a=>t.removeAttribute(a));
+  });
+  // 4) 나머지 클래스/불필요 태그 정리
+  doc.querySelectorAll('[class]').forEach(el=>el.removeAttribute('class'));
+  doc.querySelectorAll('style,meta,link,colgroup,col').forEach(el=>el.remove());
+  return doc.body.innerHTML.trim();
 }
 function rteCmd(e, cmd) { if (e) e.preventDefault(); _rteRestore(); document.execCommand(cmd, false, null); _rteSaveSel(); return false; }
 function rteFont(v) { if (!v) return; _rteRestore(); document.execCommand('fontName', false, v); _rteSaveSel(); }
