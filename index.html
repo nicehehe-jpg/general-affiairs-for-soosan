@@ -4149,7 +4149,7 @@ async function loadFolders(){
     }
   }catch(e){}
 }
-function inboxChangeFolder(raw){ _inboxFolder=raw||'INBOX'; _inboxPage=1; _inboxQ=''; _inboxCat=null; _inboxCatRule=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; renderMailCats(); document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>'; loadInbox(); }
+function inboxChangeFolder(raw){ _mailSpecial=null; _inboxFolder=raw||'INBOX'; _inboxPage=1; _inboxQ=''; _inboxCat=null; _inboxCatRule=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; renderMailCats(); document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>'; loadInbox(); }
 function inboxDoSearch(){ _inboxQ=(document.getElementById('inboxSearch').value||'').trim(); _inboxField=document.getElementById('inboxField').value; _inboxPage=1; _inboxCat=null; _inboxCatRule=null; renderMailCats(); loadInbox(); }
 function inboxClearSearch(){ document.getElementById('inboxSearch').value=''; _inboxQ=''; _inboxPage=1; _inboxCat=null; _inboxCatRule=null; renderMailCats(); loadInbox(); }
 function inboxGoPage(p){ _inboxPage=p; loadInbox(); document.getElementById('inboxList').scrollTop=0; }
@@ -4166,20 +4166,44 @@ let _inboxCat = null;       // 선택된 카테고리 이름
 let _inboxCatRule = null;   // 서버로 보낼 규칙(객체) — 있으면 /inbox에 cat=로 전달
 let _mailCatCounts = null;  // {name:count}
 let _mailCatUncat = null;   // 미분류 개수
+let _mailSpecial = null;    // null=받은메일함 | 'sent' | 'receipt' | 'flagged' (특수함 보기)
 function getMailCats(){ try{ const r=localStorage.getItem('mail_cat_rules_v2'); if(r){ const a=JSON.parse(r); if(Array.isArray(a)&&a.length) return a; } }catch(e){} return MAIL_CAT_DEFAULT.slice(); }
 function saveMailCats(a){ try{ localStorage.setItem('mail_cat_rules_v2', JSON.stringify(a)); }catch(e){} }
 function renderMailCats(){
   const bar=document.getElementById('inboxCatBar'); if(!bar) return;
   const cats=getMailCats();
   const cnt=(nm)=> (_mailCatCounts && (nm in _mailCatCounts)) ? _mailCatCounts[nm] : null;
-  const row=(active,icon,label,count,onclick,title)=>`<button onclick="${onclick}" title="${title||''}" style="display:flex;align-items:center;gap:6px;width:100%;text-align:left;padding:7px 9px;border-radius:8px;border:1px solid ${active?'var(--blue)':'transparent'};background:${active?'var(--blue-bg)':'transparent'};color:${active?'var(--blue)':'var(--t2)'};font-size:12.5px;font-weight:${active?'800':'600'};cursor:pointer;font-family:inherit;">`
+  const inInbox=(_mailSpecial===null);
+  const item=(active,icon,label,count,onclick,title,indent)=>`<button onclick="${onclick}" title="${title||''}" style="display:flex;align-items:center;gap:7px;width:100%;text-align:left;padding:7px 9px 7px ${indent?'24px':'9px'};border-radius:8px;border:1px solid ${active?'var(--blue)':'transparent'};background:${active?'var(--blue-bg)':'transparent'};color:${active?'var(--blue)':'var(--t2)'};font-size:12.5px;font-weight:${active?'800':(indent?'600':'700')};cursor:pointer;font-family:inherit;">`
     +`<span style="flex-shrink:0;">${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>`
     +`${count!=null?`<span style="flex-shrink:0;font-size:11px;color:${active?'var(--blue)':'var(--t3)'};font-weight:700;">${count}</span>`:''}</button>`;
-  let html=row(_inboxCat===null && !_inboxQ, '📥','전체', null, "applyMailCategory(null)", '전체 받은편지함');
-  cats.forEach((c,i)=>{ html+=row(_inboxCat===c.name, c.icon||'📂', _ie(c.name), cnt(c.name), `applyMailCategory(${i})`, '제목: '+((c.subject||[]).join(', '))+((c.from&&c.from.length)?(' · 발신: '+c.from.join(', ')):'')); });
-  html+=row(_inboxCat==='__uncat__', '🗂','미분류', _mailCatUncat, "applyMailCategory('uncat')", '어떤 카테고리에도 안 걸리는 메일');
-  html+=`<button onclick="manageMailCategories()" title="사서함 관리" style="margin-top:5px;padding:6px;border:1px dashed var(--line);border-radius:8px;background:transparent;color:var(--t3);font-size:12px;cursor:pointer;font-family:inherit;">⚙ 관리</button>`;
+  let html='';
+  // 전체 메일 (받은메일 전체) — 그 아래 카테고리를 들여쓰기로
+  html+=item(inInbox && _inboxCat===null && !_inboxQ, '📥','전체 메일', null, "applyMailCategory(null)", '받은 메일 전체', false);
+  cats.forEach((c,i)=>{ html+=item(inInbox && _inboxCat===c.name, c.icon||'📂', _ie(c.name), cnt(c.name), `applyMailCategory(${i})`, '제목: '+((c.subject||[]).join(', '))+((c.from&&c.from.length)?(' · 발신: '+c.from.join(', ')):''), true); });
+  html+=`<div style="height:1px;background:var(--line);margin:6px 4px;"></div>`;
+  html+=item(_mailSpecial==='sent', '📤','보낸 메일', null, "openMailSpecial('sent')", '내가 보낸 메일', false);
+  html+=item(_mailSpecial==='flagged', '⭐','중요 메일', null, "openMailSpecial('flagged')", '중요 표시(별표) 메일', false);
+  html+=item(false, '⚙','사용자 설정', null, "manageMailCategories()", '카테고리·사서함 관리', false);
   bar.innerHTML=html;
+}
+/* 폴더 목록(드롭다운)에서 힌트로 실제 IMAP 폴더 raw 찾기 */
+function _findFolderRaw(hints){
+  const sel=document.getElementById('inboxFolderSel'); if(!sel) return null;
+  for(const opt of sel.options){ const nm=(opt.textContent||'').toLowerCase(), rw=(opt.value||'').toLowerCase(); if(hints.some(h=>nm.includes(h)||rw.includes(h))) return opt.value; }
+  return null;
+}
+/* 특수함(보낸/중요) 보기로 전환 */
+function openMailSpecial(kind){
+  const map={ sent:{hints:['보낸','sent'],label:'보낸 메일'}, flagged:{hints:['중요','flag','star','important'],label:'중요 메일'} };
+  const m=map[kind]; if(!m) return;
+  const raw=_findFolderRaw(m.hints);
+  if(!raw){ alert(`'${m.label}' 폴더를 찾지 못했습니다.\n메일 계정(IMAP)에 해당 폴더가 있는지 확인해 주세요.`); return; }
+  _mailSpecial=kind; _inboxCat=null; _inboxCatRule=null; _inboxQ=''; _inboxFolder=raw; _inboxPage=1; _resetUnreadBtn();
+  const s=document.getElementById('inboxSearch'); if(s) s.value='';
+  const fs=document.getElementById('inboxFolderSel'); if(fs) fs.value=raw;
+  document.getElementById('inboxReader').innerHTML='<div style="color:var(--t3);text-align:center;padding:40px;">왼쪽에서 메일을 선택하세요.</div>';
+  renderMailCats(); loadInbox();
 }
 /* 목록 너비 좌우 조절(스플리터 드래그) */
 function inboxStartResize(e){
@@ -4227,6 +4251,7 @@ function inboxCtxNew(emailEnc){
   saveMailCats(cats); _mailCatCounts=null; _mailCatUncat=null; renderMailCats(); loadCatCounts();
 }
 function applyMailCategory(i){
+  _mailSpecial=null;
   const s=document.getElementById('inboxSearch');
   if(i===null){ _inboxCat=null; _inboxCatRule=null; _inboxQ=''; if(s) s.value=''; }
   else if(i==='uncat'){ _inboxCat='__uncat__'; _inboxCatRule={uncat:getMailCats()}; _inboxQ=''; if(s) s.value=''; }
