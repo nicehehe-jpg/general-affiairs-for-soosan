@@ -111,8 +111,8 @@
   .hero-search-wrap{
     display:flex; align-items:center; gap:6px;
     background:#fff; border:2px solid #3182F6;
-    border-radius:999px; padding:8px 14px;
-    width:320px; box-shadow:0 2px 12px rgba(49,130,246,.15);
+    border-radius:999px; padding:8px 16px;
+    width:460px; max-width:46vw; box-shadow:0 2px 12px rgba(49,130,246,.15);
     transition:box-shadow .2s;
   }
   .hero-search-wrap:focus-within{box-shadow:0 4px 20px rgba(49,130,246,.3);}
@@ -729,20 +729,6 @@
         <button class="hero-search-kbd" onclick="document.getElementById('heroSearchInput').focus()" title="검색창 포커스">⌨</button>
         <button class="hero-search-ai" onclick="heroSearchAI()" title="AI 검색">✦ AI</button>
       </div>
-      <button class="mail-hero-btn" onclick="openDashMailModal()">
-        <span class="ic">✉️</span>
-        <span class="txt">
-          <span class="main">메일 보내기</span>
-          <span class="sub">아웃룩으로 전송</span>
-        </span>
-      </button>
-      <button class="mail-hero-btn" onclick="openInbox()" style="background:linear-gradient(135deg,#0078D4,#106EBE);">
-        <span class="ic">📥</span>
-        <span class="txt">
-          <span class="main">받은편지함</span>
-          <span class="sub">받은 메일 보기</span>
-        </span>
-      </button>
     </div>
   </div>
 
@@ -892,8 +878,7 @@
   <div id="calendarView" style="display:none;"></div>
 </main>
 
-<!-- 플로팅 메일 버튼 -->
-<button class="mail-fab" onclick="openDashMailModal()" title="메일 보내기">✉️</button>
+<!-- 플로팅 메일 버튼: 메일함 메뉴로 대체되어 제거됨 -->
 
 <!-- Team Chat 버튼 -->
 <button class="teamchat-fab" onclick="window.open('https://team-chat-gray.vercel.app','_blank')" title="Team Chat">💬</button>
@@ -2622,6 +2607,23 @@ function handleRateMasterUploadDash(input){
 /* ============== 로그 관리 (업데이트 이력 + 오류 로그) ============== */
 function logEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 const CHANGELOG_CENTRAL = [
+  { date:'2026-08-27', app:'메일 · 대시보드', items:[
+    '받은편지함을 팝업 대신 대시보드 안 인페이지 화면으로 표시(좌측 \'메일함\' 메뉴) — 그룹웨어식 사용감',
+    '메일 좌측 분류 재구성 — \'전체 메일\' 아래 카테고리(세금계산서·전자결재·구매계약·협회·ERP인증) 들여쓰기, \'보낸 메일·중요 메일·사용자 설정\' 분리',
+    '대시보드 상단 중복 메일 버튼·플로팅 아이콘 제거, 검색창 확대'
+  ]},
+  { date:'2026-08-27', app:'메일 · 발송', items:[
+    '대시보드에서 보낸 메일을 IMAP 보낸함(Sent)에 자동 저장 — \'보낸 메일\'에 발송 기록이 남도록 개선(메일발송기 재시작 필요)'
+  ]},
+  { date:'2026-08-27', app:'전표생성기 · 선물지급', items:[
+    '선물지급/기념품 전표 자동생성 추가 — 취합 명단 업로드 → 사번으로 적용률 조회 → 코스트센터별 집계 → 전표입력 양식 다운로드',
+    '사번 앞자리0 정규화·사원명부(아이디 없이) 이름 매칭 보강, 동명이인 오매칭 방지',
+    '귀속부서·계정과목을 코스트센터 기준으로 산정(본사근무·파견 처리), 기념품 계정 자동 분류'
+  ]},
+  { date:'2026-08-27', app:'구매업무 · 관련문서', items:[
+    '관련 문서에 전자세금계산서 항목 추가, 문서별 여러 파일 경로 등록, 업로드 시 진행 단계 자동 완료',
+    '파일열기 도우미 자동 실행 — 카드에서 문서 클릭 시 로컬 파일·폴더 바로 열림'
+  ]},
   { date:'2026-08-21', app:'대시보드 · 업무', items:[
     '업무별 관련 문서 연결 — 로컬 폴더·파일 경로 또는 웹 링크(URL)를 지정하면 버튼으로 자동 열기',
     '로컬 경로는 회사 PC 발송기가 탐색기로 열고(한글 경로 지원), 링크는 새 탭으로 열림(발송기 꺼져 있으면 경로 클립보드 복사)',
