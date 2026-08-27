@@ -78,6 +78,12 @@
 
   /* ===== 메인 ===== */
   main{flex:1; padding:32px 40px 60px; max-width:1100px;}
+  /* ===== 메일함 인페이지(모달 대신 대시보드 본문에 표시) ===== */
+  main.mail-mode{max-width:none; padding:14px 18px;}
+  main.mail-mode > :not(#mailPageHost){display:none !important;}
+  #mailPageHost{display:none; flex-direction:column; height:calc(100vh - 28px);}
+  main.mail-mode #mailPageHost{display:flex;}
+  main.mail-mode #inboxBox{width:100% !important; max-width:none !important; height:100% !important; max-height:none !important; min-width:0 !important; min-height:0 !important; resize:none !important; box-shadow:none !important;}
   .top-row{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:26px;}
   .date{font-size:13px; color:var(--t3); margin-bottom:6px;}
   h1.greet{font-size:24px; font-weight:800; margin:0 0 4px;}
@@ -682,8 +688,12 @@
     </div>
   </div>
 
-  <div class="nav-item dash active" data-cat="all">
+  <div class="nav-item dash active" data-cat="all" onclick="closeMailPage()">
     <span class="ic">🗂️</span><span class="lbl">대시보드</span><span class="chev">›</span>
+  </div>
+
+  <div class="nav-item" id="navMail" onclick="openMailPage()">
+    <span class="ic">📬</span><span class="lbl">메일함</span>
   </div>
 
   <div class="nav-item" onclick="window.open('todo.html','_blank')">
@@ -735,6 +745,9 @@
       </button>
     </div>
   </div>
+
+  <!-- ===== 메일함 인페이지 컨테이너 (메일함 메뉴 클릭 시 여기로 표시) ===== -->
+  <div id="mailPageHost"></div>
 
   <!-- ===== 자주 가는 사이트 ===== -->
   <div class="quick-links-bar" id="qlBar">
@@ -4098,8 +4111,33 @@ let _curMail = null;
 let _inboxPage = 1, _inboxQ = '', _inboxField = 'both', _inboxPer = 30, _inboxFolder = 'INBOX', _inboxUnread = false;
 function _resetUnreadBtn(){ _inboxUnread=false; const b=document.getElementById('inboxUnreadBtn'); if(b){ b.style.background=''; b.style.color=''; } }
 function toggleUnread(){ _inboxUnread=!_inboxUnread; _inboxPage=1; const b=document.getElementById('inboxUnreadBtn'); if(b){ b.style.background=_inboxUnread?'var(--blue)':''; b.style.color=_inboxUnread?'#fff':''; } loadInbox(); }
-function openInbox(){ _inboxPage=1; _inboxQ=''; _inboxFolder='INBOX'; _inboxCat=null; _inboxCatRule=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; document.getElementById('inboxModal').classList.add('show'); renderMailCats(); loadFolders(); loadInbox(); loadCatCounts(); }
-function closeInbox(){ document.getElementById('inboxModal').classList.remove('show'); }
+let _mailInline=false;
+function _inboxReset(){ _inboxPage=1; _inboxQ=''; _inboxFolder='INBOX'; _inboxCat=null; _inboxCatRule=null; _resetUnreadBtn(); const s=document.getElementById('inboxSearch'); if(s) s.value=''; renderMailCats(); loadFolders(); loadInbox(); loadCatCounts(); }
+/* 메일함을 대시보드 본문(인페이지)으로 표시 — 모달 카드(#inboxBox)를 그대로 이동해 로직 100% 재사용 */
+function openMailPage(){
+  const box=document.getElementById('inboxBox'), host=document.getElementById('mailPageHost');
+  if(!box||!host) return;
+  host.appendChild(box);                                   // 모달 → 인페이지
+  document.getElementById('inboxModal')?.classList.remove('show');
+  const m=document.querySelector('main'); if(m){ m.classList.add('mail-mode'); }
+  document.getElementById('navMail')?.classList.add('active');
+  document.querySelector('.nav-item.dash')?.classList.remove('active');
+  document.querySelectorAll('.nav-item[data-cat]').forEach(el=>el.classList.remove('active'));
+  _mailInline=true; window.scrollTo(0,0);
+  _inboxReset();
+}
+function closeMailPage(){
+  if(!_mailInline) return;                                  // 메일함 아닐 때 클릭은 무시
+  const box=document.getElementById('inboxBox'), modal=document.getElementById('inboxModal');
+  if(box&&modal) modal.appendChild(box);                    // 인페이지 → 원래 모달 위치로 복귀
+  document.querySelector('main')?.classList.remove('mail-mode');
+  document.getElementById('navMail')?.classList.remove('active');
+  document.querySelector('.nav-item.dash')?.classList.add('active');
+  _mailInline=false;
+}
+/* 기존 진입점(받은편지함 버튼 등)도 인페이지로 */
+function openInbox(){ openMailPage(); }
+function closeInbox(){ if(_mailInline){ closeMailPage(); return; } document.getElementById('inboxModal').classList.remove('show'); }
 async function loadFolders(){
   const sel=document.getElementById('inboxFolderSel'); if(!sel) return;
   const base=await _senderBase(); if(!base) return;
