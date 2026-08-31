@@ -268,6 +268,12 @@ tbody tr.row-ignored { background:var(--surface2) !important; opacity:0.6; }
     <div class="card">
       <div class="card-title">🧾 자동 전표 생성 <span class="badge" id="voucherHeadBadge">인원 0명</span></div>
       <div id="voucherRateStatus" class="alert alert-info" style="margin-bottom:14px;">적용률 확인 중…</div>
+      <div style="margin-bottom:14px;padding:12px;border:1px dashed var(--border);border-radius:10px;background:var(--surface2);">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">📎 취합 엑셀 직접 업로드 <span style="font-weight:400;color:var(--text3)">(메인 취합 없이 이 파일로 바로 전표 생성 — '배송정보' 시트의 <b>성명·사번·소속·선물 선택</b> 자동 인식)</span></div>
+        <input type="file" id="vFile" accept=".xlsx,.xls" onchange="handleVoucherUpload(this.files[0])" style="font-size:12px;">
+        <button class="btn" style="margin-left:8px;padding:4px 10px;font-size:12px;" onclick="clearVoucherUpload()">↩ 메인 취합명단 사용</button>
+        <div id="vFileStatus" style="font-size:12px;color:var(--text3);margin-top:6px;"></div>
+      </div>
       <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="font-size:12px;font-weight:700;color:var(--text2)">업체 프리셋:</span>
         <span id="vPresetBtns" style="display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center;"></span>
@@ -1488,10 +1494,57 @@ async function ensureGiftRates(force){
   }catch(e){ localStorage.removeItem(RATE_PASS_LS); setVRateStatus('warn','⚠️ 적용률 복호화 실패 — 암호가 다릅니다. [🔄 적용률 새로고침]으로 다시 입력하세요.'); return false; }
 }
 function _vEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// 자동전표 탭에서 직접 업로드한 취합 명단(있으면 메인 취합 대신 이걸 사용)
+let voucherRows=null;
+function voucherSource(){ return (voucherRows && voucherRows.length) ? voucherRows : allRows; }
+async function handleVoucherUpload(file){
+  const st=document.getElementById('vFileStatus'); if(!file) return;
+  try{
+    st.textContent='읽는 중…'; st.style.color='var(--text3)';
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+    const sheetName=wb.SheetNames.find(n=>/배송|명단|취합|제출/.test(n)) || wb.SheetNames[0];
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:null});
+    let hi=-1, col={};
+    for(let i=0;i<Math.min(aoa.length,30);i++){
+      const row=(aoa[i]||[]).map(v=>v==null?'':String(v).trim());
+      const has=kw=>row.some(c=>c.includes(kw));
+      if((has('성명')||has('이름')||has('사원'))&&has('사번')){
+        hi=i; row.forEach((v,ci)=>{
+          if(/성명|이름|사원/.test(v)&&col.name===undefined)col.name=ci;
+          else if(v.includes('사번')&&col.empNo===undefined)col.empNo=ci;
+          else if(/소속|부서|팀/.test(v)&&col.dept===undefined)col.dept=ci;
+          else if(v.includes('선물')&&!v.includes('안내')&&col.gift===undefined)col.gift=ci;
+        });
+        break;
+      }
+    }
+    if(hi<0||col.name===undefined||col.empNo===undefined){ st.textContent='헤더(성명/사번)를 찾지 못했습니다.'; st.style.color='var(--danger)'; return; }
+    const rows=[];
+    for(let i=hi+1;i<aoa.length;i++){
+      const r=aoa[i]; if(!r) continue;
+      const name=String(r[col.name]??'').trim();
+      const empNo=String(r[col.empNo]??'').trim();
+      if(!name && !empNo) continue;
+      const dept=col.dept!==undefined?String(r[col.dept]??'').trim():'';
+      const gift=col.gift!==undefined?String(r[col.gift]??'').trim():'';
+      rows.push({name, empNo, dept, _siteName:dept, gift});
+    }
+    if(!rows.length){ st.textContent='유효한 인원을 찾지 못했습니다.'; st.style.color='var(--danger)'; return; }
+    voucherRows=rows;
+    renderGiftTypeFilter(); voucherRecalcHint();
+    st.innerHTML=`✅ <b>${_vEsc(file.name)}</b> · ${rows.length}명 불러옴 (시트: ${_vEsc(sheetName)}) — 이 파일로 전표 생성`; st.style.color='#12B886';
+  }catch(e){ st.textContent='읽기 오류: '+e.message; st.style.color='var(--danger)'; }
+}
+function clearVoucherUpload(){
+  voucherRows=null;
+  const fi=document.getElementById('vFile'); if(fi) fi.value='';
+  renderGiftTypeFilter(); voucherRecalcHint();
+  const st=document.getElementById('vFileStatus'); if(st){ st.textContent = allRows.length? '메인 취합명단 사용 중':'취합 명단 없음 — 파일을 올리거나 메인 탭에서 취합하세요'; st.style.color='var(--text3)'; }
+}
 function voucherGiftKey(r){ return String(r.gift||'').trim() || '(없음)'; }
 function renderGiftTypeFilter(){
   const host=document.getElementById('vGiftTypes'); if(!host) return;
-  const counts={}; allRows.forEach(r=>{ const k=voucherGiftKey(r); counts[k]=(counts[k]||0)+1; });
+  const counts={}; voucherSource().forEach(r=>{ const k=voucherGiftKey(r); counts[k]=(counts[k]||0)+1; });
   const types=Object.keys(counts).sort();
   if(!types.length){ host.innerHTML='<span style="color:var(--text3);font-size:12px">취합 후 표시됩니다.</span>'; return; }
   const prev={}; host.querySelectorAll('.vGiftType').forEach(c=>prev[c.value]=c.checked);
@@ -1503,8 +1556,8 @@ function renderGiftTypeFilter(){
 }
 function voucherTargetRows(){
   const sel=new Set(); document.querySelectorAll('#vGiftTypes .vGiftType').forEach(c=>{ if(c.checked) sel.add(c.value); });
-  if(!document.querySelectorAll('#vGiftTypes .vGiftType').length) return allRows.slice(); // 필터 미표시 시 전체
-  return allRows.filter(r=>sel.has(voucherGiftKey(r)));
+  if(!document.querySelectorAll('#vGiftTypes .vGiftType').length) return voucherSource().slice(); // 필터 미표시 시 전체
+  return voucherSource().filter(r=>sel.has(voucherGiftKey(r)));
 }
 // ===== 업체 프리셋 (편집 가능·클라우드+로컬 저장) =====
 const GIFT_PRESET_KEY='gift_vendor_presets_v1';
@@ -1658,7 +1711,7 @@ function voucherRecalcHint(){
     : (head?'공급가액을 입력하세요':'선물 종류를 선택하세요');
 }
 async function genGiftVoucher(){
-  if(!allRows.length){ alert('먼저 사업소 파일을 업로드하고 [⚡ 취합 시작]을 눌러 전체 취합 명단을 만들어 주세요.'); return; }
+  if(!voucherSource().length){ alert('취합 명단이 없습니다.\n· 자동전표 탭에서 취합 엑셀을 직접 업로드하거나\n· 메인 탭에서 파일 업로드 후 [⚡ 취합 시작]을 눌러 주세요.'); return; }
   const ok=await ensureGiftRates(); if(!ok){ alert('적용률을 먼저 불러와야 합니다. 상단 안내를 확인하세요.'); return; }
   const supply=Number(document.getElementById('vSupply').value)||0;
   const total=Number(document.getElementById('vTotal').value)||0;
