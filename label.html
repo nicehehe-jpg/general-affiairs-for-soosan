@@ -14,6 +14,15 @@
   .sub{ color:var(--t2); font-size:13px; margin:0 0 20px; }
   fieldset{ border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:0 0 16px; background:#fff; }
   legend{ font-weight:800; font-size:14px; padding:0 8px; }
+  details.mgmt{ border:1px solid var(--line); border-radius:12px; background:#fbfcfd; margin:0 0 16px; }
+  details.mgmt > summary{ cursor:pointer; font-weight:800; font-size:13.5px; color:var(--t2); padding:12px 16px; list-style:none; user-select:none; }
+  details.mgmt > summary::-webkit-details-marker{ display:none; }
+  details.mgmt > summary::before{ content:'▸ '; color:var(--t3); }
+  details.mgmt[open] > summary::before{ content:'▾ '; }
+  details.mgmt[open] > summary{ border-bottom:1px solid var(--line); }
+  details.mgmt .mgmt-body{ padding:14px 16px 4px; }
+  details.mgmt .mgmt-body fieldset{ margin:0 0 12px; background:#fff; }
+  details.mgmt .mgmt-body fieldset:last-child{ margin-bottom:0; }
   label.f{ display:block; font-size:12px; font-weight:700; color:var(--t2); margin:0 0 4px; }
   input.t, textarea.t, select.t{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:9px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--t1); }
   textarea.t{ resize:vertical; line-height:1.5; }
@@ -88,37 +97,40 @@
     <p class="sub">받는 사람 명단을 넣으면 <b>보내는 사람(고정) + 받는 사람</b> 라벨을 자동 생성해 인쇄합니다. (한 명당 한 장)</p>
 
     <fieldset>
-      <legend>보내는 사람 (고정 · 필요시 수정)</legend>
-      <div class="grid2">
-        <div class="row"><label class="f">주소 1</label><input class="t" id="fromAddr1" value="울산광역시 북구 매곡산업로 21(매곡동)"></div>
-        <div class="row"><label class="f">주소 2</label><input class="t" id="fromAddr2" value="자동차조선기술관 3F"></div>
-        <div class="row"><label class="f">소속 / 이름</label><input class="t" id="fromName" value="㈜수산이앤에스 경영지원팀 허창영 책임"></div>
-        <div class="row"><label class="f">연락처</label><input class="t" id="fromTel" value="052-259-4117"></div>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>받는 사람 명단</legend>
-      <div class="row">
-        <label class="f">엑셀 업로드 <span style="font-weight:500;color:var(--t3)">(부서·성명·직급·주소·주소상세·연락처 컬럼 자동 인식)</span></label>
-        <input type="file" id="file" accept=".xlsx,.xls" onchange="onFile(this.files[0])" style="font-size:13px;">
-      </div>
-      <div class="actions">
-        <button class="btn line" onclick="doPrint()">🖨 인쇄</button>
-        <button class="btn gray" onclick="clearAll()">초기화</button>
-      </div>
-      <div class="hint">📌 컬럼 순서: <b>부서 · 성명 · 직급 · 주소 · 주소상세 · 연락처</b> (순번 열은 있어도 무시). 라벨에는 <b>주소 → 주소상세 → 성명 직급님 → Tel.</b> 순으로 표시됩니다(부서는 인쇄 안 됨). 인쇄 시 브라우저 인쇄창에서 <b>여백 '기본', 배경그래픽 켜기</b>를 권장합니다.</div>
-    </fieldset>
-
-    <fieldset>
       <legend>받는 사람 검색 · 담기</legend>
       <div style="display:flex;gap:8px;align-items:stretch;">
         <input class="t" id="search" list="nameDL" style="flex:1;" placeholder="🔍 이름·부서·주소 입력 (예: 박윤서 / 당진 / 월성) — 목록에서 고르거나 Enter로 담기" oninput="onSearch()" onkeydown="if(event.key==='Enter'){event.preventDefault();addTyped();}">
         <datalist id="nameDL"></datalist>
         <button class="btn primary" style="white-space:nowrap;" onclick="addTyped()">➕ 담기</button>
       </div>
-      <div class="hint"><b>담기</b>: 이름을 입력하고 <b>Enter</b> 또는 <b>➕ 담기</b>를 누르면 그 사람이 인쇄 목록에 추가됩니다. 이렇게 <b>여러 명을 계속 담을</b> 수 있고, <b>👁 선택만 보기</b>로 담은 목록을 확인합니다. (동명이인·2주소는 함께 담긴 뒤 원치 않는 것만 체크 해제)<br>한 번 업로드하면 <b>클라우드에 자동 저장</b>되어 다음에 열 때 자동으로 불러옵니다(로그인 시). <span id="cloudStatus" style="font-weight:700;color:var(--t2);"></span></div>
+      <div class="hint"><b>담기</b>: 이름을 입력하고 <b>Enter</b> 또는 <b>➕ 담기</b>를 누르면 그 사람이 인쇄 목록에 추가됩니다. 이렇게 <b>여러 명을 계속 담을</b> 수 있고, <b>👁 선택만 보기</b>로 담은 목록을 확인합니다. (동명이인·2주소는 함께 담긴 뒤 원치 않는 것만 체크 해제) 명단은 <b>⚙ 설정 · 데이터 관리</b>에서 업로드합니다.</div>
     </fieldset>
+
+    <details class="mgmt no-print">
+      <summary>⚙ 설정 · 데이터 관리 <span style="font-weight:500;color:var(--t3);font-size:12px;">(보내는 사람 · 명단 엑셀 업로드 · 초기화)</span></summary>
+      <div class="mgmt-body">
+        <fieldset>
+          <legend>보내는 사람 (고정 · 필요시 수정)</legend>
+          <div class="grid2">
+            <div class="row"><label class="f">주소 1</label><input class="t" id="fromAddr1" value="울산광역시 북구 매곡산업로 21(매곡동)"></div>
+            <div class="row"><label class="f">주소 2</label><input class="t" id="fromAddr2" value="자동차조선기술관 3F"></div>
+            <div class="row"><label class="f">소속 / 이름</label><input class="t" id="fromName" value="㈜수산이앤에스 경영지원팀 허창영 책임"></div>
+            <div class="row"><label class="f">연락처</label><input class="t" id="fromTel" value="052-259-4117"></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>받는 사람 명단 (엑셀 업로드)</legend>
+          <div class="row">
+            <label class="f">엑셀 업로드 <span style="font-weight:500;color:var(--t3)">(부서·성명·직급·주소·주소상세·연락처 컬럼 자동 인식)</span></label>
+            <input type="file" id="file" accept=".xlsx,.xls" onchange="onFile(this.files[0])" style="font-size:13px;">
+          </div>
+          <div class="actions">
+            <button class="btn gray" onclick="clearAll()">명단 초기화</button>
+          </div>
+          <div class="hint">📌 컬럼 순서: <b>부서 · 성명 · 직급 · 주소 · 주소상세 · 연락처</b> (순번 열은 있어도 무시). 라벨에는 <b>주소 → 주소상세 → 성명 직급님 → Tel.</b> 순으로 표시됩니다(부서는 인쇄 안 됨). 한 번 업로드하면 <b>클라우드에 자동 저장</b>되어 다음에 열 때 자동으로 불러옵니다(로그인 시). <span id="cloudStatus" style="font-weight:700;color:var(--t2);"></span></div>
+        </fieldset>
+      </div>
+    </details>
 
     <div class="preview-head">
       <h2>미리보기 <span id="cntBadge" style="color:var(--t3);font-weight:600;font-size:13px;"></span></h2>
@@ -134,7 +146,7 @@
     </div>
   </div>
 
-  <div id="labels"><div class="empty no-print">명단을 업로드하거나 붙여넣고 <b>라벨 생성</b>을 누르세요.</div></div>
+  <div id="labels"><div class="empty no-print">명단을 불러오는 중… 명단이 없으면 <b>⚙ 설정 · 데이터 관리</b>에서 엑셀을 업로드하세요.</div></div>
 </div>
 
 <script>
