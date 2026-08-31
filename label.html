@@ -58,12 +58,18 @@
   .cut{ max-width:760px; margin:2px auto 16px; text-align:center; color:var(--t3); font-size:11px; letter-spacing:2px;
     border-top:1px dashed #b0b8c1; padding-top:6px; user-select:none; }
   .label.unsel + .cut{ display:none; }   /* 선택 해제된 라벨의 절취선도 숨김 */
+  /* 검색 비매칭: 화면에서만 숨김(선택 상태는 유지) */
+  .label.nomatch{ display:none; }
+  .label.nomatch + .cut{ display:none; }
 
   @page{ size:A4; margin:10mm; }
   @media print{
     body{ background:#fff; }
     .wrap{ max-width:none; padding:0; }
     .no-print{ display:none !important; }
+    /* 인쇄는 '검색'과 무관하게 선택한 전원 출력 → nomatch는 무시하고 unsel만 제외 */
+    .label.nomatch{ display:block !important; }
+    .label.nomatch + .cut{ display:block !important; }
     /* A4 1/2 크기 → 한 페이지에 2장, 사이에 절취선 */
     .label{ max-width:none; height:12.7cm; min-height:0; margin:0; border:1.6px solid #111;
       page-break-after:auto; page-break-inside:avoid; break-inside:avoid; }
@@ -122,11 +128,12 @@
       <span class="status" id="status"></span>
     </div>
     <div class="sel-bar no-print">
-      <button class="btn line" onclick="selectAllVisible(true)">✅ 전체 선택</button>
-      <button class="btn line" onclick="selectAllVisible(false)">⬜ 전체 해제</button>
+      <button class="btn line" onclick="selectAllVisible(true)">✅ 표시된 것 선택</button>
+      <button class="btn line" onclick="selectAllVisible(false)">⬜ 표시된 것 해제</button>
+      <button class="btn line" id="selOnlyBtn" onclick="toggleSelectedOnly()">👁 선택만 보기</button>
       <button class="btn primary" onclick="doPrint()">🖨 선택 인쇄 (A4 1장에 2매)</button>
       <span class="cnt" id="selBadge"></span>
-      <span style="font-size:12px;color:var(--t3);">각 라벨의 <b>인쇄</b> 체크를 끄면 그 라벨은 인쇄에서 빠집니다. (예: 김여주 검색 → 원치 않는 주소 체크 해제)</span>
+      <span style="font-size:12px;color:var(--t3);">검색으로 한 명씩 찾아 <b>인쇄</b> 체크로 담으면 <b>검색을 바꿔도 선택은 유지</b>됩니다. 담은 인원 전체가 인쇄됩니다. (<b>선택만 보기</b>로 담은 목록 확인)</span>
     </div>
   </div>
 
@@ -137,6 +144,7 @@
 let recipients = [];
 let searchQuery = '';
 let selected = new Set(); // 인쇄 선택된 인원의 인덱스
+let showSelectedOnly = false; // '선택한 사람만 보기' 모드
 
 function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -184,26 +192,33 @@ function matchesSearch(r){
   const q=searchQuery.trim().toLowerCase(); if(!q) return true;
   return [r.name,r.dept,r.rank,r.addr,r.addr2,r.tel].some(v=> String(v||'').toLowerCase().includes(q));
 }
+// 화면 표시 여부: '선택만 보기'면 선택된 것만, 그리고 검색어 매칭
+function isVisible(r, idx){ if(showSelectedOnly && !selected.has(idx)) return false; return matchesSearch(r); }
 function initSelection(){ selected = new Set(recipients.map((_,i)=>i)); } // 기본: 전원 선택
 function onSelToggle(idx, checked){
   if(checked) selected.add(idx); else selected.delete(idx);
+  if(showSelectedOnly){ render(); return; }   // 선택만 보기 모드면 해제 즉시 사라지게 다시 렌더
   const el=document.querySelector('#labels .label[data-idx="'+idx+'"]'); if(el) el.classList.toggle('unsel', !checked);
   updateSelBadge();
 }
-function selectAllVisible(on){
-  document.querySelectorAll('#labels .label').forEach(el=>{
+function selectAllVisible(on){   // 화면에 보이는(검색 매칭) 라벨만 대상
+  document.querySelectorAll('#labels .label:not(.nomatch)').forEach(el=>{
     const idx=+el.dataset.idx; if(on) selected.add(idx); else selected.delete(idx);
     el.classList.toggle('unsel', !on); const c=el.querySelector('.lblChk'); if(c) c.checked=on;
   });
-  updateSelBadge();
+  if(showSelectedOnly && !on) render(); else updateSelBadge();
+}
+function toggleSelectedOnly(){
+  showSelectedOnly=!showSelectedOnly;
+  const b=document.getElementById('selOnlyBtn');
+  if(b){ b.classList.toggle('primary', showSelectedOnly); b.classList.toggle('line', !showSelectedOnly); b.textContent = showSelectedOnly?'👁 전체 보기':'👁 선택만 보기'; }
+  render();
 }
 function updateSelBadge(){
-  const vis=document.querySelectorAll('#labels .label').length;
-  const sel=document.querySelectorAll('#labels .label:not(.unsel)').length;
-  document.getElementById('cntBadge').textContent = (vis===recipients.length)
-    ? `(전체 ${recipients.length}명 · 선택 ${sel}장 인쇄)`
-    : `(검색 ${vis} / 전체 ${recipients.length}명 · 선택 ${sel}장 인쇄)`;
-  const sb=document.getElementById('selBadge'); if(sb) sb.textContent = `선택 ${sel} / 표시 ${vis}명`;
+  const totalSel=selected.size;                                             // 총 선택(검색과 무관)
+  const vis=document.querySelectorAll('#labels .label:not(.nomatch)').length; // 화면 표시
+  document.getElementById('cntBadge').textContent = `(전체 ${recipients.length}명 · 표시 ${vis} · 선택 ${totalSel}장 인쇄)`;
+  const sb=document.getElementById('selBadge'); if(sb) sb.textContent = `선택 ${totalSel}명 · 표시 ${vis}`;
 }
 
 // 헤더에서 컬럼 인덱스 찾기
@@ -290,12 +305,12 @@ function render(){
   if(!recipients.length){ host.innerHTML='<div class="empty no-print">명단이 없습니다.</div>'; document.getElementById('cntBadge').textContent=''; const sb=document.getElementById('selBadge'); if(sb) sb.textContent=''; return; }
   let shown=0, html='';
   recipients.forEach((r,idx)=>{
-    if(!matchesSearch(r)) return;
-    shown++;
+    const vis = isVisible(r, idx);   // 비매칭도 렌더(화면만 숨김) → 검색 넘나들어도 선택 유지·인쇄
+    if(vis) shown++;
     const checked = selected.has(idx);
     const nameLine = [r.name, r.rank].filter(Boolean).join(' ');
     const toName = nameLine ? esc(nameLine)+'님' : '';
-    html += `<div class="label ${checked?'':'unsel'}" data-idx="${idx}">
+    html += `<div class="label ${checked?'':'unsel'} ${vis?'':'nomatch'}" data-idx="${idx}">
       <label class="sel no-print"><input type="checkbox" class="lblChk" ${checked?'checked':''} onchange="onSelToggle(${idx},this.checked)"> 인쇄</label>
       <div class="from">
         <div class="tag">보내는 사람</div>
@@ -314,8 +329,11 @@ function render(){
     </div>
     <div class="cut">✂ ─────────────────  절취선 (여기서 자르세요)  ───────────────── ✂</div>`;
   });
-  if(!shown){ host.innerHTML='<div class="empty no-print">검색 결과가 없습니다. (전체 '+recipients.length+'명)</div>'; document.getElementById('cntBadge').textContent=`(검색 0 / 전체 ${recipients.length}명)`; const sb=document.getElementById('selBadge'); if(sb) sb.textContent=''; return; }
-  host.innerHTML = html;
+  // 라벨은 항상 DOM에 유지(인쇄 대상). 화면에 보이는 게 없으면 안내문만 위에 표시
+  const emptyMsg = (shown===0)
+    ? `<div class="empty no-print">${showSelectedOnly?'선택한 인원이 없습니다.':'검색 결과가 없습니다.'} (선택은 유지됩니다 · 총 선택 ${selected.size}명 / 전체 ${recipients.length}명)</div>`
+    : '';
+  host.innerHTML = emptyMsg + html;
   updateSelBadge();
   if(!document.getElementById('status').textContent) setStatus(recipients.length+'명 라벨 생성됨');
 }
@@ -323,8 +341,7 @@ function render(){
 function setStatus(msg, err){ const el=document.getElementById('status'); el.textContent=msg||''; el.style.color = err?'#f04452':'#12b886'; }
 function doPrint(){
   if(!recipients.length){ setStatus('먼저 라벨을 생성하세요.', true); return; }
-  const sel=document.querySelectorAll('#labels .label:not(.unsel)').length;
-  if(!sel){ setStatus('인쇄할 라벨을 선택하세요. (전체 선택 또는 각 라벨의 인쇄 체크)', true); return; }
+  if(selected.size===0){ setStatus('인쇄할 인원을 선택하세요. (검색 → 인쇄 체크로 담기)', true); return; }
   window.print();
 }
 function clearAll(){ recipients=[]; document.getElementById('paste').value=''; document.getElementById('file').value=''; setStatus(''); render(); }
