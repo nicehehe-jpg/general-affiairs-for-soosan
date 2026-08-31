@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>배송 주소 라벨 출력</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+  :root{ --line:#e5e8eb; --t1:#191f28; --t2:#4e5968; --t3:#8b95a1; --bg:#f7f8fa; --blue:#3182f6; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Malgun Gothic','맑은 고딕',system-ui,sans-serif; background:var(--bg); color:var(--t1); }
+  .wrap{ max-width:1000px; margin:0 auto; padding:24px 20px 60px; }
+  h1{ font-size:22px; margin:0 0 4px; }
+  .sub{ color:var(--t2); font-size:13px; margin:0 0 20px; }
+  fieldset{ border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:0 0 16px; background:#fff; }
+  legend{ font-weight:800; font-size:14px; padding:0 8px; }
+  label.f{ display:block; font-size:12px; font-weight:700; color:var(--t2); margin:0 0 4px; }
+  input.t, textarea.t, select.t{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:9px; font-size:13.5px; font-family:inherit; background:#fff; color:var(--t1); }
+  textarea.t{ resize:vertical; line-height:1.5; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px 16px; }
+  .row{ margin-bottom:12px; }
+  .btn{ border:none; border-radius:10px; padding:11px 18px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .btn.primary{ background:var(--blue); color:#fff; }
+  .btn.line{ background:#fff; color:var(--t2); border:1px solid var(--line); }
+  .btn.gray{ background:#f2f4f6; color:var(--t2); }
+  .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+  .hint{ font-size:12px; color:var(--t3); line-height:1.6; margin-top:8px; }
+  .status{ font-size:13px; font-weight:700; margin:14px 0 8px; }
+  .preview-head{ display:flex; justify-content:space-between; align-items:center; margin:18px 0 8px; }
+  .preview-head h2{ font-size:15px; margin:0; }
+
+  /* ===== 라벨 ===== */
+  #labels{ }
+  .label{
+    background:#fff; border:1.6px solid #111; border-radius:2px;
+    width:100%; max-width:760px; height:13.5cm; margin:0 auto 18px;
+    position:relative; padding:1.1cm 1.3cm;
+  }
+  .label .tag{ font-weight:800; font-size:17px; margin-bottom:12px; }
+  .label .from{ position:absolute; top:1.1cm; left:1.3cm; }
+  .label .to{ position:absolute; bottom:1.4cm; right:1.3cm; }
+  .label .line{ font-size:15.5px; font-weight:700; line-height:2.0; }
+  .label .line.big{ font-size:16.5px; }
+  .empty{ text-align:center; color:var(--t3); padding:40px 0; }
+
+  @page{ size:A4; margin:14mm; }
+  @media print{
+    body{ background:#fff; }
+    .wrap{ max-width:none; padding:0; }
+    .no-print{ display:none !important; }
+    #labels{ }
+    .label{ max-width:none; height:auto; min-height:24cm; page-break-after:always; border:1.6px solid #111; margin:0; }
+    .label:last-child{ page-break-after:auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="no-print">
+    <h1>📦 배송 주소 라벨 출력</h1>
+    <p class="sub">받는 사람 명단을 넣으면 <b>보내는 사람(고정) + 받는 사람</b> 라벨을 자동 생성해 인쇄합니다. (한 명당 한 장)</p>
+
+    <fieldset>
+      <legend>보내는 사람 (고정 · 필요시 수정)</legend>
+      <div class="grid2">
+        <div class="row"><label class="f">주소 1</label><input class="t" id="fromAddr1" value="울산광역시 북구 매곡산업로 21(매곡동)"></div>
+        <div class="row"><label class="f">주소 2</label><input class="t" id="fromAddr2" value="자동차조선기술관 3F"></div>
+        <div class="row"><label class="f">소속 / 이름</label><input class="t" id="fromName" value="㈜수산이앤에스 경영지원팀 허창영 책임"></div>
+        <div class="row"><label class="f">연락처</label><input class="t" id="fromTel" value="052-259-4117"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>받는 사람 명단</legend>
+      <div class="row">
+        <label class="f">① 엑셀 업로드 <span style="font-weight:500;color:var(--t3)">(부서·성명·직급·주소·주소상세·연락처 컬럼 자동 인식)</span></label>
+        <input type="file" id="file" accept=".xlsx,.xls" onchange="onFile(this.files[0])" style="font-size:13px;">
+      </div>
+      <div class="row">
+        <label class="f">② 또는 표 붙여넣기 <span style="font-weight:500;color:var(--t3)">(엑셀에서 복사 → 여기 붙여넣기 · 탭 구분)</span></label>
+        <textarea class="t" id="paste" rows="6" placeholder="부서	성명	직급	주소	주소상세	연락처
+월성1사업소	김혜영	책임	경북 경주시 양남면 동해안로 696-13	월성1발전소 내 (주)수산이앤에스	010-7377-5511"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn primary" onclick="buildFromPaste()">🧾 라벨 생성</button>
+        <button class="btn line" onclick="doPrint()">🖨 인쇄</button>
+        <button class="btn gray" onclick="clearAll()">초기화</button>
+      </div>
+      <div class="hint">📌 컬럼 순서: <b>부서 · 성명 · 직급 · 주소 · 주소상세 · 연락처</b> (순번 열은 있어도 무시). 라벨에는 <b>주소 → 주소상세 → 성명 직급님 → Tel.</b> 순으로 표시됩니다(부서는 인쇄 안 됨). 인쇄 시 브라우저 인쇄창에서 <b>여백 '기본', 배경그래픽 켜기</b>를 권장합니다.</div>
+    </fieldset>
+
+    <div class="preview-head">
+      <h2>미리보기 <span id="cntBadge" style="color:var(--t3);font-weight:600;font-size:13px;"></span></h2>
+      <span class="status" id="status"></span>
+    </div>
+  </div>
+
+  <div id="labels"><div class="empty no-print">명단을 업로드하거나 붙여넣고 <b>라벨 생성</b>을 누르세요.</div></div>
+</div>
+
+<script>
+let recipients = [];
+
+function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// 헤더에서 컬럼 인덱스 찾기
+function mapCols(headerCells){
+  const h = headerCells.map(x=>String(x==null?'':x).trim());
+  const col = {};
+  h.forEach((v,i)=>{
+    if(/부서|소속|사업소|팀/.test(v) && col.dept===undefined) col.dept=i;
+    else if(/성명|이름|사원/.test(v) && col.name===undefined) col.name=i;
+    else if(/직급|직위/.test(v) && col.rank===undefined) col.rank=i;
+    else if(/연락처|전화|핸드폰|휴대/.test(v) && col.tel===undefined) col.tel=i;
+    else if(/주소/.test(v) && col.addr===undefined) col.addr=i;
+    else if(/주소|상세|장소|건물|수령/.test(v) && col.addr2===undefined && i!==col.addr) col.addr2=i;
+  });
+  // 주소상세: 주소 다음 열(연락처가 아니면)
+  if(col.addr!==undefined && col.addr2===undefined){
+    const nx=col.addr+1; if(nx<h.length && nx!==col.tel) col.addr2=nx;
+  }
+  return col;
+}
+
+function isHeaderRow(cells){
+  const s = cells.map(x=>String(x==null?'':x)).join(' ');
+  return /성명|이름/.test(s) && /주소/.test(s);
+}
+
+function rowsFromMatrix(matrix){
+  // 헤더행 찾기
+  let hi = matrix.findIndex(r=>isHeaderRow(r));
+  let col;
+  if(hi>=0){ col = mapCols(matrix[hi]); }
+  else { hi=-1; col={dept:1,name:2,rank:3,addr:4,addr2:5,tel:6}; } // 헤더 없으면 예시 순서 가정(순번 포함)
+  const out=[];
+  for(let i=hi+1;i<matrix.length;i++){
+    const r=matrix[i]; if(!r) continue;
+    const g=(k)=> (col[k]!==undefined && r[col[k]]!=null) ? String(r[col[k]]).trim() : '';
+    const rec={ dept:g('dept'), name:g('name'), rank:g('rank'), addr:g('addr'), addr2:g('addr2'), tel:g('tel') };
+    if(!rec.name && !rec.addr && !rec.tel) continue; // 빈 행 스킵
+    out.push(rec);
+  }
+  return out;
+}
+
+function buildFromPaste(){
+  const txt=document.getElementById('paste').value.trim();
+  if(!txt){ setStatus('붙여넣은 표가 없습니다. (또는 엑셀을 업로드하세요)', true); return; }
+  const matrix = txt.split(/\r?\n/).map(line=>line.split('\t'));
+  recipients = rowsFromMatrix(matrix);
+  render();
+}
+
+async function onFile(file){
+  if(!file) return;
+  try{
+    setStatus('엑셀 읽는 중…');
+    const wb = XLSX.read(await file.arrayBuffer(), {type:'array'});
+    // 배송/명단 시트 우선
+    const sheetName = wb.SheetNames.find(n=>/배송|명단|주소|제출/.test(n)) || wb.SheetNames[0];
+    const matrix = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
+    recipients = rowsFromMatrix(matrix);
+    if(!recipients.length){ setStatus('명단을 찾지 못했습니다. 헤더(성명/주소)를 확인하세요.', true); return; }
+    render();
+    setStatus('✅ '+file.name+' · '+recipients.length+'명 (시트: '+sheetName+')');
+  }catch(e){ setStatus('읽기 오류: '+e.message, true); }
+}
+
+function render(){
+  const host=document.getElementById('labels');
+  const from={
+    a1:esc(document.getElementById('fromAddr1').value),
+    a2:esc(document.getElementById('fromAddr2').value),
+    nm:esc(document.getElementById('fromName').value),
+    tel:esc(document.getElementById('fromTel').value),
+  };
+  if(!recipients.length){ host.innerHTML='<div class="empty no-print">명단이 없습니다.</div>'; document.getElementById('cntBadge').textContent=''; return; }
+  host.innerHTML = recipients.map(r=>{
+    const nameLine = [r.name, r.rank].filter(Boolean).join(' ');
+    const toName = nameLine ? esc(nameLine)+'님' : '';
+    return `<div class="label">
+      <div class="from">
+        <div class="tag">보내는 사람</div>
+        ${from.a1?`<div class="line">${from.a1}</div>`:''}
+        ${from.a2?`<div class="line">${from.a2}</div>`:''}
+        ${from.nm?`<div class="line">${from.nm}</div>`:''}
+        ${from.tel?`<div class="line">Tel. ${from.tel}</div>`:''}
+      </div>
+      <div class="to">
+        <div class="tag">받는 사람</div>
+        ${r.addr?`<div class="line big">${esc(r.addr)}</div>`:''}
+        ${r.addr2?`<div class="line big">${esc(r.addr2)}</div>`:''}
+        ${toName?`<div class="line big">${toName}</div>`:''}
+        ${r.tel?`<div class="line big">Tel. ${esc(r.tel)}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('cntBadge').textContent = `(${recipients.length}명 · ${recipients.length}장)`;
+  if(!document.getElementById('status').textContent) setStatus(recipients.length+'명 라벨 생성됨');
+}
+
+function setStatus(msg, err){ const el=document.getElementById('status'); el.textContent=msg||''; el.style.color = err?'#f04452':'#12b886'; }
+function doPrint(){ if(!recipients.length){ setStatus('먼저 라벨을 생성하세요.', true); return; } window.print(); }
+function clearAll(){ recipients=[]; document.getElementById('paste').value=''; document.getElementById('file').value=''; setStatus(''); render(); }
+
+// 보내는 사람 수정 시 즉시 반영
+['fromAddr1','fromAddr2','fromName','fromTel'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{ if(recipients.length) render(); });
+});
+</script>
+</body>
+</html>
