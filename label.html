@@ -100,16 +100,10 @@
     <fieldset>
       <legend>받는 사람 명단</legend>
       <div class="row">
-        <label class="f">① 엑셀 업로드 <span style="font-weight:500;color:var(--t3)">(부서·성명·직급·주소·주소상세·연락처 컬럼 자동 인식)</span></label>
+        <label class="f">엑셀 업로드 <span style="font-weight:500;color:var(--t3)">(부서·성명·직급·주소·주소상세·연락처 컬럼 자동 인식)</span></label>
         <input type="file" id="file" accept=".xlsx,.xls" onchange="onFile(this.files[0])" style="font-size:13px;">
       </div>
-      <div class="row">
-        <label class="f">② 또는 표 붙여넣기 <span style="font-weight:500;color:var(--t3)">(엑셀에서 복사 → 여기 붙여넣기 · 탭 구분)</span></label>
-        <textarea class="t" id="paste" rows="6" placeholder="부서	성명	직급	주소	주소상세	연락처
-○○사업소	홍길동	책임	○○시 ○○로 00	○○발전소 내 (주)수산이앤에스	010-0000-0000"></textarea>
-      </div>
       <div class="actions">
-        <button class="btn primary" onclick="buildFromPaste()">🧾 라벨 생성</button>
         <button class="btn line" onclick="doPrint()">🖨 인쇄</button>
         <button class="btn gray" onclick="clearAll()">초기화</button>
       </div>
@@ -280,18 +274,6 @@ function rowsFromMatrix(matrix){
   return out;
 }
 
-function buildFromPaste(){
-  const txt=document.getElementById('paste').value.trim();
-  if(!txt){ setStatus('붙여넣은 표가 없습니다. (또는 엑셀을 업로드하세요)', true); return; }
-  const matrix = txt.split(/\r?\n/).map(line=>line.split('\t'));
-  recipients = rowsFromMatrix(matrix);
-  if(!recipients.length){ setStatus('명단을 인식하지 못했습니다. 컬럼(성명/주소)을 확인하세요.', true); return; }
-  initSelection();
-  render();
-  setStatus(recipients.length+'명 라벨 생성됨');
-  saveRecipients();
-}
-
 async function onFile(file){
   if(!file) return;
   try{
@@ -362,7 +344,7 @@ function doPrint(){
   if(selected.size===0){ setStatus('인쇄할 인원을 선택하세요. (검색 → 인쇄 체크로 담기)', true); return; }
   window.print();
 }
-function clearAll(){ recipients=[]; document.getElementById('paste').value=''; document.getElementById('file').value=''; setStatus(''); render(); }
+function clearAll(){ recipients=[]; document.getElementById('file').value=''; searchQuery=''; document.getElementById('search').value=''; setStatus(''); render(); }
 
 // 보내는 사람 수정 시 즉시 반영 + 저장(디바운스)
 let _saveTimer=null;
