@@ -89,6 +89,13 @@
       <div class="hint">📌 컬럼 순서: <b>부서 · 성명 · 직급 · 주소 · 주소상세 · 연락처</b> (순번 열은 있어도 무시). 라벨에는 <b>주소 → 주소상세 → 성명 직급님 → Tel.</b> 순으로 표시됩니다(부서는 인쇄 안 됨). 인쇄 시 브라우저 인쇄창에서 <b>여백 '기본', 배경그래픽 켜기</b>를 권장합니다.</div>
     </fieldset>
 
+    <fieldset>
+      <legend>받는 사람 검색</legend>
+      <input class="t" id="search" list="nameDL" placeholder="🔍 이름·부서·주소로 찾기 (예: 박윤서 / 당진 / 월성) — 입력하면 해당 라벨만 표시·인쇄" oninput="onSearch()">
+      <datalist id="nameDL"></datalist>
+      <div class="hint">한 번 업로드하면 <b>클라우드에 자동 저장</b>되어 다음에 열 때 자동으로 불러옵니다(로그인 시). 검색으로 특정 인원만 찾아 인쇄할 수 있습니다. <span id="cloudStatus" style="font-weight:700;color:var(--t2);"></span></div>
+    </fieldset>
+
     <div class="preview-head">
       <h2>미리보기 <span id="cntBadge" style="color:var(--t3);font-weight:600;font-size:13px;"></span></h2>
       <span class="status" id="status"></span>
@@ -100,8 +107,54 @@
 
 <script>
 let recipients = [];
+let searchQuery = '';
 
 function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ===== Supabase 저장/불러오기 (다른 페이지와 공용 로그인 gm_session) ===== */
+const SB_URL='https://vvyqldyljajlmtydtqdf.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2eXFsZHlsamFqbG10eWR0cWRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Nzc4NTQsImV4cCI6MjA5NzI1Mzg1NH0.YakWHeL5ZZK7RZ9K6fwxNECy02uwikoHYdRT-rSpLKc';
+const SB_REST=SB_URL+'/rest/v1/app_store';
+const GM_SESSION='gm_session';
+const REC_KEY='label_recipients_v1';
+function _gmSession(){ try{ return JSON.parse(localStorage.getItem(GM_SESSION)||'null'); }catch(e){ return null; } }
+function _gmHeaders(){ const s=_gmSession(); const t=(s&&s.access_token)||''; return {apikey:SB_KEY, Authorization:'Bearer '+t, 'Content-Type':'application/json'}; }
+async function _gmRefresh(){ const s=_gmSession(); if(!s||!s.refresh_token) return false; try{ const r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:s.refresh_token})}); const d=await r.json().catch(()=>({})); if(d.access_token){ try{localStorage.setItem(GM_SESSION,JSON.stringify({access_token:d.access_token,refresh_token:d.refresh_token}));}catch(e){} return true; } }catch(e){} return false; }
+async function sbGetKV(key){ try{ const url=`${SB_REST}?key=eq.${encodeURIComponent(key)}&select=value`; let r=await fetch(url,{headers:_gmHeaders()}); if(r.status===401 && await _gmRefresh()) r=await fetch(url,{headers:_gmHeaders()}); if(!r.ok) return undefined; const rows=await r.json(); return rows.length?rows[0].value:null; }catch(e){ return undefined; } }
+async function sbSetKV(key,value){ try{ const url=`${SB_REST}?on_conflict=key`; const body=JSON.stringify({key,value,updated_at:new Date().toISOString()}); const opt=()=>({method:'POST',headers:{..._gmHeaders(),Prefer:'resolution=merge-duplicates'},body}); let r=await fetch(url,opt()); if(r.status===401 && await _gmRefresh()) r=await fetch(url,opt()); return r.ok; }catch(e){ return false; } }
+
+function senderObj(){ return {
+  a1:document.getElementById('fromAddr1').value, a2:document.getElementById('fromAddr2').value,
+  nm:document.getElementById('fromName').value, tel:document.getElementById('fromTel').value }; }
+function applySender(f){ if(!f) return;
+  if(f.a1!=null) document.getElementById('fromAddr1').value=f.a1;
+  if(f.a2!=null) document.getElementById('fromAddr2').value=f.a2;
+  if(f.nm!=null) document.getElementById('fromName').value=f.nm;
+  if(f.tel!=null) document.getElementById('fromTel').value=f.tel; }
+function setCloud(msg){ const el=document.getElementById('cloudStatus'); if(el) el.textContent=msg||''; }
+
+async function saveRecipients(){
+  const payload={ recipients, from:senderObj(), updatedAt:new Date().toISOString() };
+  try{ localStorage.setItem(REC_KEY, JSON.stringify(payload)); }catch(e){}
+  setCloud('☁ 저장 중…');
+  const ok=await sbSetKV(REC_KEY, payload);
+  setCloud(ok ? `☁ 클라우드 저장됨 · ${recipients.length}명` : `⚠ 로컬에만 저장됨(클라우드는 로그인 필요) · ${recipients.length}명`);
+}
+async function initLoad(){
+  let payload=null;
+  try{ const r=localStorage.getItem(REC_KEY); if(r){ const p=JSON.parse(r); if(p&&Array.isArray(p.recipients)) payload=p; } }catch(e){}
+  const cloud=await sbGetKV(REC_KEY);
+  if(cloud && Array.isArray(cloud.recipients) && (!payload || String(cloud.updatedAt||'')>String(payload.updatedAt||''))) payload=cloud;
+  if(payload && payload.recipients.length){
+    recipients=payload.recipients; applySender(payload.from); render();
+    setCloud(`☁ 저장된 명단 불러옴 · ${recipients.length}명`);
+  }
+}
+function onSearch(){ searchQuery=document.getElementById('search').value||''; render(); }
+function filteredRecipients(){
+  const q=searchQuery.trim().toLowerCase(); if(!q) return recipients;
+  return recipients.filter(r=> [r.name,r.dept,r.rank,r.addr,r.addr2,r.tel].some(v=> String(v||'').toLowerCase().includes(q)) );
+}
 
 // 헤더에서 컬럼 인덱스 찾기
 function mapCols(headerCells){
@@ -149,7 +202,10 @@ function buildFromPaste(){
   if(!txt){ setStatus('붙여넣은 표가 없습니다. (또는 엑셀을 업로드하세요)', true); return; }
   const matrix = txt.split(/\r?\n/).map(line=>line.split('\t'));
   recipients = rowsFromMatrix(matrix);
+  if(!recipients.length){ setStatus('명단을 인식하지 못했습니다. 컬럼(성명/주소)을 확인하세요.', true); return; }
   render();
+  setStatus(recipients.length+'명 라벨 생성됨');
+  saveRecipients();
 }
 
 async function onFile(file){
@@ -164,6 +220,7 @@ async function onFile(file){
     if(!recipients.length){ setStatus('명단을 찾지 못했습니다. 헤더(성명/주소)를 확인하세요.', true); return; }
     render();
     setStatus('✅ '+file.name+' · '+recipients.length+'명 (시트: '+sheetName+')');
+    saveRecipients();
   }catch(e){ setStatus('읽기 오류: '+e.message, true); }
 }
 
@@ -175,8 +232,13 @@ function render(){
     nm:esc(document.getElementById('fromName').value),
     tel:esc(document.getElementById('fromTel').value),
   };
+  // 이름 자동완성 목록
+  const dl=document.getElementById('nameDL');
+  if(dl) dl.innerHTML = [...new Set(recipients.map(r=>r.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('');
   if(!recipients.length){ host.innerHTML='<div class="empty no-print">명단이 없습니다.</div>'; document.getElementById('cntBadge').textContent=''; return; }
-  host.innerHTML = recipients.map(r=>{
+  const list=filteredRecipients();
+  if(!list.length){ host.innerHTML='<div class="empty no-print">검색 결과가 없습니다. (전체 '+recipients.length+'명)</div>'; document.getElementById('cntBadge').textContent=`(검색 0 / 전체 ${recipients.length}명)`; return; }
+  host.innerHTML = list.map(r=>{
     const nameLine = [r.name, r.rank].filter(Boolean).join(' ');
     const toName = nameLine ? esc(nameLine)+'님' : '';
     return `<div class="label">
@@ -196,7 +258,9 @@ function render(){
       </div>
     </div>`;
   }).join('');
-  document.getElementById('cntBadge').textContent = `(${recipients.length}명 · ${recipients.length}장)`;
+  document.getElementById('cntBadge').textContent = (list.length===recipients.length)
+    ? `(${recipients.length}명 · ${recipients.length}장)`
+    : `(검색 ${list.length} / 전체 ${recipients.length}명 · ${list.length}장 인쇄)`;
   if(!document.getElementById('status').textContent) setStatus(recipients.length+'명 라벨 생성됨');
 }
 
@@ -204,10 +268,13 @@ function setStatus(msg, err){ const el=document.getElementById('status'); el.tex
 function doPrint(){ if(!recipients.length){ setStatus('먼저 라벨을 생성하세요.', true); return; } window.print(); }
 function clearAll(){ recipients=[]; document.getElementById('paste').value=''; document.getElementById('file').value=''; setStatus(''); render(); }
 
-// 보내는 사람 수정 시 즉시 반영
+// 보내는 사람 수정 시 즉시 반영 + 저장(디바운스)
+let _saveTimer=null;
 ['fromAddr1','fromAddr2','fromName','fromTel'].forEach(id=>{
-  document.getElementById(id).addEventListener('input', ()=>{ if(recipients.length) render(); });
+  document.getElementById(id).addEventListener('input', ()=>{ if(recipients.length){ render(); clearTimeout(_saveTimer); _saveTimer=setTimeout(saveRecipients,1000); } });
 });
+// 페이지 열 때 저장된 명단 자동 불러오기
+initLoad();
 </script>
 </body>
 </html>

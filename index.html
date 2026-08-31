@@ -1799,7 +1799,7 @@ async function sbInit(){
 
   // 1. 월간업무
   const cloud = await sbGet(STORAGE_KEY);
-  if(cloud===undefined){ setSyncStatus('offline'); return; }
+  if(cloud===undefined){ setSyncStatus('offline'); ensureLabelTask(false); return; }
   if(Array.isArray(cloud) && cloud.length){
     TASKS = cloud; try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(TASKS)); }catch(e){}
   } else if(cloud===null){
@@ -1844,6 +1844,7 @@ async function sbInit(){
   }
 
   setSyncStatus('online');
+  ensureLabelTask(true);
   renderAll();
   renderTodoWidget();
 }
@@ -1861,6 +1862,22 @@ function loadTasks(){
 function saveTasks(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(TASKS)); }catch(e){}
   sbPush(TASKS);
+}
+// 기타업무에 '배송라벨' 작업 1회 자동 추가(사내식당 위탁운영 관리 바로 아래). 사용자가 지우면 다시 넣지 않음.
+function ensureLabelTask(setFlag){
+  try{
+    if(localStorage.getItem('gongmu_label_task_added')==='1') return;
+    if(!Array.isArray(TASKS)) return;
+    if(!TASKS.some(t=>t.title==='배송라벨')){
+      const ai = TASKS.findIndex(t=>t.title==='사내식당 위탁운영 관리');
+      let due='2026-07-02';
+      if(ai>=0 && TASKS[ai].due){ const d=new Date(TASKS[ai].due); if(!isNaN(d)){ d.setDate(d.getDate()+1); due=d.toISOString().slice(0,10); } }
+      const task={cat:'etc', title:'배송라벨', priority:'low', status:'wait', due, id:'label_'+Date.now()};
+      if(ai>=0) TASKS.splice(ai+1,0,task); else TASKS.push(task);
+      saveTasks(); renderAll();
+    }
+    if(setFlag) localStorage.setItem('gongmu_label_task_added','1');
+  }catch(e){}
 }
 
 let TASKS = loadTasks();
