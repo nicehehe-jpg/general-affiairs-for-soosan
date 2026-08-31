@@ -2812,14 +2812,24 @@ function switchLogTab(t){
   document.getElementById('logToolbar').style.display = (t==='error') ? 'flex' : 'none';
   if(t==='update') renderChangelogCentral(); else reloadErrorLog();
 }
-function renderChangelogCentral(){
-  document.getElementById('logBody').innerHTML = CHANGELOG_CENTRAL.map(e=>
+// 업데이트 이력 = 자동(배포 커밋 메시지 기반 changelog-auto.json) + 수동(과거 큐레이션 CHANGELOG_CENTRAL) 병합
+async function renderChangelogCentral(){
+  const body=document.getElementById('logBody');
+  body.innerHTML='<div class="empty">불러오는 중…</div>';
+  let auto=[];
+  try{
+    const r=await fetch('changelog-auto.json?_='+Date.now(), {cache:'no-store'});
+    if(r.ok){ const j=await r.json(); if(Array.isArray(j)) auto=j; }
+  }catch(e){}
+  const all=[...auto, ...CHANGELOG_CENTRAL].filter(e=>e && e.date && Array.isArray(e.items) && e.items.length);
+  all.sort((a,b)=> String(b.date).localeCompare(String(a.date)));   // 최신순 (동일 날짜는 자동 항목 우선)
+  body.innerHTML = all.map(e=>
     `<div style="margin-bottom:16px;">
        <div style="font-size:12.5px;font-weight:800;color:var(--blue);margin-bottom:6px;">${logEsc(e.date)} · <span style="color:var(--t2)">${logEsc(e.app||'')}</span></div>
        <ul style="margin:0;padding-left:18px;font-size:12.5px;color:var(--t2);line-height:1.75;">
          ${e.items.map(it=>`<li>${logEsc(it)}</li>`).join('')}
        </ul>
-     </div>`).join('');
+     </div>`).join('') || '<div class="empty">표시할 업데이트 이력이 없습니다.</div>';
 }
 async function reloadErrorLog(){
   const body=document.getElementById('logBody');
