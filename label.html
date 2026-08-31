@@ -43,14 +43,27 @@
   .label .line.big{ font-size:16.5px; }
   .empty{ text-align:center; color:var(--t3); padding:40px 0; }
 
-  @page{ size:A4; margin:14mm; }
+  /* 선택(체크박스) */
+  .label .sel{ position:absolute; top:8px; right:10px; z-index:3; display:inline-flex; align-items:center; gap:5px;
+    font-size:12px; font-weight:700; color:var(--blue); background:#fff; padding:3px 9px; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+  .label.unsel{ opacity:.38; }
+  .sel-bar{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0 2px; }
+  .sel-bar .btn{ padding:6px 12px; font-size:12.5px; }
+  .sel-bar .cnt{ font-size:12.5px; color:var(--t2); font-weight:700; }
+
+  /* 화면 미리보기: 절반 크기 느낌 */
+  .label{ height:12.5cm; }
+
+  @page{ size:A4; margin:10mm; }
   @media print{
     body{ background:#fff; }
     .wrap{ max-width:none; padding:0; }
     .no-print{ display:none !important; }
-    #labels{ }
-    .label{ max-width:none; height:auto; min-height:24cm; page-break-after:always; border:1.6px solid #111; margin:0; }
-    .label:last-child{ page-break-after:auto; }
+    /* A4 1/2 크기 → 한 페이지에 2장 */
+    .label{ max-width:none; height:13cm; min-height:0; margin:0 0 4mm; border:1.6px solid #111;
+      page-break-after:auto; page-break-inside:avoid; break-inside:avoid; }
+    .label.unsel{ display:none !important; }   /* 선택 안 한 라벨은 인쇄 제외 */
+    .label .sel{ display:none !important; }
   }
 </style>
 </head>
@@ -100,6 +113,13 @@
       <h2>미리보기 <span id="cntBadge" style="color:var(--t3);font-weight:600;font-size:13px;"></span></h2>
       <span class="status" id="status"></span>
     </div>
+    <div class="sel-bar no-print">
+      <button class="btn line" onclick="selectAllVisible(true)">✅ 전체 선택</button>
+      <button class="btn line" onclick="selectAllVisible(false)">⬜ 전체 해제</button>
+      <button class="btn primary" onclick="doPrint()">🖨 선택 인쇄 (A4 1장에 2매)</button>
+      <span class="cnt" id="selBadge"></span>
+      <span style="font-size:12px;color:var(--t3);">각 라벨의 <b>인쇄</b> 체크를 끄면 그 라벨은 인쇄에서 빠집니다. (예: 김여주 검색 → 원치 않는 주소 체크 해제)</span>
+    </div>
   </div>
 
   <div id="labels"><div class="empty no-print">명단을 업로드하거나 붙여넣고 <b>라벨 생성</b>을 누르세요.</div></div>
@@ -108,6 +128,7 @@
 <script>
 let recipients = [];
 let searchQuery = '';
+let selected = new Set(); // 인쇄 선택된 인원의 인덱스
 
 function esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -146,14 +167,35 @@ async function initLoad(){
   const cloud=await sbGetKV(REC_KEY);
   if(cloud && Array.isArray(cloud.recipients) && (!payload || String(cloud.updatedAt||'')>String(payload.updatedAt||''))) payload=cloud;
   if(payload && payload.recipients.length){
-    recipients=payload.recipients; applySender(payload.from); render();
+    recipients=payload.recipients; applySender(payload.from); initSelection(); render();
     setCloud(`☁ 저장된 명단 불러옴 · ${recipients.length}명`);
   }
 }
 function onSearch(){ searchQuery=document.getElementById('search').value||''; render(); }
-function filteredRecipients(){
-  const q=searchQuery.trim().toLowerCase(); if(!q) return recipients;
-  return recipients.filter(r=> [r.name,r.dept,r.rank,r.addr,r.addr2,r.tel].some(v=> String(v||'').toLowerCase().includes(q)) );
+function matchesSearch(r){
+  const q=searchQuery.trim().toLowerCase(); if(!q) return true;
+  return [r.name,r.dept,r.rank,r.addr,r.addr2,r.tel].some(v=> String(v||'').toLowerCase().includes(q));
+}
+function initSelection(){ selected = new Set(recipients.map((_,i)=>i)); } // 기본: 전원 선택
+function onSelToggle(idx, checked){
+  if(checked) selected.add(idx); else selected.delete(idx);
+  const el=document.querySelector('#labels .label[data-idx="'+idx+'"]'); if(el) el.classList.toggle('unsel', !checked);
+  updateSelBadge();
+}
+function selectAllVisible(on){
+  document.querySelectorAll('#labels .label').forEach(el=>{
+    const idx=+el.dataset.idx; if(on) selected.add(idx); else selected.delete(idx);
+    el.classList.toggle('unsel', !on); const c=el.querySelector('.lblChk'); if(c) c.checked=on;
+  });
+  updateSelBadge();
+}
+function updateSelBadge(){
+  const vis=document.querySelectorAll('#labels .label').length;
+  const sel=document.querySelectorAll('#labels .label:not(.unsel)').length;
+  document.getElementById('cntBadge').textContent = (vis===recipients.length)
+    ? `(전체 ${recipients.length}명 · 선택 ${sel}장 인쇄)`
+    : `(검색 ${vis} / 전체 ${recipients.length}명 · 선택 ${sel}장 인쇄)`;
+  const sb=document.getElementById('selBadge'); if(sb) sb.textContent = `선택 ${sel} / 표시 ${vis}명`;
 }
 
 // 헤더에서 컬럼 인덱스 찾기
@@ -203,6 +245,7 @@ function buildFromPaste(){
   const matrix = txt.split(/\r?\n/).map(line=>line.split('\t'));
   recipients = rowsFromMatrix(matrix);
   if(!recipients.length){ setStatus('명단을 인식하지 못했습니다. 컬럼(성명/주소)을 확인하세요.', true); return; }
+  initSelection();
   render();
   setStatus(recipients.length+'명 라벨 생성됨');
   saveRecipients();
@@ -218,6 +261,7 @@ async function onFile(file){
     const matrix = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, defval:null});
     recipients = rowsFromMatrix(matrix);
     if(!recipients.length){ setStatus('명단을 찾지 못했습니다. 헤더(성명/주소)를 확인하세요.', true); return; }
+    initSelection();
     render();
     setStatus('✅ '+file.name+' · '+recipients.length+'명 (시트: '+sheetName+')');
     saveRecipients();
@@ -235,13 +279,16 @@ function render(){
   // 이름 자동완성 목록
   const dl=document.getElementById('nameDL');
   if(dl) dl.innerHTML = [...new Set(recipients.map(r=>r.name).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('');
-  if(!recipients.length){ host.innerHTML='<div class="empty no-print">명단이 없습니다.</div>'; document.getElementById('cntBadge').textContent=''; return; }
-  const list=filteredRecipients();
-  if(!list.length){ host.innerHTML='<div class="empty no-print">검색 결과가 없습니다. (전체 '+recipients.length+'명)</div>'; document.getElementById('cntBadge').textContent=`(검색 0 / 전체 ${recipients.length}명)`; return; }
-  host.innerHTML = list.map(r=>{
+  if(!recipients.length){ host.innerHTML='<div class="empty no-print">명단이 없습니다.</div>'; document.getElementById('cntBadge').textContent=''; const sb=document.getElementById('selBadge'); if(sb) sb.textContent=''; return; }
+  let shown=0, html='';
+  recipients.forEach((r,idx)=>{
+    if(!matchesSearch(r)) return;
+    shown++;
+    const checked = selected.has(idx);
     const nameLine = [r.name, r.rank].filter(Boolean).join(' ');
     const toName = nameLine ? esc(nameLine)+'님' : '';
-    return `<div class="label">
+    html += `<div class="label ${checked?'':'unsel'}" data-idx="${idx}">
+      <label class="sel no-print"><input type="checkbox" class="lblChk" ${checked?'checked':''} onchange="onSelToggle(${idx},this.checked)"> 인쇄</label>
       <div class="from">
         <div class="tag">보내는 사람</div>
         ${from.a1?`<div class="line">${from.a1}</div>`:''}
@@ -257,15 +304,20 @@ function render(){
         ${r.tel?`<div class="line big">Tel. ${esc(r.tel)}</div>`:''}
       </div>
     </div>`;
-  }).join('');
-  document.getElementById('cntBadge').textContent = (list.length===recipients.length)
-    ? `(${recipients.length}명 · ${recipients.length}장)`
-    : `(검색 ${list.length} / 전체 ${recipients.length}명 · ${list.length}장 인쇄)`;
+  });
+  if(!shown){ host.innerHTML='<div class="empty no-print">검색 결과가 없습니다. (전체 '+recipients.length+'명)</div>'; document.getElementById('cntBadge').textContent=`(검색 0 / 전체 ${recipients.length}명)`; const sb=document.getElementById('selBadge'); if(sb) sb.textContent=''; return; }
+  host.innerHTML = html;
+  updateSelBadge();
   if(!document.getElementById('status').textContent) setStatus(recipients.length+'명 라벨 생성됨');
 }
 
 function setStatus(msg, err){ const el=document.getElementById('status'); el.textContent=msg||''; el.style.color = err?'#f04452':'#12b886'; }
-function doPrint(){ if(!recipients.length){ setStatus('먼저 라벨을 생성하세요.', true); return; } window.print(); }
+function doPrint(){
+  if(!recipients.length){ setStatus('먼저 라벨을 생성하세요.', true); return; }
+  const sel=document.querySelectorAll('#labels .label:not(.unsel)').length;
+  if(!sel){ setStatus('인쇄할 라벨을 선택하세요. (전체 선택 또는 각 라벨의 인쇄 체크)', true); return; }
+  window.print();
+}
 function clearAll(){ recipients=[]; document.getElementById('paste').value=''; document.getElementById('file').value=''; setStatus(''); render(); }
 
 // 보내는 사람 수정 시 즉시 반영 + 저장(디바운스)
