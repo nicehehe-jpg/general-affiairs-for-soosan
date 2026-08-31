@@ -103,11 +103,11 @@
         <datalist id="nameDL"></datalist>
         <button class="btn primary" style="white-space:nowrap;" onclick="addTyped()">➕ 담기</button>
       </div>
-      <div class="hint"><b>담기</b>: 이름을 입력하고 <b>Enter</b> 또는 <b>➕ 담기</b>를 누르면 그 사람이 인쇄 목록에 추가됩니다. 이렇게 <b>여러 명을 계속 담을</b> 수 있고, <b>👁 선택만 보기</b>로 담은 목록을 확인합니다. (동명이인·2주소는 함께 담긴 뒤 원치 않는 것만 체크 해제) 명단은 <b>⚙ 설정 · 데이터 관리</b>에서 업로드합니다.</div>
+      <div class="hint"><b>담기</b>: 이름을 입력하고 <b>Enter</b> 또는 <b>➕ 담기</b>를 누르면 그 사람이 인쇄 목록에 추가됩니다. 이렇게 <b>여러 명을 계속 담을</b> 수 있고, <b>👁 선택만 보기</b>로 담은 목록을 확인합니다. (동명이인·2주소는 함께 담긴 뒤 원치 않는 것만 체크 해제) 명단은 <b>메인 시스템 ⚙ 설정 → 데이터 관리</b>에서 업로드합니다.</div>
     </fieldset>
 
     <details class="mgmt no-print">
-      <summary>⚙ 설정 · 데이터 관리 <span style="font-weight:500;color:var(--t3);font-size:12px;">(보내는 사람 · 명단 엑셀 업로드 · 초기화)</span></summary>
+      <summary>⚙ 설정 <span style="font-weight:500;color:var(--t3);font-size:12px;">(보내는 사람 · 명단 새로고침)</span></summary>
       <div class="mgmt-body">
         <fieldset>
           <legend>보내는 사람 (고정 · 필요시 수정)</legend>
@@ -119,15 +119,13 @@
           </div>
         </fieldset>
         <fieldset>
-          <legend>받는 사람 명단 (엑셀 업로드)</legend>
-          <div class="row">
-            <label class="f">엑셀 업로드 <span style="font-weight:500;color:var(--t3)">(부서·성명·직급·주소·주소상세·연락처 컬럼 자동 인식)</span></label>
-            <input type="file" id="file" accept=".xlsx,.xls" onchange="onFile(this.files[0])" style="font-size:13px;">
-          </div>
+          <legend>받는 사람 명단</legend>
+          <div class="hint" style="margin-top:0;">명단은 <b>메인 시스템(총무관리 대시보드)</b>의 <b>⚙ 설정 → 💾 데이터 관리 → 📦 배송 라벨 명단</b>에서 업로드·관리합니다. 이 화면은 저장된 명단을 <b>자동으로 불러옵니다</b>.</div>
           <div class="actions">
-            <button class="btn gray" onclick="clearAll()">명단 초기화</button>
+            <button class="btn line" onclick="reloadRoster()">☁ 명단 새로고침</button>
+            <button class="btn line" onclick="window.open('index.html','_blank')">⚙ 데이터 관리 열기</button>
           </div>
-          <div class="hint">📌 컬럼 순서: <b>부서 · 성명 · 직급 · 주소 · 주소상세 · 연락처</b> (순번 열은 있어도 무시). 라벨에는 <b>주소 → 주소상세 → 성명 직급님 → Tel.</b> 순으로 표시됩니다(부서는 인쇄 안 됨). 한 번 업로드하면 <b>클라우드에 자동 저장</b>되어 다음에 열 때 자동으로 불러옵니다(로그인 시). <span id="cloudStatus" style="font-weight:700;color:var(--t2);"></span></div>
+          <div class="hint"><span id="cloudStatus" style="font-weight:700;color:var(--t2);"></span></div>
         </fieldset>
       </div>
     </details>
@@ -146,7 +144,7 @@
     </div>
   </div>
 
-  <div id="labels"><div class="empty no-print">명단을 불러오는 중… 명단이 없으면 <b>⚙ 설정 · 데이터 관리</b>에서 엑셀을 업로드하세요.</div></div>
+  <div id="labels"><div class="empty no-print">명단을 불러오는 중… 명단이 없으면 <b>메인 시스템 ⚙ 설정 → 💾 데이터 관리 → 📦 배송 라벨 명단</b>에서 엑셀을 업로드하세요.</div></div>
 </div>
 
 <script>
@@ -194,6 +192,22 @@ async function initLoad(){
   if(payload && payload.recipients.length){
     recipients=payload.recipients; applySender(payload.from); initSelection(); render();
     setCloud(`☁ 저장된 명단 불러옴 · ${recipients.length}명`);
+  }
+}
+// 메인 시스템에서 명단을 업로드한 뒤, 이 화면에서 클라우드 명단을 다시 불러오기(비어 있으면 비움 반영)
+async function reloadRoster(){
+  setCloud('☁ 불러오는 중…');
+  const cloud=await sbGetKV(REC_KEY);
+  if(cloud===undefined){ setCloud('⚠ 클라우드 연결 실패(로그인 필요) — 기존 명단 유지'); return; }
+  if(cloud && Array.isArray(cloud.recipients)){
+    recipients=cloud.recipients.slice(); applySender(cloud.from);
+    try{ localStorage.setItem(REC_KEY, JSON.stringify(cloud)); }catch(e){}
+    initSelection(); searchQuery=''; showSelectedOnly=false;
+    const s=document.getElementById('search'); if(s) s.value='';
+    render();
+    setCloud(recipients.length ? `☁ 새로고침됨 · ${recipients.length}명` : '☁ 저장된 명단이 없습니다. 메인 시스템 데이터 관리에서 업로드하세요.');
+  } else {
+    setCloud('☁ 저장된 명단이 없습니다. 메인 시스템 데이터 관리에서 업로드하세요.');
   }
 }
 function onSearch(){ searchQuery=document.getElementById('search').value||''; render(); }
@@ -356,7 +370,7 @@ function doPrint(){
   if(selected.size===0){ setStatus('인쇄할 인원을 선택하세요. (검색 → 인쇄 체크로 담기)', true); return; }
   window.print();
 }
-function clearAll(){ recipients=[]; document.getElementById('file').value=''; searchQuery=''; document.getElementById('search').value=''; setStatus(''); render(); }
+function clearAll(){ recipients=[]; searchQuery=''; const s=document.getElementById('search'); if(s) s.value=''; setStatus(''); render(); }
 
 // 보내는 사람 수정 시 즉시 반영 + 저장(디바운스)
 let _saveTimer=null;

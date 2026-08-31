@@ -1541,6 +1541,16 @@ async function sendAiMsg(){
     <div style="font-size:11px; color:var(--t3); margin:-4px 0 4px; line-height:1.5;">사번·성명·부서·직위(직책)·입사일·연락처 컬럼을 인식합니다. 올리면 휴양시설 신청 등에서 이름만 입력해도 자동 채워집니다.</div>
 
     <div class="set-row">
+      <div class="info">📦 배송 라벨 명단 (배송 주소 라벨)<br><span id="labelRosterState" style="color:var(--t3); font-size:11.5px;">확인 중…</span></div>
+      <div style="display:flex; gap:6px;">
+        <button class="set-btn" onclick="document.getElementById('labelRosterFileDash').click()">📤 업로드</button>
+        <button class="set-btn line" onclick="clearLabelRosterDash()">🗑</button>
+      </div>
+      <input type="file" id="labelRosterFileDash" accept=".xlsx,.xls" style="display:none" onchange="handleLabelRosterUploadDash(this)">
+    </div>
+    <div style="font-size:11px; color:var(--t3); margin:-4px 0 4px; line-height:1.5;">부서·성명·직급·주소·주소상세·연락처 컬럼을 인식합니다. 올리면 <b>배송 주소 라벨 출력</b>(label)에서 검색·담기·인쇄에 바로 사용됩니다.</div>
+
+    <div class="set-row">
       <div class="info">📊 적용률 (전표생성기 코스트센터)<br><span id="rateMasterState" style="color:var(--t3); font-size:11.5px;">확인 중…</span></div>
       <div style="display:flex; gap:6px;">
         <button class="set-btn" onclick="document.getElementById('rateMasterFileDash').click()">📤 업로드</button>
@@ -2453,6 +2463,7 @@ function openSettings(){
   recheckCloud();
   refreshEmpMasterState();
   refreshRateMasterState();
+  refreshLabelRosterState();
   document.getElementById('settingsModal').classList.add('show');
 }
 function closeSettings(){ document.getElementById('settingsModal').classList.remove('show'); }
@@ -2520,6 +2531,82 @@ function handleEmpMasterUploadDash(input){
       const nH=list.filter(x=>x.hireDate).length, nC=list.filter(x=>x.contact).length;
       alert(`사원명부 ${list.length}명 저장 완료 (클라우드 동기화).\n· 입사일 ${nH}명 · 연락처 ${nC}명`
         + (nH===0?'\n\n⚠️ 입사일 컬럼이 없어 입사일은 채워지지 않습니다. 입사일 포함 파일을 올려주세요.':''));
+    }catch(err){ console.error(err); alert('가져오기 실패: '+(err&&err.message||err)); }
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ===== 배송 라벨 명단 — label.html(배송 주소 라벨)에서 사용 (클라우드 키: label_recipients_v1) =====
+//   label.html의 저장 포맷과 100% 동일: { recipients:[{dept,name,rank,addr,addr2,tel}], from:{a1,a2,nm,tel}, updatedAt }
+const LABEL_ROSTER_KEY = 'label_recipients_v1';
+function _getLabelRoster(){ try{ const r=localStorage.getItem(LABEL_ROSTER_KEY); if(r){ const p=JSON.parse(r); if(p&&Array.isArray(p.recipients)) return p; } }catch(e){} return null; }
+async function refreshLabelRosterState(){
+  const el=document.getElementById('labelRosterState'); if(!el) return;
+  let p=_getLabelRoster();
+  if((!p || !p.recipients.length) && typeof sbGet==='function'){
+    try{ const cloud=await sbGet(LABEL_ROSTER_KEY); if(cloud && Array.isArray(cloud.recipients)){ p=cloud; try{ localStorage.setItem(LABEL_ROSTER_KEY, JSON.stringify(cloud)); }catch(e){} } }catch(e){}
+  }
+  const n=p?p.recipients.length:0;
+  if(!n){ el.innerHTML='미등록 — 업로드하면 배송 라벨 출력에서 바로 검색·인쇄됩니다'; return; }
+  const nA=p.recipients.filter(x=>x.addr||x.addr2).length;
+  el.innerHTML=`✅ ${n}명 등록됨 · 주소 ${nA}명` + (p.updatedAt?` · ${String(p.updatedAt).slice(0,10)}`:'');
+}
+function clearLabelRosterDash(){
+  if(!_getLabelRoster()){ alert('등록된 배송 라벨 명단이 없습니다.'); return; }
+  if(!confirm('클라우드에 저장된 배송 라벨 명단을 삭제할까요?\n(배송 주소 라벨 출력의 명단이 비워집니다)')) return;
+  const prev=_getLabelRoster();
+  const payload={ recipients:[], from:(prev&&prev.from)||undefined, updatedAt:new Date().toISOString() };
+  try{ localStorage.setItem(LABEL_ROSTER_KEY, JSON.stringify(payload)); }catch(e){}
+  if(typeof sbSet==='function') sbSet(LABEL_ROSTER_KEY, payload);
+  refreshLabelRosterState(); alert('배송 라벨 명단을 삭제했습니다.');
+}
+// label.html의 컬럼 인식 로직과 동일
+function _lblMapCols(headerCells){
+  const h=headerCells.map(x=>String(x==null?'':x).trim()); const col={};
+  h.forEach((v,i)=>{
+    if(/부서|소속|사업소|팀/.test(v) && col.dept===undefined) col.dept=i;
+    else if(/성명|이름|사원/.test(v) && col.name===undefined) col.name=i;
+    else if(/직급|직위/.test(v) && col.rank===undefined) col.rank=i;
+    else if(/연락처|전화|핸드폰|휴대/.test(v) && col.tel===undefined) col.tel=i;
+    else if(/주소/.test(v) && col.addr===undefined) col.addr=i;
+    else if(/주소|상세|장소|건물|수령/.test(v) && col.addr2===undefined && i!==col.addr) col.addr2=i;
+  });
+  if(col.addr!==undefined && col.addr2===undefined){ const nx=col.addr+1; if(nx<h.length && nx!==col.tel) col.addr2=nx; }
+  return col;
+}
+function _lblIsHeaderRow(cells){ const s=cells.map(x=>String(x==null?'':x)).join(' '); return /성명|이름/.test(s) && /주소/.test(s); }
+function _lblRowsFromMatrix(matrix){
+  let hi=matrix.findIndex(r=>_lblIsHeaderRow(r)); let col;
+  if(hi>=0){ col=_lblMapCols(matrix[hi]); } else { hi=-1; col={dept:1,name:2,rank:3,addr:4,addr2:5,tel:6}; }
+  const out=[];
+  for(let i=hi+1;i<matrix.length;i++){
+    const r=matrix[i]; if(!r) continue;
+    const g=(k)=> (col[k]!==undefined && r[col[k]]!=null) ? String(r[col[k]]).trim() : '';
+    const rec={ dept:g('dept'), name:g('name'), rank:g('rank'), addr:g('addr'), addr2:g('addr2'), tel:g('tel') };
+    if(rec.name || rec.addr || rec.addr2) out.push(rec);
+  }
+  return out;
+}
+function handleLabelRosterUploadDash(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  if(typeof XLSX==='undefined'){ alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해 주세요.'); input.value=''; return; }
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    try{
+      const wb=await readWorkbookSafeBuf(e.target.result,{type:'array'});
+      const sheetName=wb.SheetNames.find(n=>/배송|명단|주소|제출/.test(n)) || wb.SheetNames[0];
+      const matrix=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1, defval:null});
+      const list=_lblRowsFromMatrix(matrix);
+      if(!list.length){ alert('명단을 인식하지 못했습니다.\n헤더(성명/주소)나 컬럼을 확인해 주세요.'); input.value=''; return; }
+      const prev=_getLabelRoster();
+      const payload={ recipients:list, from:(prev&&prev.from)||undefined, updatedAt:new Date().toISOString() };
+      try{ localStorage.setItem(LABEL_ROSTER_KEY, JSON.stringify(payload)); }catch(e){}
+      const ok = (typeof sbSet==='function') ? await sbSet(LABEL_ROSTER_KEY, payload) : false;
+      refreshLabelRosterState();
+      const nA=list.filter(x=>x.addr||x.addr2).length;
+      alert((ok?'배송 라벨 명단 저장 완료 (클라우드 동기화)':'배송 라벨 명단을 읽었습니다 (로컬 저장 · 클라우드는 로그인 필요)')
+        + `\n· ${list.length}명 · 주소 ${nA}명 (시트: ${sheetName})\n\n배송 주소 라벨 출력에서 자동으로 불러옵니다.`);
     }catch(err){ console.error(err); alert('가져오기 실패: '+(err&&err.message||err)); }
     input.value='';
   };
