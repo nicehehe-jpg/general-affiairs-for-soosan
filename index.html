@@ -863,6 +863,7 @@
       </div>
       <button class="add-task-btn" id="openGuiBtn" style="background:var(--purple); display:none;">📥 전표 생성기 열기</button>
       <button class="add-task-btn" id="openPurchaseBtn" style="background:var(--blue); display:none;">🛒 구매 시스템 열기</button>
+      <button class="add-task-btn" id="aiTaskBtn" style="background:var(--purple);" onclick="openAiTaskModal()">🤖 자연어 추가</button>
       <button class="add-task-btn" id="addTaskBtn">+ 업무 추가</button>
     </div>
   </div>
@@ -1959,6 +1960,102 @@ function addTask(){
   TASKS.push(task);
   saveTasks();
   renderAll();
+}
+
+/* ===== 자연어로 업무 추가 (Gemini 파서 → 미리보기·수정 → TASKS 등록) ===== */
+let AI_PARSED = [];
+function openAiTaskModal(){
+  if(typeof gmToken==='function' && !gmToken()){ alert('로그인 후 이용하세요.'); return; }
+  let m=document.getElementById('aiTaskModal');
+  if(!m){
+    m=document.createElement('div'); m.id='aiTaskModal';
+    m.setAttribute('style','position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;');
+    m.innerHTML='<div style="background:#fff;border-radius:18px;padding:22px;width:660px;max-width:96vw;max-height:90vh;overflow:auto;font-family:inherit;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:17px;font-weight:800;">🤖 자연어로 업무 추가</div>'
+      +'<button onclick="document.getElementById(\'aiTaskModal\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#8B95A1;">✕</button></div>'
+      +'<div style="font-size:12px;color:#8B95A1;margin-bottom:10px;line-height:1.6;">예: <b>다음주 화요일 오후 3시 제휴사 미팅, 판교</b> · <b>매월 15일 복합기 임차료 처리</b> · <b>금요일까지 보험 갱신</b><br>여러 건은 줄바꿈이나 쉼표로 구분하세요. AI가 날짜·카테고리·중요도를 자동 분류합니다.</div>'
+      +'<textarea id="aiTaskInput" rows="4" placeholder="할 일을 자연스럽게 입력하세요..." style="width:100%;box-sizing:border-box;border:1.5px solid #E5E8EB;border-radius:10px;padding:10px;font-family:inherit;font-size:14px;resize:vertical;"></textarea>'
+      +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;"><button id="aiParseBtn" onclick="aiParseTasks()" style="padding:9px 16px;border:none;background:#3182F6;color:#fff;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">🔍 분석</button></div>'
+      +'<div id="aiTaskPreview" style="margin-top:12px;"></div></div>';
+    document.body.appendChild(m);
+  } else { m.style.display='flex'; }
+  const i=document.getElementById('aiTaskInput'); if(i){ i.value=''; setTimeout(()=>i.focus(),50); }
+  document.getElementById('aiTaskPreview').innerHTML=''; AI_PARSED=[];
+}
+async function aiParseTasks(){
+  const txt=(document.getElementById('aiTaskInput').value||'').trim();
+  if(!txt) return;
+  const key=(typeof getGeminiKey==='function')?getGeminiKey():'';
+  if(!key){ alert('먼저 🤖 AI 어시스턴트에서 Gemini 키를 설정해 주세요.'); return; }
+  const btn=document.getElementById('aiParseBtn'), prev=document.getElementById('aiTaskPreview');
+  if(btn){ btn.textContent='분석 중…'; btn.disabled=true; }
+  prev.innerHTML='<div style="color:#8B95A1;font-size:13px;padding:10px;">AI가 분석 중입니다…</div>';
+  try{
+    const t=new Date();
+    const todayStr=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+    const dn=['일','월','화','수','목','금','토'][t.getDay()];
+    const cats=Object.keys(CATS).map(k=>k+'('+CATS[k].name+':'+CATS[k].desc+')').join(', ');
+    const prompt='오늘은 '+todayStr+' ('+dn+'요일)입니다. 아래 사용자 자연어 입력을 총무 업무 할일로 구조화해 순수 JSON만 출력(코드블록·설명 금지).\n'
+      +'형식: {"tasks":[{"title":"...","cat":"purchase|routine|monthly|yearly|etc","due":"YYYY-MM-DD","priority":"high|mid|low","day":"월간이면 예:15일","recurring":true,"confidence":0.0~1.0,"note":"확인필요 사유(없으면 빈칸)"}]}\n'
+      +'규칙: 상대표현(오늘/내일/모레/이번주·다음주 요일/다음달 N일 등)은 오늘 기준 실제 날짜(YYYY-MM-DD)로 변환. '
+      +'카테고리는 다음 의미로 분류(모호하면 etc): '+cats+'. '
+      +'매주/매월/격주 등 반복이면 recurring=true, cat=monthly, day에 처리일자. 시간·장소가 있으면 title 뒤에 "(15:00, 판교)"처럼 괄호로 붙임. '
+      +'날짜 불명확하면 가장 그럴듯한 값 + 낮은 confidence + note에 사유. 여러 건이면 각각 배열 원소로.\n\n입력:\n'+txt;
+    const url='https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_AI_MODEL+':generateContent?key='+encodeURIComponent(key);
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      contents:[{role:'user',parts:[{text:prompt}]}],
+      generationConfig:{temperature:0.1,maxOutputTokens:4096,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}
+    })});
+    const data=await res.json();
+    if(data.error){ prev.innerHTML='<div style="color:#F04452;font-size:13px;padding:6px;">AI 오류: '+data.error.message+'</div>'; return; }
+    let out=(data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').trim();
+    const mj=out.match(/\{[\s\S]*\}/); if(mj) out=mj[0];
+    const parsed=JSON.parse(out);
+    AI_PARSED=(parsed.tasks||[]).filter(x=>x&&x.title);
+    if(!AI_PARSED.length){ prev.innerHTML='<div style="color:#8B95A1;padding:6px;">추출된 업무가 없습니다. 문장을 더 구체적으로 입력해 보세요.</div>'; return; }
+    renderAiPreview();
+  }catch(e){ prev.innerHTML='<div style="color:#F04452;font-size:13px;padding:6px;">분석 실패: '+(e&&e.message)+'</div>'; }
+  finally{ if(btn){ btn.textContent='🔍 분석'; btn.disabled=false; } }
+}
+function renderAiPreview(){
+  const prev=document.getElementById('aiTaskPreview'); if(!prev) return;
+  const catOpts=c=>Object.keys(CATS).map(k=>'<option value="'+k+'"'+(k===c?' selected':'')+'>'+CATS[k].name+'</option>').join('');
+  const priOpts=p=>[['high','높음'],['mid','보통'],['low','낮음']].map(x=>'<option value="'+x[0]+'"'+(x[0]===p?' selected':'')+'>'+x[1]+'</option>').join('');
+  let html='<div style="font-size:12.5px;color:#4E5968;margin-bottom:6px;font-weight:700;">분석 결과 '+AI_PARSED.length+'건 — 확인·수정 후 등록</div>';
+  AI_PARSED.forEach((t,i)=>{
+    const low=(t.confidence!=null && t.confidence<0.85);
+    html+='<div style="border:1px solid '+(low?'#FBD9D9':'#EEF1F4')+';border-radius:10px;padding:9px 10px;margin-bottom:7px;background:'+(low?'#FFF7F7':'#fff')+';">'
+      +(low?'<div style="font-size:11px;color:#F04452;margin-bottom:5px;">⚠ 확인 필요'+(t.note?': '+String(t.note).replace(/</g,'&lt;'):'')+'</div>':'')
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+      +'<input value="'+String(t.title||'').replace(/"/g,'&quot;')+'" oninput="AI_PARSED['+i+'].title=this.value" style="flex:1;min-width:200px;border:1px solid #E5E8EB;border-radius:7px;padding:6px 8px;font-size:13px;">'
+      +'<select onchange="AI_PARSED['+i+'].cat=this.value" style="border:1px solid #E5E8EB;border-radius:7px;padding:6px;font-size:12.5px;">'+catOpts(CATS[t.cat]?t.cat:'etc')+'</select>'
+      +'<input type="date" value="'+(t.due||'')+'" oninput="AI_PARSED['+i+'].due=this.value" style="border:1px solid #E5E8EB;border-radius:7px;padding:5px;font-size:12.5px;">'
+      +'<select onchange="AI_PARSED['+i+'].priority=this.value" style="border:1px solid #E5E8EB;border-radius:7px;padding:6px;font-size:12.5px;">'+priOpts(['high','mid','low'].includes(t.priority)?t.priority:'mid')+'</select>'
+      +'<button onclick="AI_PARSED.splice('+i+',1);renderAiPreview()" style="background:#FFF0F0;color:#F04452;border:1px solid #FBD9D9;border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer;font-family:inherit;">삭제</button>'
+      +'</div></div>';
+  });
+  html+='<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;"><button onclick="commitAiTasks()" style="padding:9px 18px;border:none;background:#12B886;color:#fff;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">✅ '+AI_PARSED.length+'건 등록</button></div>';
+  prev.innerHTML=html;
+}
+function commitAiTasks(){
+  if(!AI_PARSED.length) return;
+  let n=0;
+  AI_PARSED.forEach(t=>{
+    const title=String(t.title||'').trim(); if(!title) return;
+    const cat=CATS[t.cat]?t.cat:'etc';
+    const task={ id:'t'+Date.now()+Math.floor(Math.random()*1000), cat, title,
+      priority:(['high','mid','low'].includes(t.priority)?t.priority:'mid'), status:'wait', due:String(t.due||'').trim() };
+    if(cat==='monthly'){
+      let d=String(t.day||'').trim();
+      if(!d && task.due){ const dd=new Date(task.due); if(!isNaN(dd)) d=dd.getDate()+'일'; }
+      task.day=d||'1일'; task.sortDay=parseInt(task.day)||1;
+    }
+    TASKS.push(task); n++;
+  });
+  saveTasks(); renderAll();
+  const m=document.getElementById('aiTaskModal'); if(m) m.remove();
+  AI_PARSED=[];
+  alert(n+'건 등록됐습니다. 사이트에 바로 반영됩니다.');
 }
 
 function fmtDate(){
