@@ -1852,6 +1852,8 @@ async function sbInit(){
     Object.assign(MEAL_DATA, cloudMenu);
     initMealWidget();
   }
+  // 5-1. 고래도시뉴스룸 블로그에서 이번 주 식단 이미지 자동 수집(발송기 경유) + 공유
+  loadBlogMenu();
 
   setSyncStatus('online');
   ensureLabelTask(true);
@@ -3321,6 +3323,16 @@ function renderMealBody(){
 
   if(mealTab === 'img'){
     let html = '';
+    if(BLOG_MENU && BLOG_MENU.imageUrl){
+      html += '<div class="meal-img-wrap">'
+        + '<div class="meal-week-title">📅 이번 주 식단표'+(BLOG_MENU.week?' ('+BLOG_MENU.week+')':'')
+        + (BLOG_MENU.postUrl?' <a href="'+BLOG_MENU.postUrl+'" target="_blank" rel="noreferrer" style="font-size:11px;color:var(--blue);font-weight:600;text-decoration:none;">블로그에서 보기 ↗</a>':'')
+        + '</div>'
+        + (BLOG_MENU.postUrl?'<a href="'+BLOG_MENU.postUrl+'" target="_blank" rel="noreferrer">':'')
+        + '<img src="'+BLOG_MENU.imageUrl+'" referrerpolicy="no-referrer" alt="이번 주 식단표" loading="lazy" onerror="this.style.display=\'none\'">'
+        + (BLOG_MENU.postUrl?'</a>':'')
+        + '</div>';
+    }
     MEAL_WEEK_IMAGES.forEach(function(w){
       html += '<div class="meal-img-wrap">'
         + '<div class="meal-week-title">📅 '+w.label
@@ -3333,7 +3345,16 @@ function renderMealBody(){
   }
 
   if(!data){
-    body.innerHTML = '<div class="meal-empty">🚫 오늘('+key+') 식단 정보가 없습니다.<br><small style="color:var(--t3);">STX 푸드 사이트에서 확인해 주세요.</small></div>';
+    if(BLOG_MENU && BLOG_MENU.imageUrl){
+      body.innerHTML = '<div class="meal-img-wrap">'
+        + '<div class="meal-week-title">📅 이번 주 식단표'+(BLOG_MENU.week?' ('+BLOG_MENU.week+')':'')+'</div>'
+        + (BLOG_MENU.postUrl?'<a href="'+BLOG_MENU.postUrl+'" target="_blank" rel="noreferrer">':'')
+        + '<img src="'+BLOG_MENU.imageUrl+'" referrerpolicy="no-referrer" alt="이번 주 식단표" loading="lazy">'
+        + (BLOG_MENU.postUrl?'</a>':'')
+        + '<div style="font-size:11.5px;color:var(--t3);text-align:center;margin-top:6px;">요일별 텍스트는 준비 중 — 위 이미지에서 오늘 요일을 확인하세요</div></div>';
+    } else {
+      body.innerHTML = '<div class="meal-empty">🚫 오늘('+key+') 식단 정보가 없습니다.<br><small style="color:var(--t3);">고래도시뉴스룸 블로그 식단표에서 확인해 주세요.</small></div>';
+    }
     return;
   }
 
@@ -3362,8 +3383,33 @@ function weekLabel(key){
 function initMealWidget(){
   const key = getTodayKey().key;
   const badge = document.getElementById('mealWeekBadge');
-  if(badge){ badge.textContent = MEAL_DATA[key] ? weekLabel(key) : '식단표'; }
+  if(badge){ badge.textContent = MEAL_DATA[key] ? weekLabel(key) : (BLOG_MENU && BLOG_MENU.week ? '이번 주' : '식단표'); }
   renderMealBody();
+}
+
+/* ===== 고래도시뉴스룸 블로그(masteryoung) 주간 식단 이미지 자동 수집 =====
+   - 회사 PC 메일발송기(/menu)가 블로그에서 최신 식단 글의 이미지를 찾아줌
+   - 결과를 Supabase(menu_blog)에 저장 → 발송기 없는 직원도 최신본 열람(공유)
+   - 네이버 이미지는 referrerpolicy="no-referrer" 로 표시(핫링크 보호 우회) */
+let BLOG_MENU = null;
+async function loadBlogMenu(){
+  // 1) 클라우드에 저장된 최신본 먼저 반영(공유)
+  try{ const s = await sbGet('menu_blog'); if(s && s.imageUrl){ BLOG_MENU = s; initMealWidget(); } }catch(e){}
+  // 2) 발송기가 켜져 있으면 블로그에서 새로 확인 → 바뀌었으면 클라우드에 갱신
+  try{
+    const base = await _senderBase();
+    if(base){
+      const r = await fetch(base+'/menu', {signal:AbortSignal.timeout(25000)});
+      const d = await r.json();
+      if(d && d.ok && d.imageUrl){
+        if(!BLOG_MENU || BLOG_MENU.imageUrl !== d.imageUrl){
+          BLOG_MENU = {week:d.week||'', imageUrl:d.imageUrl, postUrl:d.postUrl||'', title:d.title||'', ts:Date.now()};
+          try{ await sbSet('menu_blog', BLOG_MENU); }catch(e){}
+          initMealWidget();
+        }
+      }
+    }
+  }catch(e){}
 }
 
 /* ===== 식단 입력(앱에서 직접) — 클라우드 menu_data에 저장, 코드수정·배포 불필요 ===== */
