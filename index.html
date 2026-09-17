@@ -3410,6 +3410,62 @@ async function loadBlogMenu(){
       }
     }
   }catch(e){}
+  try{ await extractMenuTextFromImage(); }catch(e){}
+}
+
+/* ===== 이번 주 식단 이미지 → AI(Gemini Vision)로 요일별 점심/저녁 자동 추출 → menu_data 저장(공유)
+   - 이미지 바이트는 발송기(/menu-image)가 네이버 referer로 받아옴(브라우저는 핫링크로 못 받음)
+   - Gemini 키는 이 브라우저(gm_gemini_key) 재사용. 같은 이미지는 1회만 처리(textDoneUrl로 중복 방지) */
+async function extractMenuTextFromImage(){
+  try{
+    if(!BLOG_MENU || !BLOG_MENU.imageUrl) return;
+    if(BLOG_MENU.textDoneUrl === BLOG_MENU.imageUrl) return;      // 이미 추출 완료
+    const gkey = (typeof getGeminiKey==='function') ? getGeminiKey() : '';
+    if(!gkey) return;                                             // 키 없으면 수동 입력 유지
+    const base = await _senderBase(); if(!base) return;           // 이미지 바이트는 발송기 경유
+    // 1) 이미지 바이트 → base64
+    const ir = await fetch(base+'/menu-image?url='+encodeURIComponent(BLOG_MENU.imageUrl), {signal:AbortSignal.timeout(20000)});
+    if(!ir.ok) return;
+    const blob = await ir.blob();
+    if(!blob || !/^image\//.test(blob.type||'image/jpeg')) return;
+    const b64 = await new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(',')[1]); fr.onerror=rej; fr.readAsDataURL(blob); });
+    // 2) 이번 주 월~토 날짜
+    const mon = _mondayOf(getTodayKey().key);
+    const dates = []; for(let i=0;i<6;i++){ const d=new Date(mon); d.setDate(mon.getDate()+i); dates.push(_fmt(d)); }
+    const prompt = '이 이미지는 구내식당 주간 식단표입니다. 월~토 각 요일의 "중식(점심)"과 "석식(저녁)" 메뉴명을 추출해 순수 JSON만 출력하세요(코드블록·설명 금지).\n'
+      + '형식: {"days":{"'+dates[0]+'":{"lunch":["메뉴1","메뉴2"],"dinner":["..."]}, "'+dates[1]+'":{...}, ... "'+dates[5]+'":{...}}}\n'
+      + '날짜 키는 월요일부터 순서대로 '+dates.join(', ')+' 입니다.\n'
+      + '각 메뉴 항목(밥·국·반찬 등)을 배열 원소로. 수량·원산지·코너명·"셀프"류 안내문은 제외. 석식이 없는 요일은 dinner를 빈 배열로.';
+    // 3) Gemini Vision 호출(기존 AI와 동일 모델·엔드포인트)
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_AI_MODEL}:generateContent?key=${encodeURIComponent(gkey)}`;
+    const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{ role:'user', parts:[ {text:prompt}, {inline_data:{mime_type:(blob.type||'image/jpeg'), data:b64}} ] }],
+        generationConfig:{ temperature:0.1, maxOutputTokens:2048 } }) });
+    const data = await res.json();
+    if(data.error){ console.warn('식단 AI 추출 오류:', data.error.message); return; }
+    let txt = (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').trim();
+    txt = txt.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+    const mjson = txt.match(/\{[\s\S]*\}/); if(mjson) txt = mjson[0];
+    const parsed = JSON.parse(txt);
+    const days = parsed.days || parsed;
+    let n=0;
+    Object.keys(days).forEach(function(k){
+      const e = days[k] || {};
+      const lunch = Array.isArray(e.lunch) ? e.lunch.map(String).map(s=>s.trim()).filter(Boolean) : [];
+      const dinner = Array.isArray(e.dinner) ? e.dinner.map(String).map(s=>s.trim()).filter(Boolean) : [];
+      if(lunch.length || dinner.length){
+        MEAL_DATA[k] = { lunch: lunch, dinner: dinner.length ? dinner : null };
+        if(typeof CLOUD_MENU==='object' && CLOUD_MENU) CLOUD_MENU[k] = MEAL_DATA[k];
+        n++;
+      }
+    });
+    if(n>0){
+      BLOG_MENU.textDoneUrl = BLOG_MENU.imageUrl;
+      try{ if(typeof sbSet==='function'){ await sbSet('menu_data', CLOUD_MENU); await sbSet('menu_blog', BLOG_MENU); } }catch(e){}
+      initMealWidget();
+      console.log('식단 AI 추출 완료: '+n+'일 반영');
+    }
+  }catch(e){ console.warn('식단 AI 추출 실패:', e && e.message); }
 }
 
 /* ===== 식단 입력(앱에서 직접) — 클라우드 menu_data에 저장, 코드수정·배포 불필요 ===== */
