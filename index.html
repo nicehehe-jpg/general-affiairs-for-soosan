@@ -884,6 +884,25 @@
 <!-- Team Chat 버튼 -->
 <button class="teamchat-fab" onclick="window.open('https://team-chat-gray.vercel.app','_blank')" title="Team Chat">💬</button>
 
+<!-- 🐶 자연어 할일 추가 (움직이는 리트리버) -->
+<button class="dog-fab" onclick="openAiTaskModal()" title="자연어로 할 일 추가" aria-label="자연어로 할 일 추가">
+  <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path class="tail" d="M13 33 q-9 1 -12 -7 q8 4 13 4 z" fill="#E0A150"/>
+    <ellipse class="ear-l" cx="11.5" cy="20" rx="5.2" ry="8.6" fill="#C8863A"/>
+    <ellipse class="ear-r" cx="36.5" cy="20" rx="5.2" ry="8.6" fill="#C8863A"/>
+    <ellipse cx="24" cy="23" rx="13.5" ry="12.6" fill="#EDAE57"/>
+    <ellipse cx="24" cy="29" rx="7.8" ry="6.3" fill="#FBE9C8"/>
+    <circle cx="18.6" cy="21" r="2.1" fill="#2A2A2A"/>
+    <circle cx="29.4" cy="21" r="2.1" fill="#2A2A2A"/>
+    <circle cx="19.3" cy="20.3" r=".7" fill="#fff"/>
+    <circle cx="30.1" cy="20.3" r=".7" fill="#fff"/>
+    <ellipse cx="24" cy="26.4" rx="2.4" ry="1.8" fill="#3A2A1A"/>
+    <path d="M24 28.1 q-3 2.8 -5 .9 M24 28.1 q3 2.8 5 .9" stroke="#9A7038" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+    <ellipse class="tongue" cx="24" cy="31.4" rx="1.9" ry="2.5" fill="#FF8FA3"/>
+  </svg>
+  <span class="dog-tip">할 일 말해줘! 🐶</span>
+</button>
+
 <!-- AI 채팅 버튼 -->
 <button class="ai-fab" onclick="toggleAiChat()" title="AI 어시스턴트">🤖</button>
 
@@ -917,6 +936,30 @@
   display:flex; align-items:center; justify-content:center;
 }
 .teamchat-fab:hover{transform:scale(1.12); box-shadow:0 10px 28px rgba(49,130,246,.55);}
+/* 🐶 리트리버 자연어 버튼 (채팅 위) */
+.dog-fab{
+  position:fixed; bottom:236px; right:32px; z-index:150;
+  width:60px; height:60px; border-radius:50%; border:none; cursor:pointer; padding:0;
+  background:radial-gradient(circle at 50% 38%, #FFF7E8, #FFE6BC);
+  box-shadow:0 6px 20px rgba(214,158,74,.5);
+  display:flex; align-items:center; justify-content:center;
+  animation:dogBob 1.7s ease-in-out infinite; transition:transform .15s, box-shadow .15s;
+}
+.dog-fab:hover{ transform:scale(1.14); box-shadow:0 10px 28px rgba(214,158,74,.65); animation-play-state:paused; }
+.dog-fab:active{ transform:scale(.95); }
+.dog-fab svg{ width:46px; height:46px; overflow:visible; }
+.dog-fab .tail{ transform-box:fill-box; transform-origin:right center; animation:dogTail .45s ease-in-out infinite; }
+.dog-fab .ear-l,.dog-fab .ear-r{ transform-box:fill-box; transform-origin:top center; animation:dogEar 1.7s ease-in-out infinite; }
+.dog-fab .tongue{ transform-box:fill-box; transform-origin:top center; animation:dogTongue 1.7s ease-in-out infinite; }
+@keyframes dogBob{ 0%,100%{ transform:translateY(0) rotate(-2deg);} 50%{ transform:translateY(-6px) rotate(2deg);} }
+@keyframes dogTail{ 0%,100%{ transform:rotate(-20deg);} 50%{ transform:rotate(20deg);} }
+@keyframes dogEar{ 0%,100%{ transform:rotate(-3deg);} 50%{ transform:rotate(3deg);} }
+@keyframes dogTongue{ 0%,100%{ transform:scaleY(1);} 50%{ transform:scaleY(1.25);} }
+.dog-fab .dog-tip{ position:absolute; right:70px; top:50%; transform:translateY(-50%); white-space:nowrap;
+  background:#2B2F36; color:#fff; font-size:12px; font-weight:700; padding:6px 10px; border-radius:9px; opacity:0; pointer-events:none; transition:opacity .15s; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+.dog-fab .dog-tip::after{ content:''; position:absolute; right:-5px; top:50%; transform:translateY(-50%); border:5px solid transparent; border-left-color:#2B2F36; }
+.dog-fab:hover .dog-tip{ opacity:1; }
+@media (max-width:600px){ .dog-fab{ bottom:auto; top:14px; right:14px; width:52px; height:52px; } }
 
 .ai-fab{
   position:fixed; bottom:100px; right:32px; z-index:150;
