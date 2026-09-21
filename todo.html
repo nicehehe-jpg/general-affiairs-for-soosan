@@ -309,12 +309,102 @@ body{
 .mail-select-all{font-size:12px;font-weight:700;color:var(--blue);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;}
 .mail-select-all:hover{text-decoration:underline;}
 
+/* ===== 보기 전환 ===== */
+.view-switch{display:flex;gap:6px;margin-bottom:14px;}
+.view-switch-btn{
+  background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:8px 16px;font-size:13px;font-weight:700;color:var(--t2);
+  cursor:pointer;font-family:inherit;transition:all .12s;display:flex;align-items:center;gap:6px;
+}
+.view-switch-btn:hover{background:#F7F9FB;}
+.view-switch-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* ===== 캘린더 툴바 ===== */
+.cal-toolbar{display:none;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap;}
+.cal-toolbar.show{display:flex;}
+.cal-nav{display:flex;align-items:center;gap:10px;}
+.cal-nav-btn{
+  background:var(--card);border:1px solid var(--line);border-radius:8px;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:14px;color:var(--t2);transition:background .12s;font-family:inherit;
+}
+.cal-nav-btn:hover{background:#F7F9FB;}
+.cal-today-btn{
+  background:var(--card);border:1px solid var(--line);border-radius:8px;
+  padding:7px 12px;font-size:12.5px;font-weight:700;color:var(--t2);cursor:pointer;font-family:inherit;
+  transition:background .12s;
+}
+.cal-today-btn:hover{background:#F7F9FB;}
+.cal-period-label{font-size:16px;font-weight:800;color:var(--t1);white-space:nowrap;min-width:140px;text-align:center;}
+.cal-mode-tabs{display:flex;gap:6px;}
+.cal-mode-tab{
+  background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:6px 14px;font-size:12.5px;font-weight:700;color:var(--t2);
+  cursor:pointer;font-family:inherit;transition:all .12s;
+}
+.cal-mode-tab:hover{background:#F7F9FB;}
+.cal-mode-tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* ===== 캘린더 뷰 ===== */
+.cal-view{display:none;}
+.cal-view.show{display:block;}
+.cal-card{background:var(--card);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);overflow:hidden;}
+.cal-weekday-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line);}
+.cal-weekday{padding:10px 0;text-align:center;font-size:12px;font-weight:700;color:var(--t3);}
+.cal-weekday.sun{color:var(--red);}
+.cal-weekday.sat{color:var(--blue);}
+.cal-month-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.cal-day-cell{
+  min-height:96px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:6px;cursor:pointer;transition:background .12s;position:relative;
+}
+.cal-day-cell:nth-child(7n){border-right:none;}
+.cal-day-cell:hover{background:#F7F9FB;}
+.cal-day-cell.other-month{background:#FAFBFC;}
+.cal-day-cell.other-month .cal-day-num{color:var(--t3);opacity:.5;}
+.cal-day-num{
+  font-size:12.5px;font-weight:700;color:var(--t1);margin-bottom:4px;
+  display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+}
+.cal-day-cell.today .cal-day-num{background:var(--blue);color:#fff;}
+.cal-day-num.sun{color:var(--red);}
+.cal-day-num.sat{color:var(--blue);}
+.cal-item-chip{
+  font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:6px;margin-bottom:3px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;
+}
+.cal-item-chip.high{background:var(--red-bg);color:var(--red);}
+.cal-item-chip.medium{background:var(--orange-bg);color:var(--orange);}
+.cal-item-chip.low{background:var(--green-bg);color:var(--green);}
+.cal-item-chip.done{opacity:.5;text-decoration:line-through;}
+.cal-more-link{font-size:10.5px;color:var(--t3);font-weight:600;cursor:pointer;padding:2px 6px;}
+.cal-more-link:hover{color:var(--blue);}
+
+/* 주간 뷰 */
+.cal-week-grid{display:grid;grid-template-columns:repeat(7,1fr);min-height:420px;}
+.cal-week-col{border-right:1px solid var(--line);padding:10px 8px;}
+.cal-week-col:last-child{border-right:none;}
+.cal-week-col-head{text-align:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+.cal-week-col-head .wd{font-size:11px;font-weight:700;color:var(--t3);}
+.cal-week-col-head .dt{font-size:16px;font-weight:800;color:var(--t1);margin-top:2px;}
+.cal-week-col.today .cal-week-col-head .dt{color:var(--blue);}
+
+/* 일간 뷰 */
+.cal-day-view-head{padding:16px 18px;border-bottom:1px solid var(--line);font-size:15px;font-weight:800;color:var(--t1);}
+.cal-day-view-body{padding:8px 0;}
+.cal-day-empty{padding:50px 20px;text-align:center;color:var(--t3);font-size:13.5px;}
+
 @media(max-width:640px){
   .stat-row{grid-template-columns:repeat(2,1fr);}
   .form-grid{grid-template-columns:1fr;}
   .header{padding:0 16px;}
   .container{padding:20px 12px 60px;}
   .search-wrap input{width:140px;}
+  .cal-day-cell{min-height:64px;padding:4px;}
+  .cal-item-chip{font-size:9px;padding:1px 4px;margin-bottom:2px;}
+  .cal-period-label{min-width:auto;font-size:14px;}
+  .cal-week-grid{overflow-x:auto;}
+  .cal-week-col{padding:8px 6px;}
 }
 </style>
 </head>
@@ -386,8 +476,14 @@ body{
     </div>
   </div>
 
-  <!-- 필터 & 정렬 -->
-  <div class="toolbar">
+  <!-- 보기 전환 -->
+  <div class="view-switch">
+    <button class="view-switch-btn active" id="viewBtnList" onclick="setViewMode('list')">📋 목록</button>
+    <button class="view-switch-btn" id="viewBtnCal" onclick="setViewMode('calendar')">📅 캘린더</button>
+  </div>
+
+  <!-- 필터 & 정렬 (목록 보기) -->
+  <div class="toolbar" id="toolbarList">
     <div class="filter-tabs" id="filterTabs">
       <button class="filter-tab active" data-filter="all" onclick="setFilter('all',this)">전체 <span class="cnt" id="cntAll">0</span></button>
       <button class="filter-tab" data-filter="pending" onclick="setFilter('pending',this)">진행중 <span class="cnt" id="cntPending">0</span></button>
@@ -408,6 +504,21 @@ body{
     </div>
   </div>
 
+  <!-- 캘린더 툴바 (캘린더 보기) -->
+  <div class="cal-toolbar" id="toolbarCal">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+      <button class="cal-today-btn" onclick="calToday()">오늘</button>
+      <button class="cal-nav-btn" onclick="calNext()">›</button>
+      <div class="cal-period-label" id="calPeriodLabel"></div>
+    </div>
+    <div class="cal-mode-tabs">
+      <button class="cal-mode-tab active" data-cal="month" onclick="setCalMode('month',this)">월</button>
+      <button class="cal-mode-tab" data-cal="week" onclick="setCalMode('week',this)">주</button>
+      <button class="cal-mode-tab" data-cal="day" onclick="setCalMode('day',this)">일</button>
+    </div>
+  </div>
+
   <!-- 진행률 -->
   <div class="progress-card">
     <span class="prog-label">진행률</span>
@@ -422,6 +533,11 @@ body{
       <div class="msg">할 일이 없어요</div>
       <div class="sub">위 입력창에서 새 할 일을 추가해보세요.</div>
     </div>
+  </div>
+
+  <!-- 캘린더 -->
+  <div class="cal-view" id="calendarView">
+    <div class="cal-card" id="calCard"></div>
   </div>
 
 </div>
@@ -537,6 +653,9 @@ let currentFilter = 'all';
 let editingId = null;
 let deletedItem = null;
 let snackTimer = null;
+let viewMode = 'list'; // 'list' | 'calendar'
+let calMode = 'month'; // 'month' | 'week' | 'day'
+let calDate = new Date();
 
 // ========================= 업무 데이터 (gongmu_tasks_v1) =========================
 const TASK_CAT_LABELS = {
@@ -714,9 +833,193 @@ function setFilter(f, el) {
   currentFilter = f;
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  // 업무 탭이면 빠른 추가창 숨기기
-  document.querySelector('.quick-add-card').style.display = f === 'tasks' ? 'none' : '';
+  updateQuickAddVisibility();
   render();
+}
+
+function updateQuickAddVisibility() {
+  // 업무 탭이거나 캘린더 보기이면 빠른 추가창 숨기기
+  document.querySelector('.quick-add-card').style.display = (viewMode === 'calendar' || currentFilter === 'tasks') ? 'none' : '';
+}
+
+// ========================= 보기 전환 (목록 / 캘린더) =========================
+function setViewMode(mode) {
+  viewMode = mode;
+  document.getElementById('viewBtnList').classList.toggle('active', mode === 'list');
+  document.getElementById('viewBtnCal').classList.toggle('active', mode === 'calendar');
+  document.getElementById('toolbarList').style.display = mode === 'list' ? '' : 'none';
+  document.getElementById('toolbarCal').classList.toggle('show', mode === 'calendar');
+  document.getElementById('listCard').style.display = mode === 'list' ? '' : 'none';
+  document.getElementById('calendarView').classList.toggle('show', mode === 'calendar');
+  updateQuickAddVisibility();
+  render();
+}
+
+function setCalMode(mode, el) {
+  calMode = mode;
+  document.querySelectorAll('.cal-mode-tab').forEach(b => b.classList.toggle('active', b === el || b.dataset.cal === mode));
+  renderCalendar();
+}
+
+function calPrev() {
+  if (calMode === 'month') calDate.setMonth(calDate.getMonth() - 1);
+  else if (calMode === 'week') calDate.setDate(calDate.getDate() - 7);
+  else calDate.setDate(calDate.getDate() - 1);
+  renderCalendar();
+}
+
+function calNext() {
+  if (calMode === 'month') calDate.setMonth(calDate.getMonth() + 1);
+  else if (calMode === 'week') calDate.setDate(calDate.getDate() + 7);
+  else calDate.setDate(calDate.getDate() + 1);
+  renderCalendar();
+}
+
+function calToday() {
+  calDate = new Date();
+  renderCalendar();
+}
+
+function goToDay(dateStr) {
+  calDate = new Date(dateStr + 'T00:00:00');
+  calMode = 'day';
+  document.querySelectorAll('.cal-mode-tab').forEach(b => b.classList.toggle('active', b.dataset.cal === 'day'));
+  renderCalendar();
+}
+
+function fmtDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getAllDatedItems() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  return [...todos, ...getGongmuAsTodos()].filter(t => t.dueDate && (!q || t.title.toLowerCase().includes(q)));
+}
+
+function groupByDate(items) {
+  const map = {};
+  items.forEach(t => { (map[t.dueDate] = map[t.dueDate] || []).push(t); });
+  return map;
+}
+
+function calItemChipHtml(t) {
+  const cls = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'medium' : 'low';
+  const click = t._isGongmu ? '' : `openEdit('${t.id}');`;
+  return `<div class="cal-item-chip ${cls}${t.isCompleted ? ' done' : ''}" onclick="event.stopPropagation();${click}" title="${esc(t.title)}">${esc(t.title)}</div>`;
+}
+
+function renderCalendar() {
+  const byDate = groupByDate(getAllDatedItems());
+  if (calMode === 'month') renderCalMonth(byDate);
+  else if (calMode === 'week') renderCalWeek(byDate);
+  else renderCalDay(byDate);
+}
+
+function renderCalMonth(byDate) {
+  const y = calDate.getFullYear(), m = calDate.getMonth();
+  document.getElementById('calPeriodLabel').textContent = `${y}년 ${m + 1}월`;
+  const first = new Date(y, m, 1);
+  const startOffset = first.getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const daysInPrevMonth = new Date(y, m, 0).getDate();
+  const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+  const todayStr = fmtDate(new Date());
+  const weekdayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  let html = `<div class="cal-weekday-row">${weekdayNames.map((w, i) => `<div class="cal-weekday ${i === 0 ? 'sun' : i === 6 ? 'sat' : ''}">${w}</div>`).join('')}</div>`;
+  html += `<div class="cal-month-grid">`;
+  for (let i = 0; i < totalCells; i++) {
+    let dateNum, cellMonth, inMonth = true;
+    if (i < startOffset) { dateNum = daysInPrevMonth - (startOffset - 1 - i); cellMonth = m - 1; inMonth = false; }
+    else if (i >= startOffset + daysInMonth) { dateNum = i - (startOffset + daysInMonth) + 1; cellMonth = m + 1; inMonth = false; }
+    else { dateNum = i - startOffset + 1; cellMonth = m; }
+    const cellDate = new Date(y, cellMonth, dateNum);
+    const dateStr = fmtDate(cellDate);
+    const dow = cellDate.getDay();
+    const isToday = dateStr === todayStr;
+    const dayItems = (byDate[dateStr] || []).slice().sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
+    const maxShow = 3;
+    const chips = dayItems.slice(0, maxShow).map(calItemChipHtml).join('');
+    const more = dayItems.length > maxShow ? `<div class="cal-more-link" onclick="event.stopPropagation();goToDay('${dateStr}')">+${dayItems.length - maxShow}개 더</div>` : '';
+    html += `<div class="cal-day-cell${inMonth ? '' : ' other-month'}${isToday ? ' today' : ''}" onclick="goToDay('${dateStr}')">
+      <div class="cal-day-num${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}">${dateNum}</div>
+      ${chips}${more}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('calCard').innerHTML = html;
+}
+
+function renderCalWeek(byDate) {
+  const start = new Date(calDate);
+  start.setDate(start.getDate() - start.getDay());
+  const end = new Date(start); end.setDate(end.getDate() + 6);
+  document.getElementById('calPeriodLabel').textContent = `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getMonth() + 1}월 ${end.getDate()}일`;
+  const todayStr = fmtDate(new Date());
+  const weekdayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  let html = `<div class="cal-week-grid">`;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(start.getDate() + i);
+    const dateStr = fmtDate(d);
+    const isToday = dateStr === todayStr;
+    const dayItems = (byDate[dateStr] || []).slice().sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
+    const itemsHtml = dayItems.length
+      ? dayItems.map(calItemChipHtml).join('')
+      : `<div style="font-size:11px;color:var(--t3);text-align:center;margin-top:10px;">-</div>`;
+    html += `<div class="cal-week-col${isToday ? ' today' : ''}">
+      <div class="cal-week-col-head"><div class="wd">${weekdayNames[i]}</div><div class="dt">${d.getDate()}</div></div>
+      ${itemsHtml}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('calCard').innerHTML = html;
+}
+
+function renderCalDay(byDate) {
+  const dateStr = fmtDate(calDate);
+  const weekdayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const label = `${calDate.getFullYear()}년 ${calDate.getMonth() + 1}월 ${calDate.getDate()}일 (${weekdayNames[calDate.getDay()]})`;
+  document.getElementById('calPeriodLabel').textContent = label;
+  const dayItems = (byDate[dateStr] || []).slice().sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority));
+
+  let bodyHtml;
+  if (!dayItems.length) {
+    bodyHtml = `<div class="cal-day-empty">이 날짜에 마감 예정인 할 일이 없어요.</div>`;
+  } else {
+    bodyHtml = `<div class="cal-day-view-body">` + dayItems.map(t => {
+      const isDone = t.isCompleted;
+      if (t._isGongmu) {
+        const priorityCls = t.priority === 'high' ? 'high' : t.priority === 'medium' ? 'medium' : 'low';
+        const priorityLbl = t.priority === 'high' ? '높음' : t.priority === 'medium' ? '보통' : '낮음';
+        return `<div class="todo-item${isDone ? ' done' : ''}">
+          <button class="chk-btn${isDone ? ' done' : ''}" onclick="toggleGongmuDone('${t._gongmuId}')"><span class="chk-ic">✓</span></button>
+          <div class="todo-body">
+            <div class="todo-title">${esc(t.title)}</div>
+            <div class="todo-meta">
+              <span class="priority-tag ${priorityCls}">${priorityLbl}</span>
+              <span class="cat-tag" style="background:var(--blue-bg);color:var(--blue);font-weight:700;">📋 ${t._catLabel}</span>
+            </div>
+          </div>
+        </div>`;
+      }
+      const cat = getCat(t.categoryId);
+      return `<div class="todo-item${isDone ? ' done' : ''}">
+        <button class="chk-btn${isDone ? ' done' : ''}" onclick="toggleDone('${t.id}')"><span class="chk-ic">✓</span></button>
+        <div class="todo-body">
+          <div class="todo-title">${esc(t.title)}</div>
+          <div class="todo-meta">
+            <span class="priority-tag ${t.priority}">${t.priority === 'high' ? '높음' : t.priority === 'medium' ? '보통' : '낮음'}</span>
+            ${cat ? `<span class="cat-tag"><span style="width:7px;height:7px;border-radius:50%;background:${cat.color};display:inline-block;margin-right:4px;"></span>${cat.name}</span>` : ''}
+          </div>
+          ${t.memo ? `<div class="todo-memo">${esc(t.memo)}</div>` : ''}
+        </div>
+        <div class="todo-actions">
+          <button class="icon-btn" onclick="openEdit('${t.id}')" title="편집">✏️</button>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+  document.getElementById('calCard').innerHTML = `<div class="cal-day-view-head">${label}</div>${bodyHtml}`;
 }
 
 function getDueLabel(dueDate) {
@@ -816,6 +1119,11 @@ function render() {
   const pct = total ? Math.round(done / total * 100) : 0;
   document.getElementById('progBar').style.width = pct + '%';
   document.getElementById('progPct').textContent = pct + '%';
+
+  if (viewMode === 'calendar') {
+    renderCalendar();
+    return;
+  }
 
   const list = getFiltered();
   const el = document.getElementById('listCard');
