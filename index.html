@@ -598,6 +598,72 @@
   .tw-due.soon{ background:var(--blue-bg); color:var(--blue); }
   .tw-due.normal{ background:#F2F4F6; color:var(--t3); }
   .tw-empty{ text-align:center; color:var(--t3); font-size:13px; padding:16px 0; }
+
+  /* ===== 할 일 현황 위젯 - 캘린더 ===== */
+  .tw-view-switch{ display:flex; gap:4px; }
+  .tw-view-btn{
+    background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    padding:4px 10px; font-size:11.5px; font-weight:700; color:var(--t2);
+    cursor:pointer; font-family:inherit; transition:all .12s;
+  }
+  .tw-view-btn.active{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .tw-cal-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
+  .tw-cal-nav{ display:flex; align-items:center; gap:6px; }
+  .tw-cal-nav-btn{
+    background:var(--bg); border:1px solid var(--line); border-radius:6px; width:24px; height:24px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; color:var(--t2);
+    font-family:inherit;
+  }
+  .tw-cal-today-btn{
+    background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:4px 9px;
+    font-size:11px; font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit;
+  }
+  .tw-cal-period{ font-size:13px; font-weight:800; color:var(--t1); margin-left:4px; }
+  .tw-cal-mode-tabs{ display:flex; gap:4px; }
+  .tw-cal-mode-tab{
+    background:var(--bg); border:1px solid var(--line); border-radius:14px; padding:4px 10px;
+    font-size:11px; font-weight:700; color:var(--t2); cursor:pointer; font-family:inherit;
+  }
+  .tw-cal-mode-tab.active{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .tw-cal-weekday-row{ display:grid; grid-template-columns:repeat(7,1fr); margin-bottom:4px; }
+  .tw-cal-weekday{ text-align:center; font-size:10.5px; font-weight:700; color:var(--t3); padding:3px 0; }
+  .tw-cal-weekday.sun{ color:var(--red); }
+  .tw-cal-weekday.sat{ color:var(--blue); }
+  .tw-cal-month-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .tw-cal-day-cell{
+    min-height:46px; border-radius:8px; background:var(--bg); padding:4px;
+    cursor:pointer; transition:background .12s; position:relative;
+  }
+  .tw-cal-day-cell:hover{ background:#EFF3F8; }
+  .tw-cal-day-cell.other-month{ opacity:.4; }
+  .tw-cal-day-cell.today{ box-shadow:0 0 0 1.5px var(--blue); }
+  .tw-cal-day-num{ font-size:11px; font-weight:700; color:var(--t1); }
+  .tw-cal-day-num.sun{ color:var(--red); }
+  .tw-cal-day-num.sat{ color:var(--blue); }
+  .tw-cal-dots{ display:flex; gap:2px; margin-top:4px; flex-wrap:wrap; }
+  .tw-cal-dot{ width:5px; height:5px; border-radius:50%; }
+  .tw-cal-dot.high{ background:var(--red); }
+  .tw-cal-dot.medium{ background:var(--blue); }
+  .tw-cal-dot.low{ background:var(--t3); }
+  .tw-cal-more{ font-size:9px; color:var(--t3); font-weight:700; margin-top:2px; }
+  .tw-cal-week-grid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .tw-cal-week-col{ background:var(--bg); border-radius:10px; padding:8px 6px; min-height:120px; }
+  .tw-cal-week-col.today{ box-shadow:0 0 0 1.5px var(--blue); }
+  .tw-cal-week-col-head{ text-align:center; margin-bottom:6px; }
+  .tw-cal-week-col-head .wd{ font-size:10px; font-weight:700; color:var(--t3); }
+  .tw-cal-week-col-head .dt{ font-size:13px; font-weight:800; color:var(--t1); }
+  .tw-cal-week-item{
+    font-size:10px; padding:2px 5px; border-radius:6px; margin-bottom:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+  }
+  .tw-cal-week-item.high{ background:var(--red-bg); color:var(--red); }
+  .tw-cal-week-item.medium{ background:var(--blue-bg); color:var(--blue); }
+  .tw-cal-week-item.low{ background:#F2F4F6; color:var(--t3); }
+  .tw-cal-day-label{ font-size:12.5px; font-weight:800; color:var(--t1); margin-bottom:8px; }
+  @media(max-width:640px){
+    .tw-cal-day-cell{ min-height:34px; padding:3px; }
+    .tw-cal-week-grid{ overflow-x:auto; }
+  }
 </style>
 </head>
 <body>
@@ -797,14 +863,20 @@
   <div class="todo-widget" id="todoWidget">
     <div class="todo-widget-head">
       <div class="tw-title">✅ 할 일 현황</div>
-      <button class="tw-link" onclick="window.open('todo.html','_blank')">할 일 관리 열기 →</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="tw-view-switch">
+          <button class="tw-view-btn active" id="twViewBtnList" onclick="twSetViewMode('list')">목록</button>
+          <button class="tw-view-btn" id="twViewBtnCal" onclick="twSetViewMode('calendar')">📅 캘린더</button>
+        </div>
+        <button class="tw-link" onclick="window.open('todo.html','_blank')">할 일 관리 열기 →</button>
+      </div>
     </div>
     <div class="tw-mini-stats" id="twMiniStats">
       <div class="tw-stat tw-stat-btn active" id="twStatAll" onclick="twSetFilter('today')"><div class="tw-num" id="twTotal">-</div><div class="tw-lbl">전체</div></div>
       <div class="tw-stat tw-stat-btn" id="twStatDoing" onclick="twSetFilter('doing')"><div class="tw-num" id="twDoing" style="color:var(--blue);">-</div><div class="tw-lbl">진행중</div></div>
       <div class="tw-stat tw-stat-btn" id="twStatDone" onclick="twSetFilter('done')"><div class="tw-num" id="twDone" style="color:var(--green);">-</div><div class="tw-lbl">완료</div></div>
     </div>
-    <div class="tw-bar-wrap">
+    <div class="tw-bar-wrap" id="twBarWrap">
       <div class="tw-bar-bg"><div class="tw-bar-fill" id="twBarFill" style="width:0%;"></div></div>
       <div class="tw-bar-foot">
         <span id="twBarLeft">완료 0건</span>
@@ -813,6 +885,24 @@
     </div>
     <div class="tw-list" id="twList">
       <div class="tw-empty">할 일 데이터를 불러오는 중...</div>
+    </div>
+
+    <!-- 캘린더 (위젯) -->
+    <div class="tw-cal" id="twCal" style="display:none;">
+      <div class="tw-cal-toolbar">
+        <div class="tw-cal-nav">
+          <button class="tw-cal-nav-btn" onclick="twCalPrev()">‹</button>
+          <button class="tw-cal-today-btn" onclick="twCalToday()">오늘</button>
+          <button class="tw-cal-nav-btn" onclick="twCalNext()">›</button>
+          <span class="tw-cal-period" id="twCalPeriod"></span>
+        </div>
+        <div class="tw-cal-mode-tabs">
+          <button class="tw-cal-mode-tab active" data-cal="month" onclick="twSetCalMode('month',this)">월</button>
+          <button class="tw-cal-mode-tab" data-cal="week" onclick="twSetCalMode('week',this)">주</button>
+          <button class="tw-cal-mode-tab" data-cal="day" onclick="twSetCalMode('day',this)">일</button>
+        </div>
+      </div>
+      <div id="twCalBody"></div>
     </div>
   </div>
 
@@ -4921,6 +5011,184 @@ function getTodoDueLabel(dueDate){
 let twShowDone = false;
 let twFilter = 'today'; // 'today' | 'doing' | 'done' | 'overdue'
 
+// ========================= 할 일 위젯 - 캘린더 보기 =========================
+let twViewMode = 'list'; // 'list' | 'calendar'
+let twCalMode = 'month'; // 'month' | 'week' | 'day'
+let twCalDate = new Date();
+const twPriOrder = {high:0, medium:1, low:2};
+
+function twSetViewMode(mode){
+  twViewMode = mode;
+  document.getElementById('twViewBtnList').classList.toggle('active', mode==='list');
+  document.getElementById('twViewBtnCal').classList.toggle('active', mode==='calendar');
+  document.getElementById('twMiniStats').style.display = mode==='list' ? '' : 'none';
+  document.getElementById('twBarWrap').style.display = mode==='list' ? '' : 'none';
+  document.getElementById('twList').style.display = mode==='list' ? '' : 'none';
+  document.getElementById('twCal').style.display = mode==='calendar' ? '' : 'none';
+  if(mode==='calendar') renderTwCalendar();
+}
+
+function twSetCalMode(mode, el){
+  twCalMode = mode;
+  document.querySelectorAll('.tw-cal-mode-tab').forEach(b=>b.classList.toggle('active', b===el));
+  renderTwCalendar();
+}
+function twCalPrev(){
+  if(twCalMode==='month') twCalDate.setMonth(twCalDate.getMonth()-1);
+  else if(twCalMode==='week') twCalDate.setDate(twCalDate.getDate()-7);
+  else twCalDate.setDate(twCalDate.getDate()-1);
+  renderTwCalendar();
+}
+function twCalNext(){
+  if(twCalMode==='month') twCalDate.setMonth(twCalDate.getMonth()+1);
+  else if(twCalMode==='week') twCalDate.setDate(twCalDate.getDate()+7);
+  else twCalDate.setDate(twCalDate.getDate()+1);
+  renderTwCalendar();
+}
+function twCalToday(){ twCalDate = new Date(); renderTwCalendar(); }
+
+function twGoToDay(dateStr){
+  twCalDate = new Date(dateStr+'T00:00:00');
+  twCalMode = 'day';
+  document.querySelectorAll('.tw-cal-mode-tab').forEach(b=>b.classList.toggle('active', b.dataset.cal==='day'));
+  renderTwCalendar();
+}
+
+function twFmtDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function twGetAllDatedItems(){
+  let todos = [];
+  try{ const raw = localStorage.getItem('todos_v2'); if(raw) todos = JSON.parse(raw); }catch(e){}
+  if(!Array.isArray(todos)) todos = [];
+  try{
+    const gTasks = JSON.parse(localStorage.getItem('gongmu_tasks_v1') || '[]');
+    const gAsTodos = gTasks.filter(t=>t.due).map(t=>({
+      id:'g_'+t.id, _isGongmu:true,
+      title:'[업무] '+t.title,
+      priority: t.priority==='high'?'high': t.priority==='mid'?'medium':'low',
+      dueDate: t.due,
+      isCompleted: t.status==='done',
+    }));
+    todos = [...todos, ...gAsTodos];
+  }catch(e){}
+  return todos.filter(t=>t.dueDate);
+}
+
+function twGroupByDate(items){
+  const map = {};
+  items.forEach(t=>{ (map[t.dueDate]=map[t.dueDate]||[]).push(t); });
+  return map;
+}
+
+function twDotsHtml(items){
+  const maxDots = 4;
+  const dots = items.slice(0,maxDots).map(t=>{
+    const cls = t.priority==='high'?'high':t.priority==='medium'?'medium':'low';
+    return `<span class="tw-cal-dot ${cls}"></span>`;
+  }).join('');
+  return `<div class="tw-cal-dots">${dots}</div>${items.length>maxDots?`<div class="tw-cal-more">+${items.length-maxDots}</div>`:''}`;
+}
+
+function renderTwCalendar(){
+  const byDate = twGroupByDate(twGetAllDatedItems());
+  if(twCalMode==='month') renderTwCalMonth(byDate);
+  else if(twCalMode==='week') renderTwCalWeek(byDate);
+  else renderTwCalDay(byDate);
+}
+
+function renderTwCalMonth(byDate){
+  const y=twCalDate.getFullYear(), m=twCalDate.getMonth();
+  document.getElementById('twCalPeriod').textContent = `${y}년 ${m+1}월`;
+  const first = new Date(y,m,1);
+  const startOffset = first.getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const daysInPrevMonth = new Date(y,m,0).getDate();
+  const totalCells = Math.ceil((startOffset+daysInMonth)/7)*7;
+  const todayStr = twFmtDate(new Date());
+  const weekdayNames = ['일','월','화','수','목','금','토'];
+  let html = `<div class="tw-cal-weekday-row">${weekdayNames.map((w,i)=>`<div class="tw-cal-weekday ${i===0?'sun':i===6?'sat':''}">${w}</div>`).join('')}</div>`;
+  html += `<div class="tw-cal-month-grid">`;
+  for(let i=0;i<totalCells;i++){
+    let dateNum, cellMonth, inMonth=true;
+    if(i<startOffset){ dateNum=daysInPrevMonth-(startOffset-1-i); cellMonth=m-1; inMonth=false; }
+    else if(i>=startOffset+daysInMonth){ dateNum=i-(startOffset+daysInMonth)+1; cellMonth=m+1; inMonth=false; }
+    else { dateNum=i-startOffset+1; cellMonth=m; }
+    const cellDate = new Date(y,cellMonth,dateNum);
+    const dateStr = twFmtDate(cellDate);
+    const dow = cellDate.getDay();
+    const isToday = dateStr===todayStr;
+    const dayItems = (byDate[dateStr]||[]).slice().sort((a,b)=>(twPriOrder[a.priority]??1)-(twPriOrder[b.priority]??1));
+    html += `<div class="tw-cal-day-cell${inMonth?'':' other-month'}${isToday?' today':''}" onclick="twGoToDay('${dateStr}')">
+      <div class="tw-cal-day-num${dow===0?' sun':dow===6?' sat':''}">${dateNum}</div>
+      ${dayItems.length? twDotsHtml(dayItems) : ''}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('twCalBody').innerHTML = html;
+}
+
+function renderTwCalWeek(byDate){
+  const start = new Date(twCalDate);
+  start.setDate(start.getDate()-start.getDay());
+  const end = new Date(start); end.setDate(end.getDate()+6);
+  document.getElementById('twCalPeriod').textContent = `${start.getFullYear()}년 ${start.getMonth()+1}월 ${start.getDate()}일 - ${end.getMonth()+1}월 ${end.getDate()}일`;
+  const todayStr = twFmtDate(new Date());
+  const weekdayNames = ['일','월','화','수','목','금','토'];
+  let html = `<div class="tw-cal-week-grid">`;
+  for(let i=0;i<7;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const dateStr = twFmtDate(d);
+    const isToday = dateStr===todayStr;
+    const dayItems = (byDate[dateStr]||[]).slice().sort((a,b)=>(twPriOrder[a.priority]??1)-(twPriOrder[b.priority]??1));
+    const itemsHtml = dayItems.length
+      ? dayItems.map(t=>{
+          const cls = t.priority==='high'?'high':t.priority==='medium'?'medium':'low';
+          const safeTitle = String(t.title||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+          return `<div class="tw-cal-week-item ${cls}" onclick="twGoToDay('${dateStr}')" title="${safeTitle}">${safeTitle}</div>`;
+        }).join('')
+      : `<div style="font-size:10px;color:var(--t3);text-align:center;">-</div>`;
+    html += `<div class="tw-cal-week-col${isToday?' today':''}">
+      <div class="tw-cal-week-col-head"><div class="wd">${weekdayNames[i]}</div><div class="dt">${d.getDate()}</div></div>
+      ${itemsHtml}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('twCalBody').innerHTML = html;
+}
+
+function renderTwCalDay(byDate){
+  const dateStr = twFmtDate(twCalDate);
+  const weekdayNames = ['일','월','화','수','목','금','토'];
+  const label = `${twCalDate.getFullYear()}년 ${twCalDate.getMonth()+1}월 ${twCalDate.getDate()}일 (${weekdayNames[twCalDate.getDay()]})`;
+  document.getElementById('twCalPeriod').textContent = label;
+  const dayItems = (byDate[dateStr]||[]).slice().sort((a,b)=>(twPriOrder[a.priority]??1)-(twPriOrder[b.priority]??1));
+  const priLabel = {high:'높음', medium:'보통', low:'낮음'};
+  let html = `<div class="tw-cal-day-label">${label}</div>`;
+  if(!dayItems.length){
+    html += `<div class="tw-empty">이 날짜에 마감 예정인 할 일이 없어요.</div>`;
+  } else {
+    html += dayItems.map(t=>{
+      const isDone = t.isCompleted;
+      const pri = t.priority||'medium';
+      return `<div class="tw-item" style="${isDone?'opacity:.6;':''}">
+        <div class="tw-chk" onclick="twToggleCalItem('${t.id}')" title="${isDone?'완료 취소':'완료 처리'}"
+          style="${isDone?'background:var(--green);border-color:var(--green);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;':''}">${isDone?'✓':''}</div>
+        <span class="tw-item-title" style="${isDone?'text-decoration:line-through;color:var(--t3);':''}">${t.title||'(제목 없음)'}</span>
+        <span class="tw-pri ${pri}">${priLabel[pri]||pri}</span>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('twCalBody').innerHTML = html;
+}
+
+function twToggleCalItem(id){
+  toggleTodoWidget(id); // 기존 토글 로직 재사용 (todos_v2 / gongmu_tasks_v1 갱신 + 목록 위젯 갱신)
+  renderTwCalendar(); // 캘린더 뷰도 즉시 갱신
+}
+
 function twSetFilter(f) {
   twFilter = f;
   twShowDone = f === 'done';
@@ -5153,7 +5421,10 @@ function toggleTodoWidget(id){
 renderQlSites();
 renderTodoWidget();
 window.addEventListener('storage', function(e){
-  if(e.key === 'todos_v2') renderTodoWidget();
+  if(e.key === 'todos_v2' || e.key === 'gongmu_tasks_v1'){
+    renderTodoWidget();
+    if(twViewMode === 'calendar') renderTwCalendar();
+  }
 });
 </script>
 </body>
