@@ -2333,18 +2333,16 @@ async function openLocalFolder(path){
   if(!path) return;
   // 웹 링크(URL)면 브라우저 새 탭으로 바로 열기
   if(/^https?:\/\//i.test(path)){ window.open(path, '_blank'); return; }
-  // 로컬 폴더/파일 경로면 회사 PC 발송기가 탐색기/연결프로그램으로 열기
-  const base = await _senderBase();
-  if(!base){
-    try{ await navigator.clipboard.writeText(path); }catch(e){}
-    alert('로컬 폴더·파일을 자동으로 열려면 회사 PC의 [메일발송기]를 켜야 합니다.\n(발송기가 탐색기를 대신 열어줍니다)\n\n경로를 클립보드에 복사했습니다:\n'+path);
-    return;
-  }
+  // 로컬 폴더/파일 경로면 회사 PC의 '파일열기도우미'(127.0.0.1:17321)로 열기 시도
   try{
-    const r = await fetch(base+'/open-folder', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({path}), signal:AbortSignal.timeout(10000) });
+    const url = 'http://127.0.0.1:17321/open?path='+encodeURIComponent(path);
+    const r = await fetch(url, { signal:AbortSignal.timeout(2500) });
     const d = await r.json();
-    if(!d.ok){ alert('열기 실패: '+(d.error||'알 수 없는 오류')); }
-  }catch(e){ alert('열기 오류: '+(e.message||e)); }
+    if(d && d.ok) return;
+  }catch(e){}
+  // 도우미가 꺼져 있거나 실패하면 경로를 클립보드에 복사하고 안내
+  try{ await navigator.clipboard.writeText(path); }catch(e){}
+  alert('로컬 폴더·파일을 자동으로 열려면 회사 PC의 [파일열기도우미]를 켜야 합니다.\n(파일열기도우미.vbs 실행 시 클릭 한 번에 자동으로 열립니다)\n\n경로를 클립보드에 복사했습니다:\n'+path);
 }
 
 // 구매계약 단계(purchase.html STAGES와 동일)
