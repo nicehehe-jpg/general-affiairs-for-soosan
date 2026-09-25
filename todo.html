@@ -754,6 +754,49 @@ function renderTasksView() {
 function save() {
   localStorage.setItem('todos_v2', JSON.stringify(todos));
   localStorage.setItem('todo_cats', JSON.stringify(categories));
+  pushTodosToCloud();
+}
+
+// ========================= 클라우드 동기화 (todos_v2) =========================
+// 카카오톡 비서(supabase/functions/kakao-todo)도 같은 app_store 'todos_v2'를 읽고 쓴다.
+// 저장 직전에 클라우드를 다시 읽어, 마지막 동기화 이후 다른 곳(카톡 등)에서 추가/수정된 항목을 합친 뒤 올린다.
+let lastCloudSync = '';
+let cloudPushTimer = null;
+
+async function pullTodosFromCloud() {
+  if (typeof sbGet !== 'function') return;
+  const cloud = await sbGet('todos_v2');
+  if (Array.isArray(cloud)) {
+    todos = cloud;
+    localStorage.setItem('todos_v2', JSON.stringify(todos));
+    lastCloudSync = new Date().toISOString();
+    render();
+  } else if (cloud === null && todos.length) {
+    if (await sbSet('todos_v2', todos)) lastCloudSync = new Date().toISOString();
+  }
+}
+
+function pushTodosToCloud() {
+  if (typeof sbSet !== 'function') return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(async () => {
+    const cloud = await sbGet('todos_v2');
+    if (cloud === undefined) return;   // 오프라인 — 로컬에만 저장
+    if (Array.isArray(cloud)) {
+      const byId = new Map(todos.map(t => [t.id, t]));
+      let merged = false;
+      cloud.forEach(c => {
+        const mine = byId.get(c.id);
+        if (!mine) {
+          if (lastCloudSync && (c.createdAt || '') > lastCloudSync) { todos.unshift(c); merged = true; }   // 다른 곳에서 새로 추가
+        } else if ((c.updatedAt || '') > (mine.updatedAt || '') && (c.updatedAt || '') > lastCloudSync) {
+          Object.assign(mine, c); merged = true;                                                            // 다른 곳에서 더 최근 수정
+        }
+      });
+      if (merged) { localStorage.setItem('todos_v2', JSON.stringify(todos)); render(); }
+    }
+    if (await sbSet('todos_v2', todos)) lastCloudSync = new Date().toISOString();
+  }, 600);
 }
 
 function uid() {
@@ -1449,12 +1492,14 @@ window.addEventListener('storage', e => {
   }
 });
 
-// 이 탭으로 다시 돌아왔을 때 갱신 (같은 브라우저 내 탭 전환)
+// 이 탭으로 다시 돌아왔을 때 갱신 (같은 브라우저 내 탭 전환 + 카톡 등에서 바뀐 클라우드 할 일 반영)
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && currentFilter === 'tasks') {
-    renderTasksView();
-  }
+  if (document.visibilityState !== 'visible') return;
+  if (currentFilter === 'tasks') renderTasksView();
+  pullTodosFromCloud();
 });
+
+pullTodosFromCloud();
 </script>
 </body>
 </html>
